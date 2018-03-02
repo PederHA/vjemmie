@@ -84,7 +84,7 @@ class PUBGCog:
                         aliases=['crateplay', 'dibs'],
                         description='nah mate ur not getting the awm')
     #TODO: weighted random
-    
+    #yeboi
     async def crate(self, ctx: commands.Context, *args):
         crateguns_all=["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
         crateguns_nom249=["M24", "AWM", "AUG", "Groza", "MK14"]
