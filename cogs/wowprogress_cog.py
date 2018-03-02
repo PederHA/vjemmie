@@ -39,32 +39,27 @@ class WPCog:
             sauce = urllib.request.urlopen(url).read()
             soup = bs.BeautifulSoup(sauce,'html.parser')
             
-            """Finds the top search result and fetches url to guild page
-            """
+            #Finds the top search result and fetches url to guild page
             topr = soup.find("a", {"class" : lambda L: L and L.startswith("guild")})
             
-            """Sends error message to the channel in case a guild cannot be found
-            """
+            #Sends error message to the channel in case a guild cannot be found
             if topr == None:
                 return await ctx.send("Couldn't find guild!")
 
-            """Top result is converted to a string, then appended to wowprogress URL
-                to create the full URL to the guild page
-            """
+            #Top result is cast to string, then appended to wowprogress URL
+            #to create the complete URL to the guild page
             topr = str(topr.get("href"))
             appendresult = "https://wowprogress.com" + topr
 
-            """Scrapes the resulting URL from the top result
-            """
-
+            #Scrapes the resulting URL from the top result
             sauce = urllib.request.urlopen(appendresult).read()
             soup = bs.BeautifulSoup(sauce,"html.parser")
 
             #Raids Per Week
             wprw = soup.find("div", class_="raids_week")
             
-            """Manage exception for guilds with unknown raid days
-            """
+            #Manage exception for guilds with unknown raid days
+            
 
             """
             DUNNO WHAT TO DO WITH THIS YET
@@ -88,22 +83,22 @@ class WPCog:
             gname = str(gname.string)
             gname = gname.partition("@")[0]
             gname = gname.split("Guild ", 1)[1]
-            #print(gnamefinal)
 
             #Progression
             progress = soup.find("span", class_="innerLink ratingProgress")
             progress = progress.find("b")
             progress = str(progress.string)
-            #print(gprogress)
-
+            
             #World Rank
             wrank = soup.find("span", {"class" : lambda L: L and L.startswith("rank")})
-            #print(wrank.string)
 
+            #Calculate execution time
             exetime = (time.time()-start_time)
-            exetimestr = "{0:.1f}".format(exetime) 
+            exetime = "{0:.1f}".format(exetime) 
 
+            #TODO: Use .format() instead.
+            #      Also, not sure what I was doing with regards to using the bs4 string method vs explicitly casting to string back then.
             return await ctx.send(appendresult + "\n```\n\n" + "Guild Name: " + gname + "\nProgress: " + progress + "\nWorld Rank: " 
-                        + wrank.string + "\n" + "Raids Per Week: " + rpw + "\n```" + "\n" + "👳🏾" +  "Command executed in " + exetimestr + " seconds")
+                        + wrank.string + "\n" + "Raids Per Week: " + rpw + "\n```" + "\n" + "👳🏾" +  "Command executed in " + exetime + " seconds")
         except Exception:
-            return await ctx.send("Guild is either inactive or an unknown error occured.")        
+            return await ctx.send("Guild is inactive.") #Lazy solution, but it will be correct error message in 99% of cases.      

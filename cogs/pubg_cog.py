@@ -46,32 +46,32 @@ class PUBGCog:
                                 "School", "Pochinki", "Mylta", "Mylta Power", 
                                 "Military Base", "Novorepnoye"]
         
-        """
-        to-do: Fix if-statement so I only need 1 ctx.send instead of 1 for each of the maps
-        """
-        #THIS IS HORRENDOUS. TO-DO: MAKE FUNCTION FOR INVALID MAP / ARG. FIND A WAY TO CONSOLIDATE THE ARG CHECKS.
+        #valid_maps = ["Erangel", "Miramar"]
 
-        if args != (): #IF A MAP IS SPECIFIED
+        #TODO: Fix if-statement so I only need 1 ctx.send instead of 1 for each of the maps
+
+        #THIS IS HORRENDOUS. TO-DO: MAKE FUNCTION FOR INVALID MAP / ARG. FIND A WAY TO CONSOLIDATE THE ARG CHECKS.
+        if args != (): #IF A MAP IS SPECIFIED -> ENTER 
             if (args[0] == 'erangel') or (args[0] == 'miramar'): #IF VALID MAPS ARE SPECIFIED. TO-DO: DONT HARD CODE MAP NAMES
                 
                 if args[0] == 'miramar':
                     if len(args)>1:
-                        if args[1] == 'hot': #IF HOT
+                        if args[1] == 'hot':
                             droplocation = random.choice(miramar_locations_hot)
                         else:
                             await ctx.send("Invalid arguments. Syntax: \"!drop <Map> ( + <Hot>)\"")            
                     else:
-                        droplocation = random.choice(miramar_locations_all) #IF NOT HOT
+                        droplocation = random.choice(miramar_locations_all)
                     
                 elif args[0] == 'erangel':
                     print ("we r inside erangel")
                     if len(args)>1:
-                        if args[1] == 'hot': #IF HOT
+                        if args[1] == 'hot':
                             droplocation = random.choice(erangel_locations_hot)
                         else:
                             await ctx.send("Invalid arguments. Syntax: \"!drop <Map> ( + <Hot>)\"")            
                     else:
-                        droplocation = random.choice(erangel_locations_all) #IF NOT HOT
+                        droplocation = random.choice(erangel_locations_all)
 
                 await ctx.send("Drop location: " + droplocation)
             
@@ -83,12 +83,13 @@ class PUBGCog:
     @commands.command(name='crate',
                         aliases=['crateplay', 'dibs'],
                         description='nah mate ur not getting the awm')
-    #To-do: weighted random
+    #TODO: weighted random
+    
     async def crate(self, ctx: commands.Context, *args):
         crateguns_all=["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
         crateguns_nom249=["M24", "AWM", "AUG", "Groza", "MK14"]
-        crateguns_snipers=["M24", "AWM", "MK14"]
-        crateguns_auto=["M249", "AUG", "Groza"]
+        #crateguns_snipers=["M24", "AWM", "MK14"]
+        #crateguns_auto=["M249", "AUG", "Groza"]
         
         if len(args) != 1:
             if args == ():
@@ -98,6 +99,7 @@ class PUBGCog:
             squadlist = list(args)
             random.shuffle(squadlist)
             
+            #USING NUMPY - SPLIT LIST INTO N PARTS.
             for arg in range (len(args)):
                 if args[arg] == "m249": #NON FUNCTIONAL. STUPID SOLUTION ANYWAY.
                     random.shuffle(crateguns_all)
@@ -106,7 +108,7 @@ class PUBGCog:
                     random.shuffle(crateguns_nom249)
                     gunsplit = numpy.array_split(crateguns_nom249,squadsize)
 
-            #todo: Fix m249
+            #TODO: Fix m249
 
             output = "```"
             for n in range(squadsize):
