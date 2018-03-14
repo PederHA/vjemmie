@@ -21,7 +21,7 @@ from cogs.reddit_cog import RedditCog
 #from cogs.react_cog import ReactCog
 from discord import opus
 from ext_module import ExtModule
-
+import serial_asyncio
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 sound_folder = 'sounds'
@@ -62,3 +62,22 @@ async def on_message(message):
 """
 
 bot.run(secrets.BOT_TOKEN)
+"""
+class Input(asyncio.Protocol):
+
+    def __init__(self):
+        super().__init__()
+        self._transport = None
+
+    def connection_made(self, transport):
+        self._transport = transport
+
+    def data_received(self, data):
+        self._transport.write(data)
+
+
+loop2 = asyncio.get_event_loop()
+coro2 = serial_asyncio.create_serial_connection(loop2, Input, 'COM6', baudrate=9600)
+loop2.run_until_complete(coro2)
+loop2.run_forever()
+loop2.close() """
