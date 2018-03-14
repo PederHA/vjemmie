@@ -87,15 +87,10 @@ class PUBGCog:
                         aliases=['crateplay', 'dibs'],
                         description='nah mate ur not getting the awm')
                         
-    #THIS IS AN ACTUAL CLUSTERFUCK. How to fix: 
-    #if m249 in "squad":
-    #squad.remove("m249")
-    #squadsize = squadsize - 1
-    #gunlist = crateguns_all
-    
     
     #TODO: weighted random
     #      Sort list if using numbers
+    #       Auto or snipers only
 
     async def crate(self, ctx: commands.Context, *args):
         crateguns_all=["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
@@ -105,8 +100,6 @@ class PUBGCog:
         #user_args = args
         print(args)
 
-        #TODO: Change variable names. FIX m249 for numbers
-        #if (len(args) != 1) or (args == ('m249',)):
         if (args == ()) or (len(args)==1 and args[0] == "m249"):
             squad = ('simon', 'hugo', 'travis', 'steve')
         elif args[0] == '2':
@@ -120,32 +113,28 @@ class PUBGCog:
             await ctx.send("How many god damn members do you think can fit in a team?")
         else:
             squad = args
-        #squad = args
+
         squad = list(squad)
         args = list(args)
-        #m249 isnt in squad cause it gets its value from args, which is overwritten
+        squadsize = len(squad)
+
         if "m249" in args:
             m249 = True
             args.remove("m249")
         else:
             m249 = False
-        
-        squadsize = len(squad)
-        print ("Squadsize = ", squadsize)
-        
-        print(m249)
+
         if (squadsize > 1) and (squadsize <= 4):
 
-
             random.shuffle(squad)
-            
             #USING NUMPY - SPLIT LIST INTO N PARTS.
             if m249 == True:
                 #Shuffle list of crateguns, then split into number of parts equal to squadsize
                 random.shuffle(crateguns_all)
                 gunsplit = numpy.array_split(crateguns_all,squadsize)
                 
-                #If one of the gunsplit indices is only ['M249']: do a reroll
+                #If one of the gunsplit indices is  ['M249']: do a reroll
+                #TODO: M249 ONLY tag that disables this check
                 for n in range(squadsize):
                     gun = gunsplit[n].tolist()
                     while gun == ['M249']:
@@ -157,6 +146,7 @@ class PUBGCog:
                 random.shuffle(crateguns_nom249)
                 gunsplit = numpy.array_split(crateguns_nom249,squadsize)
 
+            #Generate discord bot output
             output = "```"
             for n in range(squadsize):
                 linebuffer = ""
