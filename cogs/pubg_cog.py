@@ -57,7 +57,6 @@ class PUBGCog:
             pubgmap = pubgmap.lower()
 
             if pubgmap in valid_maps: #Check if supplied arg is a valid pubg map
-            #TODO: Don't hardcode map names. Instead take from valid map list.
                 if pubgmap == 'miramar':
                     if len(args)>1:
                         if args[1] == 'hot': #If the second argument is 'hot', choose from hot list.
