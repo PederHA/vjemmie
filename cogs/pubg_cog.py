@@ -100,6 +100,7 @@ class PUBGCog:
         #user_args = args
         print(args)
 
+        #This whole clusterfuck needs a re-do
         if (args == ()) or (len(args)==1 and args[0] == "m249"):
             squad = ('simon', 'hugo', 'travis', 'steve')
         elif args[0] == '2':
@@ -134,7 +135,7 @@ class PUBGCog:
                 gunsplit = numpy.array_split(crateguns_all,squadsize)
                 
                 #If one of the gunsplit indices is  ['M249']: do a reroll
-                #TODO: M249 ONLY tag that disables this check
+                #TODO: M249-ONLY tag that disables this check
                 for n in range(squadsize):
                     gun = gunsplit[n].tolist()
                     while gun == ['M249']:
