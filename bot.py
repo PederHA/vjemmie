@@ -41,43 +41,4 @@ bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
 async def on_ready():
     print("Client logged in")
 
-
-"""
-async def testfunc():
-        print ("Hello")
-        sound = SoundboardCog(commands.Bot,folder='sounds')
-        sound._load_songs('sounds')
-        #await sound.play(340921036201525249,"mw2intervention")
-        await asyncio.sleep(3)
-        print ("World") 
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(testfunc())"""
-
-#Sickass rad message reaction function that breaks the bot
-"""@bot.event
-async def on_message(message):
-    if message.author.id == 133875264995328000:
-        await message.add_reaction(':PedoRad:237754662361628672')
-"""
-
 bot.run(secrets.BOT_TOKEN)
-"""
-class Input(asyncio.Protocol):
-
-    def __init__(self):
-        super().__init__()
-        self._transport = None
-
-    def connection_made(self, transport):
-        self._transport = transport
-
-    def data_received(self, data):
-        self._transport.write(data)
-
-
-loop2 = asyncio.get_event_loop()
-coro2 = serial_asyncio.create_serial_connection(loop2, Input, 'COM6', baudrate=9600)
-loop2.run_until_complete(coro2)
-loop2.run_forever()
-loop2.close() """
