@@ -30,13 +30,13 @@ class WPCog:
     @commands.command(name="wowprogress",
                       aliases=["wp", "wowp"],
                       description="Searches WoWprogress for a given guild name, and returns top result.")
-    #@ExtModule.reaction_respond
     async def wowprogress(self, ctx: commands.Context, *args: str):
         try:
             start_time = time.time()
             url = ("https://www.wowprogress.com/search?{}&type=guild".format(
                 urlencode({'q': ' '.join(args)})
             ))
+            
             sauce = urllib.request.urlopen(url).read()
             soup = bs.BeautifulSoup(sauce, 'html.parser')
 
@@ -75,7 +75,6 @@ class WPCog:
 
             raids_per_week = str(raids_per_week.string).split(": ", 1)[1]
 
-
             # Guild name
             guild_name = soup.find("title")
             guild_name = str(guild_name.string).partition("@")[0].split("Guild ", 1)[1]
@@ -86,8 +85,7 @@ class WPCog:
             progress = str(progress.string)
 
             # World Rank
-            world_rank = soup.find(
-                "span", {"class": lambda L: L and L.startswith("rank")})
+            world_rank = soup.find("span", {"class": lambda L: L and L.startswith("rank")})
             world_rank = world_rank.string
 
             # Calculate execution time
@@ -95,8 +93,13 @@ class WPCog:
             exetime = "{0:.1f}".format(exetime)
 
             # TODO: Markdown formatting (bold).    
-            await ctx.send(guild_wp_url + ("\n\n```markdown\n" + "Guild Name: {}\nProgress: {}\nWorld Rank: {}"
-                            "\nRaids Per Week: {}\n```\n👳🏾Command executed in {} seconds").format(guild_name, progress, world_rank, raids_per_week, exetime))        
+            await ctx.send(guild_wp_url + ("\n\n```markdown\n"
+                                            "Guild Name: {}\n"
+                                            "Progress: {}\n"
+                                            "World Rank: {}\n"
+                                            "Raids Per Week: {}\n"
+                                            "```\n"
+                                            "👳🏾Command executed in {} seconds").format(guild_name, progress, world_rank, raids_per_week, exetime))        
         except Exception:
             # Lazy solution, but this will be the correct error message to return in 99% of cases.
             await ctx.send("Guild is inactive.")
