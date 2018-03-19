@@ -58,35 +58,19 @@ class WPCog:
             soup = bs.BeautifulSoup(sauce, "html.parser")
 
             # Raids Per Week
-            raids_per_week = soup.find("div", class_="raids_week")
+            raids_per_week = soup.find("div", class_="raids_week").string.split(": ", 1)[1]
 
-            # Manage exception for guilds with unknown raid days
-
-            """
-            DUNNO WHAT TO DO WITH THIS YET
-            #unknown = raids_per_week.find("nobr")
-            #print(unknown.string)
-            #print(raids_per_week.string)
-            #if raids_per_week.string == None:
-                #rpwn = "unknown"
-            
-            #elif raids_per_week.string != None:
-            """
-
-            raids_per_week = str(raids_per_week.string).split(": ", 1)[1]
+            # Exception for guilds with unknown raid days
+            # Nothing here yet.
 
             # Guild name
-            guild_name = soup.find("title")
-            guild_name = str(guild_name.string).partition("@")[0].split("Guild ", 1)[1]
+            guild_name = soup.find("title").string.partition("@")[0].split("Guild ", 1)[1]
 
             # Progression
-            progress = soup.find("span", class_="innerLink ratingProgress")
-            progress = progress.find("b")
-            progress = str(progress.string)
+            progress = soup.find("span", class_="innerLink ratingProgress").find("b").string
 
             # World Rank
-            world_rank = soup.find("span", {"class": lambda L: L and L.startswith("rank")})
-            world_rank = world_rank.string
+            world_rank = soup.find("span", {"class": lambda L: L and L.startswith("rank")}).string
 
             # Calculate execution time
             exetime = (time.time()-start_time)
