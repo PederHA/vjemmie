@@ -4,8 +4,6 @@ from ext_module import ExtModule
 import random
 import numpy
 
-import traceback
-
 
 class PUBGCog:
     """PUBG Bot Commands
@@ -54,7 +52,7 @@ class PUBGCog:
         if args != ():  
 
             pubgmap = args[0].lower()
-            
+            # TODO: 'hot' check and its associated error message should only have to be done once.
             # Check if supplied arg is a valid pubg map
             if pubgmap in VALID_MAPS:
                 if pubgmap == 'miramar':
@@ -160,51 +158,3 @@ class PUBGCog:
             output += "```"
 
             await ctx.send(output)
-
-    @commands.command(name='roll',
-                      aliases=['dice'],
-                      description='Random roll. Provide number argument to specify range (1-100 default).')
-    async def roll(self, ctx: commands.Context, *args):
-        """Code written while sleep deprived. High chance of being utter shit.
-            The rolling() method used to make sense before i rewrote the roll() method.
-            Now it's sort of pointless, really.
-        """
-        async def rolling(lower: int, upper: int):
-            random_number = 0
-
-            random_number = random.randint(lower, upper)
-            return random_number
-
-        # Default values
-        random_range_lower = 1
-        random_range_upper = 100
-
-        try:
-            if len(args) == 1:
-                # If 1 argument is provided, the upper range is changed to the user defined value.
-                random_range_upper = int(args[0])
-            elif len(args) > 1:
-                # If 2 (or more) arguments are provided, the 1st and 2nd indices of the args tuple are cast to integers.
-                random_range_lower = int(args[0])
-                random_range_upper = int(args[1])
-
-            # This block of shit needs some cleaning up. Probably don't need the type check when catching exceptions below.
-            if (isinstance(random_range_lower, int)) and (isinstance(random_range_upper, int)):
-                rollresult = await rolling(random_range_lower, random_range_upper)
-                random_range_lower = str(random_range_lower)
-                random_range_upper = str(random_range_upper)
-                random_number = str(rollresult)
-                await ctx.send("Rolling " + random_range_lower + " - " + random_range_upper + ": "
-                               + "  **" + random_number + "**")
-
-        # Manually catch the two common exceptions that can occur + unknown exception.
-        except ValueError:
-            error = traceback.format_exc()
-            if "invalid literal" in error:
-                # Invalid literal error stems from 1 or more args not being integers
-                await ctx.send("Only numbers are accepted. You utter, utter retard.")
-            elif "empty range" in error:
-                # Empty range exception stems from random_range_lower being greater than random_range_upper.
-                await ctx.send("An error occured. The first value should be less or equal to the second value.")
-            else:
-                await ctx.send("An unknown error occured. You probably fucked something up.")
