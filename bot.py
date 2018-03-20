@@ -18,6 +18,7 @@ from cogs.youtube_cog import YTCog
 from cogs.wowprogress_cog import WPCog
 from cogs.pfm_memes_cog import PFMCog
 from cogs.reddit_cog import RedditCog
+from cogs.fun_cog import FunCog
 #from cogs.react_cog import ReactCog
 from discord import opus
 from ext_module import ExtModule
@@ -36,6 +37,7 @@ bot.add_cog(WPCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(PFMCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
 #bot.add_cog(ReactCog(bot=bot, log_channel_id=log_channel_id))
+bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 
 @bot.event
 async def on_ready():
