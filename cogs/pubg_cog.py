@@ -93,11 +93,9 @@ class PUBGCog:
     #       Auto or snipers only
     async def crate(self, ctx: commands.Context, *args):
         CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
-        CRATEGUNS_NOM249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
+        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
         #crateguns_snipers=["M24", "AWM", "MK14"]
         #crateguns_auto=["M249", "AUG", "Groza"]
-        #user_args = args
-        print(args)
 
         # This whole clusterfuck needs a re-do
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
@@ -108,7 +106,7 @@ class PUBGCog:
             squad = ('1', '2', '3')
         elif args[0] == '4':
             squad = ('1', '2', '3', '4')
-        elif (len(args) > 4) and ("m249" not in args):
+        elif ((len(args) > 4) and ("m249" not in args)) or ((len(args)>5) and ("m249" in args)):
             squad = args
             await ctx.send("How many god damn members do you think can fit in a team?")
         else:
@@ -116,7 +114,7 @@ class PUBGCog:
 
         squad = list(squad)
         args = list(args)
-        squadsize = len(squad)
+        
         
         # Temporary
         if "rad" in squad:
@@ -124,10 +122,12 @@ class PUBGCog:
 
         if "m249" in args:
             m249 = True
-            args.remove("m249")
+            squad.remove("m249")
         else:
             m249 = False
 
+        squadsize = len(squad)
+        
         if (squadsize > 1) and (squadsize <= 4):
             random.shuffle(squad)
             # USING NUMPY - SPLIT LIST INTO N PARTS.
@@ -146,8 +146,8 @@ class PUBGCog:
                         for g in range(squadsize):
                             gun = gunsplit[g].tolist()
             else:
-                random.shuffle(CRATEGUNS_NOM249)
-                gunsplit = numpy.array_split(CRATEGUNS_NOM249, squadsize)
+                random.shuffle(CRATEGUNS_NO_M249)
+                gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
 
             # Generate discord bot output
             output = "```"
@@ -165,7 +165,7 @@ class PUBGCog:
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')
     async def roll(self, ctx: commands.Context, *args):
-        """Code created while sleep deprived. High chance of being utter shit.
+        """Code written while sleep deprived. High chance of being utter shit.
             The rolling() method used to make sense before i rewrote the roll() method.
             Now it's sort of pointless, really.
         """
