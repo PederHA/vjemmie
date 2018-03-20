@@ -91,10 +91,12 @@ class SoundboardCog:
                 pass
         name = _name_cut[randint(1, len(_name_cut)) - 1]
         
-        #This should be in its own method, but I'm lazy and dumb so here it is:
-        if name == "mw2nuke": #VERY IMPORTANT NUKE EMOJI REACTION
+        # This should be in its own method, but I'm lazy and dumb so here it is:
+        # VERY IMPORTANT NUKE EMOJI REACTION
+        if name == "mw2nuke":
             await ctx.message.add_reaction('\U0001F4A3')
-        if (name == "zonodoor") or (name == "rad1"): #Looks in spellbook for Pick Lock
+        # Looks in spellbook for Pick Lock
+        if (name == "zonodoor") or (name == "rad1"):
             await ctx.message.add_reaction(':PedoRad:237754662361628672')
         if name == "lairynig":
             await ctx.message.add_reaction(':Kebappa:237754301919789057')
