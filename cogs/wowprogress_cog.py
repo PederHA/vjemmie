@@ -46,7 +46,7 @@ class WPCog:
 
             # Sends error message to the channel in case a guild cannot be found
             if top_result == None:
-                return await ctx.send("Couldn't find guild!")
+                await ctx.send("Couldn't find guild!")
 
             # Top result is cast to string, then appended to wowprogress URL
             # to create the full website URL to the guild page
