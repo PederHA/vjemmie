@@ -20,4 +20,3 @@ botstartup.bat - Shortcut.lnk
 __pycache__/
 cogs/mac_pubg_cog.py
 cogs/serial_cog.py
-.gitignore

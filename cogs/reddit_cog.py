@@ -42,7 +42,7 @@ class RedditCog:
         sub = reddit.subreddit('emojipasta')
         posts = sub.top(limit=self.ALL_POST_LIMIT) 
         random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-        #BOI
+        #BOI??
         # TODO: Get rid of multiple ctx.send per method, like this clusterfuck:
         for i,post in enumerate(posts):
             if i==random_post_number:
@@ -53,9 +53,6 @@ class RedditCog:
                         await ctx.send(post.title + "\n" +  post.url)
                     else:
                         await ctx.send(post.title)
-
-                    
-                
 
     @commands.command()
     async def ipfb(self, ctx: commands.Context, *args: str):
