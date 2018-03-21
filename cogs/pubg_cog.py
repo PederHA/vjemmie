@@ -46,18 +46,20 @@ class PUBGCog:
                                  "School", "Pochinki", "Mylta", "Mylta Power",
                                  "Military Base", "Novorepnoye"]
 
-        VALID_MAPS = ["erangel", "miramar"]
+        VALID_MAPS = ["Erangel", "Miramar"]
         
         # Only proceed if an argument is given.
         if args != ():  
 
             pubgmap = args[0].lower()
+            pubgmap = pubgmap[0:].capitalize()
             # TODO: 'hot' check and its associated error message should only have to be done once.
-            # Check if supplied arg is a valid pubg map
+
+            # Check if arg is a valid pubg map
             if pubgmap in VALID_MAPS:
-                if pubgmap == 'miramar':
+                if pubgmap == 'Miramar':
                     if len(args) > 1:
-                        # If the second argument is 'hot', choose from hot list.
+                        # If the second argument is 'hot', pick location from hot list.
                         if args[1] == 'hot':
                             droplocation = random.choice(MIRAMAR_LOCATIONS_HOT)
                         else:
@@ -65,7 +67,7 @@ class PUBGCog:
                     else:
                         droplocation = random.choice(MIRAMAR_LOCATIONS_ALL)
 
-                elif pubgmap == 'erangel':
+                elif pubgmap == 'Erangel':
                     if len(args) > 1:
                         if args[1] == 'hot':
                             droplocation = random.choice(ERANGEL_LOCATIONS_HOT)
@@ -78,7 +80,7 @@ class PUBGCog:
 
             else:
                 await ctx.send(pubgmap[0:].capitalize() + " is not a valid map."
-                                "\nMaps currently in the pool are: " + str(VALID_MAPS)[1:-1])
+                                "\nMaps currently in the pool are: " + (str(VALID_MAPS)[1:-1]).replace("'", ""))
         # TODO Don't hardcode this error message. Allow for maps to be added to the pool without having to come back to this message.
         else:
             await ctx.send("No map specified. Type \"!drop erangel (hot)\" or \"!drop miramar (hot)\".")
