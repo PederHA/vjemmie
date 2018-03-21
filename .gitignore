@@ -18,5 +18,6 @@ botstartup.bat - Shortcut.lnk
 .vscode/launch.json
 .vscode/settings.json
 __pycache__/
+boi
 cogs/mac_pubg_cog.py
 cogs/serial_cog.py
