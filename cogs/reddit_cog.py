@@ -28,6 +28,8 @@ class RedditCog:
         self.bot.remove_command('help')
         self.ALL_POST_LIMIT = 400
         self.OTHER_POST_LIMIT = 100
+        self.image_extensions = [".jpg",".png",".gif"]
+        self.image_hosts =["imgur.com", "i.redd.it"]
     
     async def on_ready(self):
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
@@ -46,7 +48,12 @@ class RedditCog:
                 try:
                     await ctx.send(post.selftext)
                 except:
-                    await ctx.send(post.title + "\n" +  post.url)
+                    if (post.url[-4:] in self.image_extensions) or (post.url in self.image_hosts):
+                        await ctx.send(post.title + "\n" +  post.url)
+                    else:
+                        await ctx.send(post.title)
+
+                    
                 
 
     @commands.command()
