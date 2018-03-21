@@ -43,6 +43,7 @@ class RedditCog:
         posts = sub.top(limit=self.ALL_POST_LIMIT) 
         random_post_number = random.randint(1,self.ALL_POST_LIMIT)
         
+        # TODO: Get rid of multiple ctx.send per method, like this clusterfuck:
         for i,post in enumerate(posts):
             if i==random_post_number:
                 try:
@@ -72,7 +73,6 @@ class RedditCog:
         sub = reddit.subreddit('scottishpeopletwitter')
         posts = sub.top(limit=self.ALL_POST_LIMIT) 
         random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-
 
         for i,post in enumerate(posts):
             if i==random_post_number:
