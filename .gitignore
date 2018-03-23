@@ -21,3 +21,4 @@ __pycache__/
 boi
 cogs/mac_pubg_cog.py
 cogs/serial_cog.py
+requirements.txt

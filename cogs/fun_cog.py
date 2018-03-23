@@ -33,8 +33,6 @@ class FunCog:
             Now it's sort of pointless, really.
         """
         async def roll_numbers(lower: int, upper: int):
-            random_number = 0
-
             random_number = random.randint(lower, upper)
             return random_number
         
@@ -46,7 +44,8 @@ class FunCog:
             except ValueError:
                 return False
         
-        args = list(args)
+        # The is_number method returns True if no arguments are given, since the for-loop is never entered.
+        # Which means no exception can occur.
         args_are_ints = await is_number(args)
                     
         # Default values
@@ -83,10 +82,7 @@ class FunCog:
                       aliases=['random'],
                       description='Random choice of two or more args')
     async def roll2(self, ctx: commands.Context, *args):
-        """This method should be baked into the main roll method,
-            but the way I wrote it originally, makes it somewhat of PITA
-            to allow for names and numbers. This is just a result of bad
-            code and a lazy human being writing said code.
+        """Picks 1 item in an list of args with args>1 size.
         """
         async def roll_names(args):
 
@@ -101,7 +97,7 @@ class FunCog:
             except:
                 await ctx.send("An error occured.")
             else:
-                await ctx.send(random_name)
+                await ctx.send(random_name[0:].capitalize())
         else:
             if len(args) == 0:
                 error_amount = "No arguments"
