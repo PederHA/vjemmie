@@ -78,7 +78,7 @@ class RedditCog:
                 except:
                     await ctx.send("Something went wrong. I'll fix this later.")
 
-    @commands.command(help="Accepted args: \"week, month, year\"",brief="Edgy memes",aliases=["dm", "2edgy4me"])
+    @commands.command(help="Valid args: \"week, month, year\"",brief="Edgy memes",aliases=["dm", "2edgy4me"])
     async def dankmemes(self, ctx: commands.Context, *args: str):
         sub = reddit.subreddit('dankmemes')
         date_intervals = ['week', 'month', 'year']
@@ -91,7 +91,7 @@ class RedditCog:
             random_post_number = random.randint(1,self.ALL_POST_LIMIT)
         for i,post in enumerate(posts):
             if i==random_post_number:
-                await ctx.send("**" + post.title + "**" +"\n" + post.url)
+                await ctx.send("**" + post.title + "**\n" + post.url)
 
     @commands.command()
     async def dfm(self, ctx: commands.Context, *args: str):
@@ -110,27 +110,11 @@ class RedditCog:
                     print (post.title)
 
     @commands.command()
-    async def ept(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('emojipasta')
-        posts = sub.top(limit=200) 
-        random_post_number = random.randint(1,200)
-        print (random_post_number)
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                print (i)
-                print (random_post_number)
-                print(post.title)
-                await ctx.send(post.title)
-
-    @commands.command()
     async def copypasta(self, ctx: commands.Context, *args: str):
         sub = reddit.subreddit('copypasta')
         posts = sub.top(limit=200) 
         random_post_number = random.randint(1,200)
-        print (random_post_number)
+        
         for i,post in enumerate(posts):
             if i==random_post_number:
-                print (i)
-                print (random_post_number)
-                print(post.selftext)
                 await ctx.send(post.selftext)
