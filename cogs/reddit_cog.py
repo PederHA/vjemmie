@@ -70,7 +70,7 @@ class RedditCog:
         sub = reddit.subreddit('scottishpeopletwitter')
         posts = sub.top(limit=self.ALL_POST_LIMIT) 
         random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-
+        
         for i,post in enumerate(posts):
             if i==random_post_number:
                 try:

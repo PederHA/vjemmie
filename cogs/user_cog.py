@@ -28,7 +28,7 @@ class UserCog:
                       aliases=['complain', 'suggestion', 'complaint'],
                       description='(textblock) || The textblock will be send as a suggestion'
                                   ' to the admins of this bot. You can also use this for bug report!')
-    @ExtModule.reaction_respond
+    
     async def suggest(self, ctx: commands.Context, *args):
         """This command sends the text given to the log_channel and pins it there.
         Args:
@@ -47,7 +47,7 @@ class UserCog:
     @commands.command(name='info',
                       aliases=['information', 'stats', 'statistics'],
                       description='Sends information about the bot')
-    @ExtModule.reaction_respond
+    
     async def info(self, ctx: commands.Context):
         """This function sends basic information about the the bot to the ctx.TextChannel
         Args:
@@ -67,7 +67,7 @@ class UserCog:
     @commands.command(name='help',
                       aliases=['hlep', 'mayday'],
                       description='Sends you the names, aliases and description of all commands per PM!')
-    @ExtModule.reaction_respond
+    
     async def help(self, ctx: commands.Context, *args):
         """This function sends a list of all the command + aliases + description to the requester
         Args:

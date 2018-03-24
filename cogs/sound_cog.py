@@ -56,7 +56,7 @@ class SoundboardCog:
                                   ' If no tags are found or no sound with all the given tags exists'
                                   ' the sound is chosen randomly.'
                                   ' Requires you to be in a voice channel!')
-    @ExtModule.reaction_respond
+    
     async def play(self, ctx: commands.Context, *args):
         """This command plays the first sound name found in args, if one exists.
         If none exists, all args will be interpreted as tags. The command will create the cut, of all
@@ -100,6 +100,7 @@ class SoundboardCog:
             await ctx.message.add_reaction(':PedoRad:237754662361628672')
         if name == "lairynig":
             await ctx.message.add_reaction(':Kebappa:237754301919789057')
+            
         try:
             vc = await voice_channel.connect()
         except discord.ClientException:
@@ -114,7 +115,7 @@ class SoundboardCog:
                       aliases=['halt'],
                       description='The bot will stop playing a sound and leave the current voice channel.'
                                   'Requires you to be in the same voice channel as the bot!')
-    @ExtModule.reaction_respond
+    
     async def stop(self, ctx: commands.Context):
         """This function stops the bot playing a sound and makes it leave the current voice channel.
          Args:
@@ -127,7 +128,7 @@ class SoundboardCog:
 
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
-    @ExtModule.reaction_respond
+    
     async def soundlist(self, ctx: commands.Context):
         """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
         Args:
@@ -142,7 +143,7 @@ class SoundboardCog:
 
     @commands.command(name='taglist',
                       aliases=['tags'], description='Prints a list of all tags with soundnames on the soundboard.')
-    @ExtModule.reaction_respond
+    
     async def taglist(self, ctx: commands.Context):
         """This function prints a list of all the tags with their sounds on the Soundboard to the
          channel/user where it was requested.

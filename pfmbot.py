@@ -39,8 +39,21 @@ bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
 #bot.add_cog(ReactCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 
-@bot.event
-async def on_ready():
+@bot.async_event
+def on_ready():
     print("Client logged in")
+
+"""@bot.async_event
+def on_message(message):
+    if message.author.id == 103890994440728576:
+        await message.add_reaction(':PedoRad:237754662361628672') """
+
+@bot.async_event
+async def on_message(message):
+    if message.author.id == 103890994440728576:
+        rad_words = ["ninja", "jacket", "jacuzzi", "8x", "scope"]
+        if any(word in message.content.lower() for word in rad_words):
+            await message.add_reaction(':PedoRad:237754662361628672')
+    await bot.process_commands(message)
 
 bot.run(secrets.BOT_TOKEN)
