@@ -1,15 +1,9 @@
-from urllib.parse import urlencode
 import secrets
-import urllib.request
 from discord.ext.commands import Bot
 from discord.ext import commands
 import discord
 import bs4 as bs
-import random
-import time
-import praw
 import asyncio
-import re
 from cogs.sound_cog import SoundboardCog
 from cogs.admin_cog import AdminCog
 from cogs.user_cog import UserCog
@@ -22,7 +16,7 @@ from cogs.fun_cog import FunCog
 #from cogs.react_cog import ReactCog
 from discord import opus
 from ext_module import ExtModule
-import serial_asyncio
+from events_module import EventsModule
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 sound_folder = 'sounds'
@@ -36,7 +30,6 @@ bot.add_cog(YTCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(WPCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(PFMCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
-#bot.add_cog(ReactCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 
 @bot.async_event
@@ -47,10 +40,13 @@ def on_ready():
 # Move out of main?
 @bot.async_event
 async def on_message(message):
-    if message.author.id == 133875264995328000:
+    if EventsModule.is_travis(message):
+        pass
+    if EventsModule.is_rad(message):
         rad_words = ["ninja", "jacket", "jacuzzi", "8x", "scope"]
         if any(word in message.content.lower() for word in rad_words):
             await message.add_reaction(':PedoRad:237754662361628672')
     await bot.process_commands(message)
+
 
 bot.run(secrets.BOT_TOKEN)
