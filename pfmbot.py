@@ -43,14 +43,11 @@ bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 def on_ready():
     print("Client logged in")
 
-"""@bot.async_event
-def on_message(message):
-    if message.author.id == 103890994440728576:
-        await message.add_reaction(':PedoRad:237754662361628672') """
 
+# Move out of main?
 @bot.async_event
 async def on_message(message):
-    if message.author.id == 103890994440728576:
+    if message.author.id == 133875264995328000:
         rad_words = ["ninja", "jacket", "jacuzzi", "8x", "scope"]
         if any(word in message.content.lower() for word in rad_words):
             await message.add_reaction(':PedoRad:237754662361628672')
