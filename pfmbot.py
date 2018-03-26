@@ -13,10 +13,10 @@ from cogs.wowprogress_cog import WPCog
 from cogs.pfm_memes_cog import PFMCog
 from cogs.reddit_cog import RedditCog
 from cogs.fun_cog import FunCog
-#from cogs.react_cog import ReactCog
 from discord import opus
 from ext_module import ExtModule
 from events_module import EventsModule
+from secrets import PFMCrypto
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 sound_folder = 'sounds'
@@ -36,17 +36,20 @@ bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 def on_ready():
     print("Client logged in")
 
-
 # Move out of main?
-@bot.async_event
+@bot.listen()
 async def on_message(message):
     if EventsModule.is_travis(message):
+        #travis_message = message.content.lower()
+        #if message.author.voice.channel.id == 133332608762380289:
+            #await message.author.voice.channel.disconnect()
         pass
     if EventsModule.is_rad(message):
-        rad_words = ["ninja", "jacket", "jacuzzi", "8x", "scope"]
-        if any(word in message.content.lower() for word in rad_words):
+        if any(word in message.content.lower() for word in secrets.RAD_WORDS):
             await message.add_reaction(':PedoRad:237754662361628672')
-    await bot.process_commands(message)
-
+    if PFMCrypto.base64_compare(message):
+        await message.add_reaction(':cmonpfm:427842995748995082')
+    
+    #await bot.process_commands(message)
 
 bot.run(secrets.BOT_TOKEN)
