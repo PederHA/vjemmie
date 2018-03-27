@@ -17,7 +17,7 @@ class UserCog:
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.send_log = None                # will be assigned
-        #self.bot.remove_command('help')
+        self.bot.remove_command('help')
 
     async def on_ready(self):
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
