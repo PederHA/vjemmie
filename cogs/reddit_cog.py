@@ -25,7 +25,6 @@ class RedditCog:
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.send_log = None                # will be assigned
-        self.bot.remove_command('help')
         self.ALL_POST_LIMIT = 400
         self.OTHER_POST_LIMIT = 100
         self.image_extensions = [".jpg",".png",".gif"]

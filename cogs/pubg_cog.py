@@ -10,15 +10,9 @@ class PUBGCog:
     """
 
     def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        """The constructor of the UserCog class, assigns the important variables
-        Args:
-            bot: The bot the commands will be added to (commands.Bot)
-            log_channel_id: The id of the log_channel (int)
-        """
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.send_log = None                # will be assigned
-        self.bot.remove_command('help')
 
     async def on_ready(self):
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
@@ -27,7 +21,7 @@ class PUBGCog:
 
     @commands.command(name='drop',
                       aliases=['roulette', 'plane'],
-                      description='(textblock) || u fucking wot')
+                      description='u fucking wot')
     async def drop(self, ctx: commands.Context, *args):
         MIRAMAR_LOCATIONS_ALL = ["El Pozo", "Pecado", "Monte Nuevo", "San Martín",
                                  "Hacienda del Patrón", "El Azahar", "Cruz del Valle",
@@ -98,6 +92,7 @@ class PUBGCog:
         #crateguns_auto=["M249", "AUG", "Groza"]
 
         # This whole clusterfuck needs a re-do
+        # TODO: Move to function
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
             squad = ('simon', 'hugo', 'travis', 'steve')
         elif args[0] == '2':
@@ -112,17 +107,18 @@ class PUBGCog:
         else:
             squad = args
 
+        # Just a little catch-all tuple->list thing
         squad = list(squad)
-        args = list(args)
-        
         
         # Temporary
         if "rad" in squad:
             await ctx.message.add_reaction(':8xscope:417396529452810241')
-
+        
+        # Move this check its own function
         if "m249" in args:
             m249 = True
-            squad.remove("m249")
+            if "m249" in squad:
+                squad.remove("m249")
         else:
             m249 = False
 
@@ -131,7 +127,7 @@ class PUBGCog:
         if (squadsize > 1) and (squadsize <= 4):
             random.shuffle(squad)
             # USING NUMPY - SPLIT LIST INTO N PARTS.
-            if m249 == True:
+            if m249:
                 # Shuffle list of crateguns, then split into number of parts equal to squadsize
                 random.shuffle(CRATEGUNS_ALL)
                 gunsplit = numpy.array_split(CRATEGUNS_ALL, squadsize)
@@ -160,3 +156,4 @@ class PUBGCog:
             output += "```"
 
             await ctx.send(output)
+

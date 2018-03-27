@@ -10,15 +10,9 @@ class YTCog:
     """PUBG Bot Commands
     """
     def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        """The constructor of the UserCog class, assigns the important variables
-        Args:
-            bot: The bot the commands will be added to (commands.Bot)
-            log_channel_id: The id of the log_channel (int)
-        """
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.send_log = None                # will be assigned
-        self.bot.remove_command('help')
     
     async def on_ready(self):
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
@@ -44,5 +38,3 @@ class YTCog:
         exetime = "{0:.1f}".format(exetime)
 
         await ctx.send(("https://youtube.com{}").format(link))
-        #return await ctx.send("https://youtube.com" + link.get("href"))
-        #+ "\nCommand executed in: " + exetime + " seconds.")

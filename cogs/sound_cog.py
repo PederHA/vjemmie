@@ -91,15 +91,7 @@ class SoundboardCog:
                 pass
         name = _name_cut[randint(1, len(_name_cut)) - 1]
         
-        # This should be in its own method, but I'm lazy and dumb so here it is:
-        # VERY IMPORTANT NUKE EMOJI REACTION
-        if name == "mw2nuke":
-            await ctx.message.add_reaction('\U0001F4A3')
-        # Looks in spellbook for Pick Lock
-        if (name == "zonodoor") or (name == "rad1"):
-            await ctx.message.add_reaction(':PedoRad:237754662361628672')
-        if name == "lairynig":
-            await ctx.message.add_reaction(':Kebappa:237754301919789057')
+        await SoundboardCog.name_reaction(self,name,ctx.message)
             
         try:
             vc = await voice_channel.connect()
@@ -125,7 +117,7 @@ class SoundboardCog:
             print (connection)
             if ctx.author.voice.channel == connection.channel:
                 return await connection.disconnect()
-
+    
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
     
@@ -174,3 +166,12 @@ class SoundboardCog:
             fut.result()
         except asyncio.CancelledError:
             pass
+    
+    async def name_reaction(self, name, message):
+        if name == "mw2nuke":
+            await message.add_reaction('\U0001F4A3')
+        # Looks in spellbook for Pick Lock
+        if (name == "zonodoor") or (name == "rad1"):
+            await message.add_reaction(':PedoRad:237754662361628672')
+        if name == "lairynig":
+            await message.add_reaction(':Kebappa:237754301919789057')
