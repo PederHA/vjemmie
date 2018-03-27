@@ -16,7 +16,7 @@ from cogs.fun_cog import FunCog
 from discord import opus
 from ext_module import ExtModule
 from events_module import EventsModule
-from secrets import PFMCrypto
+from secrets import PFMSecrets
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 sound_folder = 'sounds'
@@ -39,17 +39,10 @@ def on_ready():
 # Move out of main?
 @bot.listen()
 async def on_message(message):
-    if EventsModule.is_travis(message):
-        #travis_message = message.content.lower()
-        #if message.author.voice.channel.id == 133332608762380289:
-            #await message.author.voice.channel.disconnect()
-        pass
     if EventsModule.is_rad(message):
         if any(word in message.content.lower() for word in secrets.RAD_WORDS):
             await message.add_reaction(':PedoRad:237754662361628672')
-    if PFMCrypto.base64_compare(message):
+    if PFMSecrets.base64_compare(message):
         await message.add_reaction(':cmonpfm:427842995748995082')
-    
-    #await bot.process_commands(message)
 
 bot.run(secrets.BOT_TOKEN)
