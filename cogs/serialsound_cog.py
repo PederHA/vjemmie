@@ -8,11 +8,14 @@ from discord.ext import commands
 
 from ext_module import ExtModule
 
+from pprint import pprint
+
 
 class SerialSoundboardCog:
-    """Cog for the soundboard feature"""
-
-    # see play command changes
+    """
+    Super early WIP for serial controlled soundboard functionality\n
+    TODO: Subclass?
+    """
 
     def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}):
         """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
@@ -49,7 +52,7 @@ class SerialSoundboardCog:
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
-        opus.load_opus('libopus')  # the opus library
+        #opus.load_opus('libopus')  # the opus library
     
     @commands.command(name='splay',
                       description=' tags/name || Plays the sound with the first name found in the arguments.'
@@ -70,10 +73,10 @@ class SerialSoundboardCog:
             args: Shall contain at least one filnename or multiple tags (all String)
             """
         try:  # user must be connected to a voice channel
-            voice_channel = ctx.author.voice.channel
+            #voice_channel = ctx.author.voice.channel
             test_voice_channel = self.bot.get_channel(340921036201525249)
             test_text_channel = self.bot.get_channel(340921036201525248)
-            await test_text_channel.send(str(dir(test_voice_channel.connect)))
+            #await test_text_channel.send(str(dir(test_voice_channel.connect)))
         except AttributeError:
             #await ctx.send(content='To use this command you have to be connected to a voice channel!')
             raise discord.DiscordException
@@ -119,7 +122,6 @@ class SerialSoundboardCog:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
         for connection in self.bot.voice_clients:
-            print (connection)
             if ctx.author.voice.channel == connection.channel:
                 return await connection.disconnect()
     
