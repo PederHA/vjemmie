@@ -17,7 +17,7 @@ from cogs.sound_cog import SoundboardCog
 from cogs.user_cog import UserCog
 from cogs.wowprogress_cog import WPCog
 from cogs.youtube_cog import YTCog
-#from cogs.serialsound_cog import SerialSoundboardCog
+from cogs.serialsound_cog import SerialSoundboardCog
 from events_module import EventsModule
 from ext_module import ExtModule
 
