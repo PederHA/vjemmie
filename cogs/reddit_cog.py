@@ -92,7 +92,15 @@ class RedditCog:
         sub_type = "txt"
         
         await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
-    
+    @commands.command()
+    async def reddit(self,ctx: commands.Context, args):
+        subreddit = args
+        print(subreddit)
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
+
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
+
     async def random_post(self, ctx, subreddit, postlimit: int, sub_type, bot):
         """
         Calls 1 of 2 methods; ``img_subreddit()`` or ``txt_subreddit()``,
