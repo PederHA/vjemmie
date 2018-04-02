@@ -14,18 +14,26 @@ reddit = praw.Reddit(client_id=secrets.REDDIT_ID,
                     )
 
 class RedditCog:
-    """PUBG Bot Commands
+    """
+    Reddit cog.
+    ====
+    Each subreddit is divided into its own command.
+
+    For example:
+    ----
+    ``!spt`` or ``!emojipasta``
+
+    TODO:
+    ----
+    Add ``!reddit`` command that allows for any subreddit.
+    However, a more generalized function is needed for that.
+    
     """
 
     def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        """The constructor of the UserCog class, assigns the important variables
-        Args:
-            bot: The bot the commands will be added to (commands.Bot)
-            log_channel_id: The id of the log_channel (int)
-        """
         self.bot = bot
         self.log_channel_id = log_channel_id
-        self.send_log = None                # will be assigned
+        self.send_log = None               
         self.ALL_POST_LIMIT = 400
         self.OTHER_POST_LIMIT = 100
         self.image_extensions = [".jpg",".png",".gif"]
@@ -86,6 +94,18 @@ class RedditCog:
         await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
     
     async def random_post(self, ctx, subreddit, postlimit: int, sub_type, bot):
+        """
+        Calls 1 of 2 methods; ``img_subreddit()`` or ``txt_subreddit()``,
+        and sends return value to the channel the command was invoked in.
+        
+        Arguments:
+            ctx: message object passed from the subreddit bot command. (ctx.message)
+            subreddit: Name of subreddit. (str)
+            postlimit (int): Number of posts to search through 1-postlimit. (int)
+            sub_type: Type of subreddit - txt or img. (str)
+            bot: The bot instance the cog is added to.
+        """
+
         self.bot = bot
         channel = self.bot.get_channel(ctx.channel.id)
 
