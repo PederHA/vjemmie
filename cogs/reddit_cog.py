@@ -6,6 +6,7 @@ import praw
 import asyncio
 import re
 import secrets
+import traceback
 
 reddit = praw.Reddit(client_id=secrets.REDDIT_ID,
                      client_secret=secrets.REDDIT_SECRET,
@@ -38,82 +39,108 @@ class RedditCog:
 
     @commands.command()
     async def emojipasta(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('emojipasta')
-        posts = sub.top(limit=self.ALL_POST_LIMIT) 
-        random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-        #BOI??
-        # TODO: Get rid of multiple ctx.send per method, like this clusterfuck:
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                try:
-                    await ctx.send(post.selftext)
-                except:
-                    if (post.url[-4:] in self.image_extensions) or (post.url in self.image_hosts):
-                        await ctx.send(post.title + "\n" +  post.url)
-                    else:
-                        await ctx.send(post.title)
+        subreddit = "emojipasta"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "txt"
+        
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
 
     @commands.command()
     async def ipfb(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('indianpeoplefacebook')
-        posts = sub.top(limit=self.ALL_POST_LIMIT) 
-        random_post_number = random.randint(1,self.ALL_POST_LIMIT)
+        subreddit = "indianpeoplefacebook"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
 
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                    await ctx.send(post.url)
-
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
 
     @commands.command()
     async def spt(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('scottishpeopletwitter')
-        posts = sub.top(limit=self.ALL_POST_LIMIT) 
-        random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-        
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                try:
-                    await ctx.send(post.url)
-                except:
-                    await ctx.send("Something went wrong. I'll fix this later.")
+        subreddit = "scottishpeopletwitter"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
+
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
 
     @commands.command(help="Valid args: \"week, month, year\"",brief="Edgy memes",aliases=["dm", "2edgy4me"])
     async def dankmemes(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('dankmemes')
-        date_intervals = ['week', 'month', 'year']
-        if args != ():
-            if args[0] in date_intervals:
-                posts = sub.top(time_filter=args[0], limit=self.OTHER_POST_LIMIT)
-                random_post_number = random.randint(1,self.OTHER_POST_LIMIT)            
-        else:
-            posts = sub.top(limit=self.ALL_POST_LIMIT)
-            random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                await ctx.send("**" + post.title + "**\n" + post.url)
+        subreddit = "dankmemes"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
 
-    @commands.command()
-    async def dfm(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('deepfriedmemes')
-        posts = sub.top(limit=self.ALL_POST_LIMIT) 
-        random_post_number = random.randint(1,self.ALL_POST_LIMIT)
-        print (random_post_number)
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                print (i)
-                print (random_post_number)
-                if post.selftext != None:
-                    print(post.selftext)
-                    await ctx.send(post.url)
-                elif post.selftext == None:
-                    print (post.title)
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
+
+    @commands.command(aliases=["dfm"])
+    async def deepfriedmemes(self, ctx: commands.Context, *args: str):
+        subreddit = "deepfriedmemes"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
+
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
 
     @commands.command()
     async def copypasta(self, ctx: commands.Context, *args: str):
-        sub = reddit.subreddit('copypasta')
-        posts = sub.top(limit=200) 
-        random_post_number = random.randint(1,200)
+        subreddit = "copypasta"
+        postlimit = 200
+        sub_type = "txt"
         
-        for i,post in enumerate(posts):
-            if i==random_post_number:
-                await ctx.send(post.selftext)
+        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot)
+    
+    async def random_post(self, ctx, subreddit, postlimit: int, sub_type, bot):
+        self.bot = bot
+        channel = self.bot.get_channel(ctx.channel.id)
+
+        try:
+            if sub_type == "txt":
+                post = await RedditCog.txt_subreddit(self,subreddit,postlimit)
+            elif sub_type == "img":
+                post = await RedditCog.img_subreddit(self,subreddit,postlimit)
+            await channel.send(post)
+        except:
+            error = traceback.format_exc()
+            await RedditCog.send_error(self,error)
+
+            if "Must be 2000 or fewer in length." in error:
+                await channel.send("The reddit post exceeded Discord's character limit")
+            else:
+                await channel.send("An unexpected error occured.")
+    
+    async def txt_subreddit(self,subreddit, postlimit: int):
+        sub = reddit.subreddit(subreddit)
+        posts = sub.top(limit=postlimit)
+        random_post_number = random.randint(1,postlimit)
+
+        try:
+            for i,post in enumerate(posts):
+                if i==random_post_number:
+                    if post.selftext != '':
+                        return post.selftext
+                    else:
+                        if (post.url[-4:] in self.image_extensions) or (post.url in self.image_hosts): 
+                            post = post.title + "\n" +  post.url
+                            return post
+                        else:
+                            return post.title
+                    break
+        except:
+            error = traceback.format_exc()
+            await RedditCog.send_error(self,error)
+
+    async def img_subreddit(self,subreddit, postlimit: int):
+        sub = reddit.subreddit(subreddit)
+        posts = sub.top(limit=postlimit)
+        random_post_number = random.randint(1,postlimit)
+
+        try:
+            for i,post in enumerate(posts):
+                if i==random_post_number:
+                    post = "**" + post.title + "**\n" + post.url
+                    return post
+        except:
+            error = traceback.format_exc()
+            await RedditCog.send_error(self,error)
+            return "An unexpected error occured."
+
+    
+    async def send_error(self, error):
+        channel = self.bot.get_channel(340921036201525248)
+        await channel.send(str(error))
