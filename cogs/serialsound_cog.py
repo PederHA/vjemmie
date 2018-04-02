@@ -1,4 +1,5 @@
 import asyncio
+import serial_asyncio
 import os
 from random import randint
 
@@ -10,11 +11,18 @@ from ext_module import ExtModule
 
 from pprint import pprint
 
+boi = "not modified"
 
 class SerialSoundboardCog:
     """
-    Super early WIP for serial controlled soundboard functionality\n
-    TODO: Subclass?
+    Super early WIP for serial controlled soundboard functionality
+    ====
+
+
+    TODO:
+    ----
+    Should probably make this a subclass of the SoundboardCog Class, 
+    but for now I'm just trying trying to figure out how this should all work.
     """
 
     def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}):
@@ -36,6 +44,14 @@ class SerialSoundboardCog:
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
 
+    async def serialconnection(self):
+        loop = asyncio.get_event_loop()
+        serial_coro = serial_asyncio.create_serial_connection(loop, SerialSoundboardCog.Output, 'COM6', baudrate=9600)
+        value = loop.run_until_complete(asyncio.gather(serial_coro))
+
+        loop.run_forever() 
+        loop.close()
+
     @staticmethod
     def _load_songs(folder):
         """This function returns a list with all the mp3-file names in the given folder
@@ -52,6 +68,9 @@ class SerialSoundboardCog:
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
+        await self.serialconnection()
+
+
         #opus.load_opus('libopus')  # the opus library
     
     @commands.command(name='splay',
@@ -74,6 +93,7 @@ class SerialSoundboardCog:
             """
         try:  # user must be connected to a voice channel
             #voice_channel = ctx.author.voice.channel
+            print(boi)
             test_voice_channel = self.bot.get_channel(340921036201525249)
             test_text_channel = self.bot.get_channel(340921036201525248)
             #await test_text_channel.send(str(dir(test_voice_channel.connect)))
@@ -182,3 +202,30 @@ class SerialSoundboardCog:
             await message.add_reaction(':PedoRad:237754662361628672')
         if name == "lairynig":
             await message.add_reaction(':Kebappa:237754301919789057')
+    
+    class Output(asyncio.Protocol):
+        def connection_made(self, transport):
+            self.transport = transport
+            print('port opened', transport)
+            transport.serial.rts = False
+            transport.write(b'hello world\n')
+
+        def data_received(self, data):
+            self.data = data.decode()
+            self.data = self.data[:-1]
+            print(self.data)
+            if self.data == "top right":
+                #SerialSoundboardCog.splay("boi","mw2intervention")
+                #print("lol")
+                global boi
+                boi = "heyboyz"
+                return "Heyo"
+            #print(data.decode())
+            #self.transport.close()
+
+        def connection_lost(self, exc):
+            print('port closed')
+            asyncio.get_event_loop().stop()
+    
+    
+
