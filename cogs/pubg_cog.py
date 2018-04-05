@@ -3,7 +3,7 @@ import discord
 from ext_module import ExtModule
 import random
 import numpy
-
+from events_module import EventsModule
 
 class PUBGCog:
     """PUBG Bot Commands
@@ -91,14 +91,11 @@ class PUBGCog:
                       description='nah mate ur not getting the awm')
     async def crate(self, ctx: commands.Context, *args):
         """
-        TODO: weighted random
-        Sort list if using numbers
-        Auto or snipers only
+        Distributes potential weapons found in PUBG airdrops among
+        `args` number of players. `args` can be a tuple containing
+        multiple names, or a number.
         """
-        CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
-        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
-        #crateguns_snipers=["M24", "AWM", "MK14"]
-        #crateguns_auto=["M249", "AUG", "Groza"]
+
 
         # This whole clusterfuck needs a re-do
         # TODO: Move to function
@@ -122,7 +119,7 @@ class PUBGCog:
         squad = list(squad)
         
         # Temporary
-        if "rad" in squad:
+        if EventsModule.contains_rad:
             await ctx.message.add_reaction(':8xscope:417396529452810241')
 
         squadsize, gunsplit = PUBGCog.roll_guns(args,squad)
