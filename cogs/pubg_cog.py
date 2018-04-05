@@ -23,6 +23,13 @@ class PUBGCog:
                       aliases=['roulette', 'plane'],
                       description='u fucking wot')
     async def drop(self, ctx: commands.Context, *args):
+        """
+        ``!drop``command that chooses random drop location on a given PUBG map.
+        ----
+        
+        Args: tuple containing user arguments provided after typing !drop.
+        """
+
         MIRAMAR_LOCATIONS_ALL = ["El Pozo", "Pecado", "Monte Nuevo", "San Martín",
                                  "Hacienda del Patrón", "El Azahar", "Cruz del Valle",
                                  "Tierra Bronca", "Torre Ahumada", "Campo Militar", "Impala",
@@ -82,10 +89,12 @@ class PUBGCog:
     @commands.command(name='crate',
                       aliases=['crateplay', 'dibs'],
                       description='nah mate ur not getting the awm')
-    # TODO: weighted random
-    #       Sort list if using numbers
-    #       Auto or snipers only
     async def crate(self, ctx: commands.Context, *args):
+        """
+        TODO: weighted random
+        Sort list if using numbers
+        Auto or snipers only
+        """
         CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
         CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
         #crateguns_snipers=["M24", "AWM", "MK14"]
@@ -104,26 +113,34 @@ class PUBGCog:
         elif ((len(args) > 4) and ("m249" not in args)) or ((len(args)>5) and ("m249" in args)):
             squad = args
             await ctx.send("How many god damn members do you think can fit in a team?")
+        elif (len(args) == 2 and "m249" in args):
+            await ctx.send("Can't roll crate for 1 player.")
         else:
             squad = args
 
-        # Just a little catch-all tuple->list thing
+        # Make the args a list, so it can be modified.
         squad = list(squad)
         
         # Temporary
         if "rad" in squad:
             await ctx.message.add_reaction(':8xscope:417396529452810241')
+
+        squadsize, gunsplit = PUBGCog.roll_guns(args,squad)
+        output = PUBGCog.generate_crate_text(squadsize,squad,gunsplit)
         
-        # Move this check its own function
-        if "m249" in args:
-            m249 = True
-            if "m249" in squad:
-                squad.remove("m249")
-        else:
-            m249 = False
+        await ctx.send(output)
+
+    @staticmethod
+    def roll_guns(args, squad):
+        CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
+        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
+        #crateguns_snipers=["M24", "AWM", "MK14"]
+        #crateguns_auto=["M249", "AUG", "Groza"]
+        
+        m249, squad = PUBGCog.check_m249(args,squad)
 
         squadsize = len(squad)
-        
+
         if (squadsize > 1) and (squadsize <= 4):
             random.shuffle(squad)
             # USING NUMPY - SPLIT LIST INTO N PARTS.
@@ -141,19 +158,32 @@ class PUBGCog:
                         gunsplit = numpy.array_split(CRATEGUNS_ALL, squadsize)
                         for g in range(squadsize):
                             gun = gunsplit[g].tolist()
+                return squadsize, gunsplit
+
             else:
                 random.shuffle(CRATEGUNS_NO_M249)
                 gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
+                return squadsize, gunsplit
+    
+    @staticmethod
+    def check_m249(args, squad):
+        if "m249" in args:
+            if "m249" in squad:
+                squad.remove("m249")
+            return True, squad
+        else:
+            return False, squad
 
-            # Generate discord bot output
-            output = "```"
-            for n in range(squadsize):
-                linebuffer = ""
-                linebuffer = (str(squad[n])[0:].capitalize(
-                ) + ": " + str(gunsplit[n])[1:-1].replace("'", "") + "\n")
-                output += linebuffer
-                n += 1
-            output += "```"
-
-            await ctx.send(output)
-
+    @staticmethod
+    def generate_crate_text(squadsize, squad, gunsplit):
+        # Generate discord bot output
+        output = "```"
+        for n in range(squadsize):
+            linebuffer = ""
+            linebuffer = (str(squad[n])[0:].capitalize(
+            ) + ": " + str(gunsplit[n])[1:-1].replace("'", "") + "\n")
+            output += linebuffer
+            n += 1
+        output += "```"
+        
+        return output
