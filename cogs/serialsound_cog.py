@@ -11,7 +11,6 @@ from ext_module import ExtModule
 
 from pprint import pprint
 
-boi = "not modified"
 
 class SerialSoundboardCog:
     """
@@ -43,13 +42,15 @@ class SerialSoundboardCog:
             self.tag_dict[value] = [name.lower() for name in self.tag_dict[value]]
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
+        self.serialvalue = "hey"
 
     async def serialconnection(self):
         loop = asyncio.get_event_loop()
         serial_coro = serial_asyncio.create_serial_connection(loop, SerialSoundboardCog.Output, 'COM6', baudrate=9600)
-        value = loop.run_until_complete(asyncio.gather(serial_coro))
-
-        loop.run_forever() 
+        self.serialvalue = loop.run_until_complete(asyncio.gather(serial_coro))
+        
+        loop.run_forever()
+        #self.serialvalue = serial_coro
         loop.close()
 
     @staticmethod
@@ -68,8 +69,7 @@ class SerialSoundboardCog:
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
-        await self.serialconnection()
-
+        self.newvalue = await self.serialconnection()
 
         #opus.load_opus('libopus')  # the opus library
     
@@ -93,9 +93,9 @@ class SerialSoundboardCog:
             """
         try:  # user must be connected to a voice channel
             #voice_channel = ctx.author.voice.channel
-            print(boi)
             test_voice_channel = self.bot.get_channel(340921036201525249)
             test_text_channel = self.bot.get_channel(340921036201525248)
+            print("SPLAY PRINT: ",self.serialvalue)
             #await test_text_channel.send(str(dir(test_voice_channel.connect)))
         except AttributeError:
             #await ctx.send(content='To use this command you have to be connected to a voice channel!')
@@ -204,6 +204,8 @@ class SerialSoundboardCog:
             await message.add_reaction(':Kebappa:237754301919789057')
     
     class Output(asyncio.Protocol):
+        def __init__(self):
+            self.value = "yeson"
         def connection_made(self, transport):
             self.transport = transport
             print('port opened', transport)
@@ -213,13 +215,10 @@ class SerialSoundboardCog:
         def data_received(self, data):
             self.data = data.decode()
             self.data = self.data[:-1]
-            print(self.data)
+            self.newvalue = self.data
             if self.data == "top right":
-                #SerialSoundboardCog.splay("boi","mw2intervention")
-                #print("lol")
-                global boi
-                boi = "heyboyz"
-                return "Heyo"
+                return self.newvalue
+                SerialSoundboardCog.serialvalue = "YEBOI"
             #print(data.decode())
             #self.transport.close()
 
