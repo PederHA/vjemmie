@@ -106,30 +106,7 @@ class FunCog:
             
             await ctx.send(("{} provided. Type **!random** followed by at least 2 words.").format(error_amount))
     
-    @commands.command(name="texttospeech",
-                      aliases=["tts","text-to-speech"])
-    async def texttospeech(self, ctx: commands.Context, *args):
-        valid_langs =  gTTS.LANGUAGES.keys()
-        valid_langs_entries = gTTS.LANGUAGES.items()
-        
-        if len(args)==3:
-            
-            text, language, command_name = args
 
-            
-            if language in valid_langs:
-                tts = gTTS(text=text, lang=language)
-                tts.save("sounds/" + command_name + ".mp3")
-                  
-        elif args[0] == "help":
-            await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
-        
-        else:
-            await ctx.send("3 arguments required: "
-                           "`text` "
-                           "`language` "
-                           "`command_name`."
-                           "\nType `!tts help` for more information about available languages.")
 
 
 

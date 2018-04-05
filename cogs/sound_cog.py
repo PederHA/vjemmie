@@ -5,6 +5,7 @@ import os
 import asyncio
 from random import randint
 from discord import opus
+from gtts import gTTS
 
 
 class SoundboardCog:
@@ -31,8 +32,8 @@ class SoundboardCog:
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
 
-    @commands.command(name="reloadsounds")
-    async def reloadsounds(self, ctx: commands.Context):
+    #@commands.command(name="reloadsounds")
+    async def reloadsounds(self):
             self.sound_list = SoundboardCog._load_songs(self.folder)
 
     @staticmethod
@@ -179,3 +180,32 @@ class SoundboardCog:
             await message.add_reaction(':PedoRad:237754662361628672')
         if name == "lairynig":
             await message.add_reaction(':Kebappa:237754301919789057')
+    @commands.command(name="texttospeech",
+                      aliases=["tts","text-to-speech"])
+    async def texttospeech(self, ctx: commands.Context, *args):
+        valid_langs =  gTTS.LANGUAGES.keys()
+        valid_langs_entries = gTTS.LANGUAGES.items()
+        
+        if len(args)==3:
+            
+            text, language, command_name = args
+
+            
+            if language in valid_langs:
+                tts = gTTS(text=text, lang=language)
+                tts.save("sounds/" + command_name + ".mp3")
+                await ctx.send (f'Sound created: **{command_name}**')
+                await self.reloadsounds()
+            else:
+                await ctx.send ("Invalid language." 
+                                "Type `!tts help` for more information about available languages.")
+                  
+        elif args[0] == "help":
+            await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
+        
+        else:
+            await ctx.send("3 arguments required: "
+                           "`text` "
+                           "`language` "
+                           "`command_name`."
+                           "\nType `!tts help` for more information about available languages.")
