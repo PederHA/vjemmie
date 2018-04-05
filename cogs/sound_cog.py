@@ -31,6 +31,10 @@ class SoundboardCog:
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
 
+    @commands.command(name="reloadsounds")
+    async def reloadsounds(self, ctx: commands.Context):
+            self.sound_list = SoundboardCog._load_songs(self.folder)
+
     @staticmethod
     def _load_songs(folder):
         """This function returns a list with all the mp3-file names in the given folder
