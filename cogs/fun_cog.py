@@ -3,6 +3,7 @@ import discord
 from ext_module import ExtModule
 import random
 import traceback
+import asyncio
 
 class FunCog:
     """PUBG Bot Commands
@@ -76,11 +77,13 @@ class FunCog:
                       aliases=['random'],
                       description='Random choice of two or more args')
     async def roll2(self, ctx: commands.Context, *args):
-        """Picks 1 item in an list of args with args>1 size.
+        """Basically https://xkcd.com/221/.
         """
-        async def roll_names(args):
-
-            random_name = random.choice(args)
+        async def roll_names(names):
+            
+            # Implemented due to complaints about rigged RNG :thinking:
+            for i in range(random.randint(2,5)):
+                random_name = random.choice(names)
             return random_name
         
         if args != () and len(args)>1:
