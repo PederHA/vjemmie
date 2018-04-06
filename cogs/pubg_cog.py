@@ -119,7 +119,7 @@ class PUBGCog:
         squad = list(squad)
         
         # Temporary
-        if EventsModule.contains_rad:
+        if EventsModule.contains_rad(squad):
             await ctx.message.add_reaction(':8xscope:417396529452810241')
 
         squadsize, gunsplit = PUBGCog.roll_guns(args,squad)
