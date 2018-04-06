@@ -199,13 +199,14 @@ class SoundboardCog:
             else:
                 await ctx.send ("Invalid language." 
                                 "Type `!tts help` for more information about available languages.")
-                  
-        elif args[0] == "help":
-            await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
-        
         else:
-            await ctx.send("3 arguments required: "
-                           "`text` "
-                           "`language` "
-                           "`command_name`."
-                           "\nType `!tts help` for more information about available languages.")
+            if len(args)>=1:          
+                if args[0] == "help":
+                    await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
+            
+            else:
+                await ctx.send("3 arguments required: "
+                            "`text` "
+                            "`language` "
+                            "`command_name`."
+                            "\nType `!tts help` for more information about available languages.")
