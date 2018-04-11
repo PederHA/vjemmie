@@ -6,6 +6,7 @@ import asyncio
 from random import randint
 from discord import opus
 from gtts import gTTS
+import re
 
 
 class SoundboardCog:
@@ -185,6 +186,8 @@ class SoundboardCog:
     async def texttospeech(self, ctx: commands.Context, *args):
         valid_langs =  gTTS.LANGUAGES.keys()
         valid_langs_entries = gTTS.LANGUAGES.items()
+
+        langs = str(valid_langs_entries)[12:-2]
         
         if len(args)==3:
             
@@ -202,8 +205,15 @@ class SoundboardCog:
         else:
             if len(args)>=1:          
                 if args[0] == "help":
-                    await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
-            
+                    output = '```Available languages:\n'
+                    for lang in gTTS.LANGUAGES:
+                        print(lang)
+                        print(gTTS.LANGUAGES[lang])
+                        output += f"{gTTS.LANGUAGES[lang]}: {lang}\n" 
+                    output+="```"
+                    await ctx.send(output)
+                    #await ctx.send("**Available languages:**\n" + str(valid_langs_entries)[12:-2])
+                    # ([^']+).*?([^']+).*?([^']+)
             else:
                 await ctx.send("3 arguments required: "
                             "`text` "
