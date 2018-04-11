@@ -92,9 +92,12 @@ class PUBGCog:
     async def crate(self, ctx: commands.Context, *args):
         """
         Distributes potential weapons found in PUBG airdrops among
-        `args` number of players. `args` can be a tuple containing
-        strings representies squad members, or containing a single
-        string representing the number of squad members.
+        `args` number of players. 
+        
+        `args` can be a tuple containing
+        multiple strings, each representing a squad member, or a 
+        tuple containing a single string representing the number
+        of squad members.
         """
 
 
@@ -147,7 +150,7 @@ class PUBGCog:
                 gunsplit = numpy.array_split(gunlist, squadsize)
                 needs_reroll = False
 
-                # If one of the gunsplit indices is  ['M249']: do a reroll
+                # Reroll if one of the gunsplit indices is "M249" or "Ghillie Suit"
                 # TODO: M249-ONLY tag that disables rerolling.
                 for n in range(squadsize):
                     gun = gunsplit[n].tolist()
@@ -156,7 +159,6 @@ class PUBGCog:
                         needs_reroll = True
                     
                     while needs_reroll:
-                        print("Rerolling...")
                         
                         random.shuffle(gunlist)
                         gunsplit = numpy.array_split(gunlist, squadsize)
