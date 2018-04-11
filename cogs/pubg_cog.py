@@ -93,7 +93,8 @@ class PUBGCog:
         """
         Distributes potential weapons found in PUBG airdrops among
         `args` number of players. `args` can be a tuple containing
-        multiple names, or a number.
+        strings representies squad members, or containing a single
+        string representing the number of squad members.
         """
 
 
@@ -115,38 +116,35 @@ class PUBGCog:
         else:
             squad = args
 
-        # Make the args a list, so it can be modified.
+        # Create a list out of the args tuple, so it can be modified.
         squad = list(squad)
         
         # Temporary
         if EventsModule.contains_rad(squad):
             await ctx.message.add_reaction(':8xscope:417396529452810241')
+        #@staticmethod
+        async def roll_guns(args, squad):
+            CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
+            CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
+            SOLO_ROLL_BLACKLIST = ["M249", "Ghillie Suit"] #NYI
+            #crateguns_snipers=["M24", "AWM", "MK14"]
+            #crateguns_auto=["M249", "AUG", "Groza"]
+            
+            m249, squad = await check_m249(args,squad)
 
-        squadsize, gunsplit = PUBGCog.roll_guns(args,squad)
-        output = PUBGCog.generate_crate_text(squadsize,squad,gunsplit)
-        
-        await ctx.send(output)
+            squadsize = len(squad)
 
-    @staticmethod
-    def roll_guns(args, squad):
-        CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
-        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
-        SOLO_ROLL_BLACKLIST = ["M249", "Ghillie Suit"]
-        #crateguns_snipers=["M24", "AWM", "MK14"]
-        #crateguns_auto=["M249", "AUG", "Groza"]
-        
-        m249, squad = PUBGCog.check_m249(args,squad)
-
-        squadsize = len(squad)
-
-        if (squadsize > 1) and (squadsize <= 4):
-            random.shuffle(squad)
-            # USING NUMPY - SPLIT LIST INTO N PARTS.
-            if m249:
+            if (squadsize > 1) and (squadsize <= 4):
+                random.shuffle(squad)
+                # USING NUMPY - SPLIT LIST INTO N PARTS.
+                if m249:
+                    gunlist = CRATEGUNS_ALL
+                else:
+                    gunlist = CRATEGUNS_NO_M249
 
                 # Shuffle list of crateguns, then split into number of parts equal to squadsize
-                random.shuffle(CRATEGUNS_ALL)
-                gunsplit = numpy.array_split(CRATEGUNS_ALL, squadsize)
+                random.shuffle(gunlist)
+                gunsplit = numpy.array_split(gunlist, squadsize)
                 needs_reroll = False
 
                 # If one of the gunsplit indices is  ['M249']: do a reroll
@@ -156,66 +154,50 @@ class PUBGCog:
                     if ((gun == ['M249']) or (gun == ['Ghillie Suit']) 
                     or (("M249" in gun) and ("Ghillie Suit" in gun))):
                         needs_reroll = True
+                    
                     while needs_reroll:
                         print("Rerolling...")
-                        random.shuffle(CRATEGUNS_ALL)
-                        gunsplit = numpy.array_split(CRATEGUNS_ALL, squadsize)
+                        
+                        random.shuffle(gunlist)
+                        gunsplit = numpy.array_split(gunlist, squadsize)
+                        
                         for g in range(squadsize):
                             gun = gunsplit[g].tolist()
                             if gun == ['Ghillie Suit'] or gun == ['M249']:
                                 needs_reroll = True
+                            
                             # Clean up this statement with some any() and all().
                             elif ((gun != ['Ghillie Suit']) or (("Ghillie Suit" in gun) and not gun == ['Ghillie Suit'])
                             or ("M249" in gun) and (not gun == ['M249']) or ("Ghillie Suit" in gun) and ("M249" in gun)):
                                 needs_reroll = False
-                return squadsize, gunsplit
-
-            else:
-                random.shuffle(CRATEGUNS_NO_M249)
-                gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
-                needs_reroll = False
-                for n in range(squadsize):
-                    gun = gunsplit[n].tolist()
-                    if gun == ['Ghillie Suit']:
-                        needs_reroll = True
                 
-                while needs_reroll:
-                    random.shuffle(CRATEGUNS_NO_M249)
-                    gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
-                    for g in range(squadsize):
-                        gun = gunsplit[g].tolist()
-                        if gun == ['Ghillie Suit']:
-                            needs_reroll = True
-                        elif gun != ['Ghillie Suit'] or (("Ghillie Suit" in gun) and not gun == ['Ghillie Suit']):
-                            needs_reroll = False
-                       
-                            
-
                 return squadsize, gunsplit
-    
-    @staticmethod
-    def check_m249(args, squad):
-        if "m249" in args:
-            if "m249" in squad:
-                squad.remove("m249")
-            return True, squad
-        else:
-            return False, squad
 
-    @staticmethod
-    def generate_crate_text(squadsize, squad, gunsplit):
-        # Generate discord bot output
-        output = "```"
-        for n in range(squadsize):
-            linebuffer = ""
-            linebuffer = (str(squad[n])[0:].capitalize(
-            ) + ": " + str(gunsplit[n])[1:-1].replace("'", "") + "\n")
-            output += linebuffer
-            n += 1
-        output += "```"
+        async def check_m249(args, squad):
+            if "m249" in args:
+                if "m249" in squad:
+                    squad.remove("m249")
+                return True, squad
+            else:
+                return False, squad
+
+        async def generate_crate_text(squadsize, squad, gunsplit):
+            # Generate discord bot output
+            output = "```"
+            for n in range(squadsize):
+                linebuffer = ""
+                linebuffer = (str(squad[n])[0:].capitalize(
+                ) + ": " + str(gunsplit[n])[1:-1].replace("'", "") + "\n")
+                output += linebuffer
+                n += 1
+            output += "```"
+            
+            return output
         
-        return output
-    
-    @staticmethod
-    def split_guns(squad, squadsize, m249):
-        pass
+        async def split_guns(squad, squadsize, m249):
+            pass            
+
+        squadsize, gunsplit = await roll_guns(args,squad)
+        output = await generate_crate_text(squadsize,squad,gunsplit)
+        
+        await ctx.send(output)
