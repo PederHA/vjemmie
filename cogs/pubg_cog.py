@@ -129,8 +129,8 @@ class PUBGCog:
 
     @staticmethod
     def roll_guns(args, squad):
-        CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14"]
-        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14"]
+        CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
+        CRATEGUNS_NO_M249 = ["M24", "AWM", "AUG", "Groza", "MK14", "Ghillie Suit"]
         #crateguns_snipers=["M24", "AWM", "MK14"]
         #crateguns_auto=["M249", "AUG", "Groza"]
         
@@ -150,16 +150,42 @@ class PUBGCog:
                 # TODO: M249-ONLY tag that disables rerolling.
                 for n in range(squadsize):
                     gun = gunsplit[n].tolist()
-                    while gun == ['M249']:
+                    print("Pre reroll: ", gun)
+                    while ((gun == ['M249']) or (gun == ['Ghillie Suit']) 
+                    or ("M249" in gun) and ("Ghillie Suit" in gun)):
                         random.shuffle(CRATEGUNS_ALL)
                         gunsplit = numpy.array_split(CRATEGUNS_ALL, squadsize)
                         for g in range(squadsize):
                             gun = gunsplit[g].tolist()
+                            print("Post reroll: ", gun)
+                print("-------")
+                print("Rolling finished")
+                print("-------")
+                print()
                 return squadsize, gunsplit
 
             else:
                 random.shuffle(CRATEGUNS_NO_M249)
                 gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
+                needs_reroll = False
+                for n in range(squadsize):
+                    gun = gunsplit[n].tolist()
+                    if gun == ['Ghillie Suit']:
+                        needs_reroll = True
+                
+                while needs_reroll:
+                    #needs_reroll = False
+                    random.shuffle(CRATEGUNS_NO_M249)
+                    gunsplit = numpy.array_split(CRATEGUNS_NO_M249, squadsize)
+                    for g in range(squadsize):
+                        gun = gunsplit[g].tolist()
+                        if gun == ['Ghillie Suit']:
+                            needs_reroll = True
+                        elif gun != ['Ghillie Suit'] or (("Ghillie Suit" in gun) and not gun == ['Ghillie Suit']):
+                            needs_reroll = False
+                       
+                            
+
                 return squadsize, gunsplit
     
     @staticmethod
@@ -184,3 +210,7 @@ class PUBGCog:
         output += "```"
         
         return output
+    
+    @staticmethod
+    def split_guns(squad, squadsize, m249):
+        pass
