@@ -27,15 +27,18 @@ class SoundboardCog:
         self.send_log = None             # will be assigned later
         self.sound_list = SoundboardCog._load_songs(self.folder)
         self.tag_dict = tag_dict
-        self.tag_dict = dict((k.lower(), v) for k, v in self.tag_dict.items())  # lower all keys
+        self.tag_dict = dict((k.lower(), v)
+                             for k, v in self.tag_dict.items())  # lower all keys
         for value in self.tag_dict:     # lower all values
-            self.tag_dict[value] = [name.lower() for name in self.tag_dict[value]]
+            self.tag_dict[value] = [name.lower()
+                                    for name in self.tag_dict[value]]
         for tag in self.tag_dict.keys():  # removing invalid filenames
-            self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
+            self.tag_dict[tag] = [
+                name for name in self.tag_dict[tag] if name in self.sound_list]
 
     #@commands.command(name="reloadsounds")
     async def reloadsounds(self):
-            self.sound_list = SoundboardCog._load_songs(self.folder)
+        self.sound_list = SoundboardCog._load_songs(self.folder)
 
     @staticmethod
     def _load_songs(folder):
@@ -46,7 +49,8 @@ class SoundboardCog:
             sound_list: The list with file names, all lowercase and without the .mp3 (list)
         This function raises an Exception, if the folder was empty
             """
-        sound_list = sorted([i[:-4].lower() for i in os.listdir(folder) if '.mp3' in i])
+        sound_list = sorted([i[:-4].lower()
+                             for i in os.listdir(folder) if '.mp3' in i])
         if not sound_list:
             raise Exception("No mp3 files in the given folder")
         return sound_list
@@ -54,7 +58,7 @@ class SoundboardCog:
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
         opus.load_opus('libopus')  # the opus library
-    
+
     @commands.command(name='play',
                       description=' tags/name || Plays the sound with the first name found in the arguments.'
                                   ' If no name is found, plays a random sound which has all tags found in the aguments.'
@@ -62,7 +66,6 @@ class SoundboardCog:
                                   ' If no tags are found or no sound with all the given tags exists'
                                   ' the sound is chosen randomly.'
                                   ' Requires you to be in a voice channel!')
-    
     async def play(self, ctx: commands.Context, *args):
         """This command plays the first sound name found in args, if one exists.
         If none exists, all args will be interpreted as tags. The command will create the cut, of all
@@ -88,7 +91,9 @@ class SoundboardCog:
         if len(_name_cut) > 1:
             for arg in args:  # if no name is found go through the tags
                 if arg.lower() in self.tag_dict.keys():
-                    _name_cut = [name for name in _name_cut if name in self.tag_dict[arg.lower()]]  # update the cut
+                    # update the cut
+                    _name_cut = [
+                        name for name in _name_cut if name in self.tag_dict[arg.lower()]]
         if len(_name_cut) == 0:  # play a random sound if the tags have no cut
             _name_cut = self.sound_list
             try:
@@ -96,9 +101,9 @@ class SoundboardCog:
             except discord.DiscordException:
                 pass
         name = _name_cut[randint(1, len(_name_cut)) - 1]
-        
-        await SoundboardCog.name_reaction(self,name,ctx.message)
-            
+
+        await SoundboardCog.name_reaction(self, name, ctx.message)
+
         try:
             vc = await voice_channel.connect()
         except discord.ClientException:
@@ -113,20 +118,18 @@ class SoundboardCog:
                       aliases=['halt'],
                       description='The bot will stop playing a sound and leave the current voice channel.'
                                   'Requires you to be in the same voice channel as the bot!')
-    
     async def stop(self, ctx: commands.Context):
         """This function stops the bot playing a sound and makes it leave the current voice channel.
          Args:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
         for connection in self.bot.voice_clients:
-            print (connection)
+            print(connection)
             if ctx.author.voice.channel == connection.channel:
                 return await connection.disconnect()
-    
+
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
-    
     async def soundlist(self, ctx: commands.Context):
         """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
         Args:
@@ -141,7 +144,6 @@ class SoundboardCog:
 
     @commands.command(name='taglist',
                       aliases=['tags'], description='Prints a list of all tags with soundnames on the soundboard.')
-    
     async def taglist(self, ctx: commands.Context):
         """This function prints a list of all the tags with their sounds on the Soundboard to the
          channel/user where it was requested.
@@ -172,7 +174,7 @@ class SoundboardCog:
             fut.result()
         except asyncio.CancelledError:
             pass
-    
+
     async def name_reaction(self, name, message):
         if name == "mw2nuke":
             await message.add_reaction('\U0001F4A3')
@@ -181,40 +183,40 @@ class SoundboardCog:
             await message.add_reaction(':PedoRad:237754662361628672')
         if name == "lairynig":
             await message.add_reaction(':Kebappa:237754301919789057')
+
     @commands.command(name="texttospeech",
-                      aliases=["tts","text-to-speech"])
+                      aliases=["tts", "text-to-speech"])
     async def texttospeech(self, ctx: commands.Context, *args):
-        valid_langs =  gTTS.LANGUAGES.keys()
+        valid_langs = gTTS.LANGUAGES.keys()
         valid_langs_entries = gTTS.LANGUAGES.items()
-        
-        if len(args)==3:
-            
+
+        if len(args) == 3:
+
             text, language, command_name = args
 
-            
             if language in valid_langs:
                 tts = gTTS(text=text, lang=language)
                 tts.save("sounds/" + command_name + ".mp3")
-                await ctx.send (f'Sound created: **{command_name}**')
+                await ctx.send(f'Sound created: **{command_name}**')
                 await self.reloadsounds()
             else:
-                await ctx.send ("Invalid language." 
-                                "Type `!tts help` for more information about available languages.")
+                await ctx.send("Invalid language."
+                               "Type `!tts help` for more information about available languages.")
         else:
-            if len(args)>=1:          
+            if len(args) >= 1:
                 if args[0] == "help":
-                    
+
                     output = '```Available languages:\n\n'
-                    
+
                     for lang in gTTS.LANGUAGES:
-                        output += f"{gTTS.LANGUAGES[lang]}: {lang}\n" 
-                    
-                    output+="```"
-                    
+                        output += f"{gTTS.LANGUAGES[lang]}: {lang}\n"
+
+                    output += "```"
+
                     await ctx.send(output)
             else:
                 await ctx.send("3 arguments required: "
-                            "`text` "
-                            "`language` "
-                            "`command_name`."
-                            "\nType `!tts help` for more information about available languages.")
+                               "`text` "
+                               "`language` "
+                               "`command_name`."
+                               "\nType `!tts help` for more information about available languages.")
