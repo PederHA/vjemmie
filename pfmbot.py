@@ -22,7 +22,7 @@ from events_module import EventsModule
 from ext_module import ExtModule
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
-sound_folder = 'sounds'
+sound_folder = "sounds"
 log_channel_id = 340921036201525248
 
 bot.add_cog(SoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
