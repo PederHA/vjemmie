@@ -23,6 +23,7 @@ class SerialSoundboardCog:
     Should probably make this a subclass of the SoundboardCog Class, 
     but for now I'm just trying trying to figure out how this should all work.
     """
+    dummy_value = ""
 
     def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}):
         """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
@@ -91,11 +92,15 @@ class SerialSoundboardCog:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
             args: Shall contain at least one filnename or multiple tags (all String)
             """
+        global dummy_value
+        print("Dummy value: ", dummy_value)
+        print("EDVIN HELLO")
         try:  # user must be connected to a voice channel
             #voice_channel = ctx.author.voice.channel
             test_voice_channel = self.bot.get_channel(340921036201525249)
             test_text_channel = self.bot.get_channel(340921036201525248)
-            print("SPLAY PRINT: ",self.serialvalue)
+            
+            #print("SPLAY PRINT: ",self.serialvalue)
             #await test_text_channel.send(str(dir(test_voice_channel.connect)))
         except AttributeError:
             #await ctx.send(content='To use this command you have to be connected to a voice channel!')
@@ -213,12 +218,14 @@ class SerialSoundboardCog:
             transport.write(b'hello world\n')
 
         def data_received(self, data):
+            global dummy_value
             self.data = data.decode()
             self.data = self.data[:-1]
             self.newvalue = self.data
             if self.data == "top right":
+                dummy_value = self.data
                 return self.newvalue
-                SerialSoundboardCog.serialvalue = "YEBOI"
+                #SerialSoundboardCog.serialvalue = "YEBOI"
             #print(data.decode())
             #self.transport.close()
 
