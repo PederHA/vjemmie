@@ -124,7 +124,6 @@ class SoundboardCog:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
         for connection in self.bot.voice_clients:
-            print(connection)
             if ctx.author.voice.channel == connection.channel:
                 return await connection.disconnect()
 
@@ -188,7 +187,6 @@ class SoundboardCog:
                       aliases=["tts", "text-to-speech"])
     async def texttospeech(self, ctx: commands.Context, *args):
         valid_langs = gTTS.LANGUAGES.keys()
-        valid_langs_entries = gTTS.LANGUAGES.items()
 
         if len(args) == 3:
 
