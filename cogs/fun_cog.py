@@ -4,8 +4,6 @@ from ext_module import ExtModule
 import random
 import traceback
 import asyncio
-from gtts import gTTS
-from cogs.sound_cog import SoundboardCog
 
 
 class FunCog:
