@@ -56,11 +56,6 @@ class PFMCog:
         pics = ["http://i.imgur.com/yFr0xvx.png"] 
         await ctx.send(random.choice(pics))
 
-    @commands.command(aliases=["tinypriestx", "deadgirlfriendx"])
-    async def bigshanex(self, ctx: commands.Context):
-        pics = ["https://cdn.discordapp.com/attachments/173224145297997824/343366782821728276/ff195d1f6191df12da16326bf97dc7d8.png"] 
-        await ctx.send(random.choice(pics))
-
     @commands.command()
     async def hugo(self, ctx: commands.Context):
         pics = ["https://cdn.discordapp.com/attachments/133332608296681472/301705840539467776/bv.png"] 
