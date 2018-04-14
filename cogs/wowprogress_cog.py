@@ -72,12 +72,12 @@ class WPCog:
 
             # TODO: Markdown formatting (bold).    
             await ctx.send(guild_wp_url + ("\n\n```markdown\n"
-                                            "Guild Name: {}\n"
-                                            "Progress: {}\n"
-                                            "World Rank: {}\n"
-                                            "Raids Per Week: {}\n"
+                                            f"Guild Name: {guild_name}\n"
+                                            f"Progress: {progress}\n"
+                                            f"World Rank: {world_rank}\n"
+                                            f"Raids Per Week: {raids_per_week}\n"
                                             "```\n"
-                                            "👳🏾Command executed in {} seconds").format(guild_name, progress, world_rank, raids_per_week, exetime))        
+                                            f"🤖Command executed in {exetime} seconds"))     
         except Exception:
             # Lazy solution, but this will be the correct error message to return in 99% of cases.
             await ctx.send("Guild is inactive.")
