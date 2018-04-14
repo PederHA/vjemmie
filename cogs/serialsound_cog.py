@@ -23,7 +23,7 @@ class SerialSoundboardCog:
     Should probably make this a subclass of the SoundboardCog Class, 
     but for now I'm just trying trying to figure out how this should all work.
     """
-    dummy_value = ""
+    dummy_value = "nothing"
 
     def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}):
         """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
@@ -93,8 +93,6 @@ class SerialSoundboardCog:
             args: Shall contain at least one filnename or multiple tags (all String)
             """
         global dummy_value
-        print("Dummy value: ", dummy_value)
-        print("EDVIN HELLO")
         try:  # user must be connected to a voice channel
             #voice_channel = ctx.author.voice.channel
             test_voice_channel = self.bot.get_channel(340921036201525249)
