@@ -180,8 +180,6 @@ class SoundboardCog:
         # Looks in spellbook for Pick Lock
         if (name == "zonodoor") or (name == "rad1"):
             await message.add_reaction(':PedoRad:237754662361628672')
-        if name == "lairynig":
-            await message.add_reaction(':Kebappa:237754301919789057')
 
     @commands.command(name="texttospeech",
                       aliases=["tts", "text-to-speech"])
