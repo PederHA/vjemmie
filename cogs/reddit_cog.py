@@ -54,7 +54,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
         
-        await RedditCog.random_post(self,ctx.message,subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message,subreddit,postlimit, sub_type,self.bot, args)
 
     @commands.command()
     async def ipfb(self, ctx: commands.Context, *args: str):
@@ -62,7 +62,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
 
     @commands.command()
     async def spt(self, ctx: commands.Context, *args: str):
@@ -70,7 +70,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
 
     @commands.command(help="Valid args: \"week, month, year\"",brief="Edgy memes",aliases=["dm", "2edgy4me"])
     async def dankmemes(self, ctx: commands.Context, *args: str):
@@ -78,7 +78,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
 
     @commands.command(aliases=["dfm"])
     async def deepfriedmemes(self, ctx: commands.Context, *args: str):
@@ -86,7 +86,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
 
     @commands.command()
     async def copypasta(self, ctx: commands.Context, *args: str):
@@ -94,7 +94,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
         
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
     
     @commands.command(aliases=["mmirl","mmi"])
     async def metal_me_irl(self, ctx: commands.Context, *args: str):
@@ -102,7 +102,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await RedditCog.random_post(self,ctx.message, subreddit,postlimit, sub_type,self.bot, args)
+        await self.random_post(ctx.message, subreddit,postlimit, sub_type,self.bot, args)
     
     @commands.command()
     async def reddit(self,ctx: commands.Context, *args):
@@ -111,7 +111,7 @@ class RedditCog:
             postlimit = self.ALL_POST_LIMIT
             sub_type = "img"
 
-            await RedditCog.random_post(self,ctx.message, subreddit, postlimit, sub_type,self.bot, args)
+            await self.random_post(ctx.message, subreddit, postlimit, sub_type,self.bot, args)
         else:
             await ctx.send("No subreddit provided. Usage: !reddit [subreddit]")
     
