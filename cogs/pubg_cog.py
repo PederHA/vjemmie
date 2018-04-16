@@ -49,7 +49,7 @@ class PUBGCog:
 
         VALID_MAPS = ["Erangel", "Miramar"]
         
-        # Only proceed if an argument is given.
+        # Only valid_args if an argument is given.
         if args != ():  
 
             pubgmap = args[0].lower()
@@ -103,6 +103,8 @@ class PUBGCog:
 
         # This whole clusterfuck needs a re-do
         # TODO: Move to function
+        valid_args = True
+        
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
             squad = ('simon', 'hugo', 'travis', 'steve')
         elif args[0] == "2":
@@ -112,26 +114,28 @@ class PUBGCog:
         elif args[0] == "4":
             squad = ("1", "2", "3", "4")
         elif ((len(args) > 4) and ("m249" not in args)) or ((len(args)>5) and ("m249" in args)):
-            squad = args
+            valid_args = False
             await ctx.send("How many god damn members do you think can fit in a team?")
-        elif (len(args) == 2 and "m249" in args):
+        elif (len(args) == 2 and "m249" in args) or (len(args) == 1 and "m249" not in args):
+            valid_args = False
             await ctx.send("Can't roll crate for 1 player.")
         else:
             squad = args
-
-        # Create a list out of the args tuple, so it can be modified.
-        squad = list(squad)
         
-        # Temporary
-        if EventsModule.contains_rad(squad):
-            await ctx.message.add_reaction(':8xscope:417396529452810241')
+        if valid_args:
+            # Create a list out of the args tuple, so it can be modified.
+            squad = list(squad)
+            
+            # Temporary
+            if EventsModule.contains_rad(squad):
+                await ctx.message.add_reaction(':8xscope:417396529452810241')
 
-        # Determines size of squad and distributes guns accordingly.
-        # Returns size of squad and gun list containing n=squadsize lists.
-        squadsize, gunsplit = await self.roll_guns(args,squad)
-        output = await self.generate_crate_text(squadsize,squad,gunsplit)
-        
-        await ctx.send(output)
+            # Determines size of squad and distributes guns accordingly.
+            # Returns size of squad and gun list containing n=squadsize lists.
+            squadsize, gunsplit = await self.roll_guns(args,squad)
+            output = await self.generate_crate_text(squadsize,squad,gunsplit)
+            
+            await ctx.send(output)
     
     async def roll_guns(self, args, squad):
         CRATEGUNS_ALL = ["M249", "M24", "AWM", "AUG", "Groza", "MK14", "Ghillie"]
