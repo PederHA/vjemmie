@@ -78,7 +78,8 @@ class FunCog:
                       aliases=['random'],
                       description='Random choice of two or more args')
     async def roll2(self, ctx: commands.Context, *args):
-        """Basically https://xkcd.com/221/.
+        """
+        Basically https://xkcd.com/221/.
         """
         async def roll_names(names):
             
@@ -102,7 +103,7 @@ class FunCog:
             else:
                 error_amount = "Only **1** argument was"
             
-            await ctx.send(("{} provided. Type **!random** followed by at least 2 words.").format(error_amount))
+            await ctx.send(f"{error_amount} provided. Type `!random` followed by at least 2 words.")
     
 
 
