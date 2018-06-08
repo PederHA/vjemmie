@@ -34,27 +34,20 @@ class PUBGCog:
         MIRAMAR_LOCATIONS_ALL = [
             "El Pozo",
             "Pecado",
-            "Monte Nuevo",
             "San Martín",
             "Hacienda del Patrón",
+            "Campo Militar",
+            "Los Leones",    
+            "Monte Nuevo",
             "El Azahar",
             "Cruz del Valle",
             "Tierra Bronca",
             "Torre Ahumada",
-            "Campo Militar",
             "Impala",
             "La Cobrería",
-            "Los Leones",
         ]
 
-        MIRAMAR_LOCATIONS_HOT = [
-            "El Pozo",
-            "Pecado",
-            "San Martín",
-            "Hacienda del Patrón",
-            "Campo Militar",
-            "Los Leones",
-        ]
+        MIRAMAR_LOCATIONS_HOT = MIRAMAR_LOCATIONS_ALL[:6]
 
         ERANGEL_LOCATIONS_ALL = [
             "South George",
@@ -74,17 +67,7 @@ class PUBGCog:
             "Zharki",
         ]
 
-        ERANGEL_LOCATIONS_HOT = [
-            "South George",
-            "North George",
-            "Yasnaya",
-            "School",
-            "Pochinki",
-            "Mylta",
-            "Mylta Power",
-            "Military Base",
-            "Novorepnoye",
-        ]
+        ERANGEL_LOCATIONS_HOT = ERANGEL_LOCATIONS_ALL[:9]
 
         VALID_MAPS = ["Erangel", "Miramar"]
 
