@@ -8,10 +8,11 @@ import re
 import secrets
 import traceback
 
-reddit = praw.Reddit(client_id=secrets.REDDIT_ID,
-                     client_secret=secrets.REDDIT_SECRET,
-                     user_agent=secrets.REDDIT_USER_AGENT,
-                     )
+reddit = praw.Reddit(
+    client_id=secrets.REDDIT_ID,
+    client_secret=secrets.REDDIT_SECRET,
+    user_agent=secrets.REDDIT_USER_AGENT,
+)
 
 
 class RedditCog:
@@ -32,7 +33,7 @@ class RedditCog:
 
     """
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
+    def __init__(self, bot: commands.Bot, log_channel_id: int = None):
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.send_log = None
@@ -54,7 +55,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command()
     async def ipfb(self, ctx: commands.Context, *args: str):
@@ -62,7 +63,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command()
     async def spt(self, ctx: commands.Context, *args: str):
@@ -70,15 +71,19 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
-    @commands.command(help="Valid args: \"week, month, year\"", brief="Edgy memes", aliases=["dm", "2edgy4me"])
+    @commands.command(
+        help='Valid args: "week, month, year"',
+        brief="Edgy memes",
+        aliases=["dm", "2edgy4me"],
+    )
     async def dankmemes(self, ctx: commands.Context, *args: str):
         subreddit = "dankmemes"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command(aliases=["dfm"])
     async def deepfriedmemes(self, ctx: commands.Context, *args: str):
@@ -86,7 +91,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command()
     async def copypasta(self, ctx: commands.Context, *args: str):
@@ -94,7 +99,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command(aliases=["mmirl", "mmi"])
     async def metal_me_irl(self, ctx: commands.Context, *args: str):
@@ -102,7 +107,7 @@ class RedditCog:
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
 
     @commands.command()
     async def reddit(self, ctx: commands.Context, *args):
@@ -111,11 +116,11 @@ class RedditCog:
             postlimit = self.ALL_POST_LIMIT
             sub_type = "img"
 
-            await self.random_post(ctx.message, subreddit, postlimit, sub_type, self.bot, args)
+            await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
         else:
             await ctx.send("No subreddit provided. Usage: !reddit [subreddit]")
 
-    async def random_post(self, ctx, subreddit, postlimit: int, sub_type, bot, args):
+    async def random_post(self, ctx, subreddit, postlimit: int, sub_type, args):
         """
         Calls 1 of 2 methods; ``img_subreddit()`` or ``txt_subreddit()``,
         and sends return value to the channel the command was invoked in.
@@ -129,7 +134,6 @@ class RedditCog:
             args: Tuple containing optional arguments for time filter and content filter (hot/top)
         """
 
-        self.bot = bot
         channel = self.bot.get_channel(ctx.channel.id)
 
         args = list(args)
@@ -154,9 +158,13 @@ class RedditCog:
 
         try:
             if sub_type == "txt":
-                post = await RedditCog.txt_subreddit(self, subreddit, postlimit, sorting_filter, time_filter)
+                post = await self.txt_subreddit(
+                    subreddit, postlimit, sorting_filter, time_filter
+                )
             elif sub_type == "img":
-                post = await RedditCog.img_subreddit(self, subreddit, postlimit, sorting_filter, time_filter)
+                post = await self.img_subreddit(
+                    subreddit, postlimit, sorting_filter, time_filter
+                )
             await channel.send(post)
         except:
             error = traceback.format_exc()
@@ -172,6 +180,7 @@ class RedditCog:
             sub = reddit.subreddit(subreddit)
             posts = sub.top(time_filter=time_filter, limit=postlimit)
             random_post_number = random.randint(1, postlimit)
+
         elif sorting_filter == "hot":
             sub = reddit.subreddit(subreddit)
             posts = sub.hot()
@@ -180,10 +189,12 @@ class RedditCog:
         try:
             for i, post in enumerate(posts):
                 if i == random_post_number:
-                    if post.selftext != '':
+                    if post.selftext != "":
                         return post.selftext
                     else:
-                        if (post.url[-4:] in self.image_extensions) or (post.url in self.image_hosts):
+                        if (post.url[-4:] in self.image_extensions) or (
+                            post.url in self.image_hosts
+                        ):
                             post = post.title + "\n" + post.url
                             return post
                         else:
@@ -193,11 +204,14 @@ class RedditCog:
             error = traceback.format_exc()
             await RedditCog.send_error(self, error)
 
-    async def img_subreddit(self, subreddit, postlimit: int, sorting_filter, time_filter):
+    async def img_subreddit(
+        self, subreddit, postlimit: int, sorting_filter, time_filter
+    ):
         if sorting_filter == "top":
             sub = reddit.subreddit(subreddit)
             posts = sub.top(time_filter=time_filter, limit=postlimit)
             random_post_number = random.randint(1, postlimit)
+
         elif sorting_filter == "hot":
             sub = reddit.subreddit(subreddit)
             posts = sub.hot()
