@@ -37,7 +37,7 @@ class PUBGCog:
             "San Martín",
             "Hacienda del Patrón",
             "Campo Militar",
-            "Los Leones",    
+            "Los Leones",
             "Monte Nuevo",
             "El Azahar",
             "Cruz del Valle",
@@ -180,19 +180,18 @@ class PUBGCog:
         GUNS = _CRATEGUNS_ALL[:4]
         EQUIPMENT = _CRATEGUNS_ALL[4:]
 
+        # Shuffle lists
+        random.shuffle(squad)
+        random.shuffle(GUNS)
+        random.shuffle(EQUIPMENT)
+
+        # Divide lists by len(squad)
         squadsize = len(squad)
 
-        if True:
-            random.shuffle(squad)
+        gunsplit = numpy.array_split(GUNS, squadsize)
+        armorsplit = numpy.array_split(EQUIPMENT, squadsize)
 
-            # Shuffle list of crateguns, then split into number of parts equal to squadsize
-            random.shuffle(GUNS)
-            random.shuffle(EQUIPMENT)
-            # using numpy split list into n=len(squad) parts.
-            gunsplit = numpy.array_split(GUNS, squadsize)
-            armorsplit = numpy.array_split(EQUIPMENT, squadsize)
-
-            # Reroll if one of the gunsplit indices is ["M249"] or ["Ghillie"]
+        # Reroll if one of the gunsplit indices is ["M249"] or ["Ghillie"]
 
         return gunsplit, armorsplit
 

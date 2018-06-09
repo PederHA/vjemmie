@@ -102,7 +102,7 @@ class SoundboardCog:
                 pass
         name = _name_cut[randint(1, len(_name_cut)) - 1]
 
-        await SoundboardCog.name_reaction(self, name, ctx.message)
+        await self.name_reaction(name, ctx.message)
 
         try:
             vc = await voice_channel.connect()

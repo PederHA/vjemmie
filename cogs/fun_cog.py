@@ -105,9 +105,3 @@ class FunCog:
             
             await ctx.send(f"{error_amount} provided. Type `!random` followed by at least 2 words.")
     
-
-
-
-
-        
-
