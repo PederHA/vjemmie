@@ -1,7 +1,10 @@
 import asyncio
 import serial_asyncio
 import os
+import random
 from random import randint
+import numpy
+import traceback
 
 import discord
 from discord import opus
@@ -14,24 +17,22 @@ from pprint import pprint
 
 class SerialSoundboardCog:
     """
-    Super early WIP for serial controlled soundboard functionality
-    ====
-
-
-    TODO:
-    ----
-    Should probably make this a subclass of the SoundboardCog Class, 
-    but for now I'm just trying trying to figure out how this should all work.
+    Serial controlled soundboard.
+    Lots of globals. Yes.
     """
-    dummy_value = "nothing"
+
+    bot_global = ""
+    sound_folder = ""
+    sound_list = ""
+    shitposting_channel = ""
+
 
     def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}):
-        """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
-        Args:
-            bot: The bot the Cog will be added to (commands.Bot)
-            folder: The path to the folder with the sound files (str)
-            log_channel_id: The id of the log_channel (int)
-            """
+        global bot_global
+        global sound_folder
+        global sound_list
+        global shitposting_channel
+
         self.folder = folder
         self.bot = bot
         self.log_channel_id = log_channel_id
@@ -44,15 +45,22 @@ class SerialSoundboardCog:
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [name for name in self.tag_dict[tag] if name in self.sound_list]
         self.serialvalue = "hey"
+        
+        bot_global = bot
+        sound_folder = folder
+        sound_list = self.sound_list
+        shitposting_channel = 348610981204590593
+    
 
     async def serialconnection(self):
-        loop = asyncio.get_event_loop()
-        serial_coro = serial_asyncio.create_serial_connection(loop, SerialSoundboardCog.Output, 'COM6', baudrate=9600)
-        self.serialvalue = loop.run_until_complete(asyncio.gather(serial_coro))
-        
-        loop.run_forever()
-        #self.serialvalue = serial_coro
-        loop.close()
+        try:
+            loop = asyncio.get_event_loop()
+            serial_coro = serial_asyncio.create_serial_connection(loop, self.Output, 'COM10', baudrate=9600)
+            loop.run_until_complete(asyncio.gather(serial_coro))
+            loop.run_forever()
+            loop.close()
+        except:
+            pass
 
     @staticmethod
     def _load_songs(folder):
@@ -70,10 +78,22 @@ class SerialSoundboardCog:
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
-        self.newvalue = await self.serialconnection()
+        await self.serialconnection()
 
-        #opus.load_opus('libopus')  # the opus library
+
+    @staticmethod
+    def print_stuff():
+        print("I am printing.")
     
+    @staticmethod
+    async def async_print(value):
+        global bot_global
+        global shitposting_channel
+
+        test_text_channel = bot_global.get_channel(shitposting_channel)
+        await test_text_channel.send(value)
+
+
     @commands.command(name='splay',
                       description=' tags/name || Plays the sound with the first name found in the arguments.'
                                   ' If no name is found, plays a random sound which has all tags found in the aguments.'
@@ -92,13 +112,12 @@ class SerialSoundboardCog:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
             args: Shall contain at least one filnename or multiple tags (all String)
             """
-        global dummy_value
+
         try:  # user must be connected to a voice channel
             #voice_channel = ctx.author.voice.channel
             test_voice_channel = self.bot.get_channel(340921036201525249)
             test_text_channel = self.bot.get_channel(340921036201525248)
             
-            #print("SPLAY PRINT: ",self.serialvalue)
             #await test_text_channel.send(str(dir(test_voice_channel.connect)))
         except AttributeError:
             #await ctx.send(content='To use this command you have to be connected to a voice channel!')
@@ -134,6 +153,34 @@ class SerialSoundboardCog:
                 after=lambda e: SerialSoundboardCog.disconnector(vc, self.bot))
         await self.send_log('Playing: ' + name)
 
+    @staticmethod
+    async def serial_play(args):
+        
+        global bot_global
+        global sound_folder
+        global sound_list
+        
+        guild = bot_global.get_guild(133332608296681472)
+        for voice_channel in guild.voice_channels:
+            for member in voice_channel.members:
+                if member.id == 103890994440728576:
+                    user_voice_channel = voice_channel.id                    
+
+        try: 
+            test_voice_channel = bot_global.get_channel(user_voice_channel)
+        except AttributeError:
+            raise discord.DiscordException
+
+       
+        try:
+            vc = await test_voice_channel.connect()
+        except discord.ClientException:
+            raise discord.DiscordException
+        
+        vc.play(discord.FFmpegPCMAudio(sound_folder + '/' + args + '.mp3'),
+                after=lambda e: SerialSoundboardCog.disconnector(vc, bot_global))
+
+    
     @commands.command(name='sstop',
                       aliases=['shalt'],
                       description='The bot will stop playing a sound and leave the current voice channel.'
@@ -209,6 +256,8 @@ class SerialSoundboardCog:
     class Output(asyncio.Protocol):
         def __init__(self):
             self.value = "yeson"
+            self.loop = asyncio.get_event_loop()
+            
         def connection_made(self, transport):
             self.transport = transport
             print('port opened', transport)
@@ -216,20 +265,113 @@ class SerialSoundboardCog:
             transport.write(b'hello world\n')
 
         def data_received(self, data):
-            global dummy_value
-            self.data = data.decode()
-            self.data = self.data[:-1]
-            self.newvalue = self.data
-            if self.data == "top right":
-                dummy_value = self.data
-                return self.newvalue
-                #SerialSoundboardCog.serialvalue = "YEBOI"
-            #print(data.decode())
-            #self.transport.close()
+            serial_data = data.decode()
+            serial_data = serial_data[:-1]
+            serial_data = serial_data
+            try:
+                if serial_data == "top left":
+                    try:
+                        self.loop.run_until_complete(SerialSoundboardCog.serial_play("mw2nexttime"))
+                        self.loop.stop()
+                    except:
+                        pass
+                elif serial_data == "top middle":
+                    try:
+                        self.loop.run_until_complete(SerialSoundboardCog.serial_play("noice"))
+                    except:
+                        pass
+                elif serial_data == "top right":
+                    try:
+                        self.loop.run_until_complete(SerialSoundboardCog.serial_play("rod"))
+                    except:
+                        pass
+                elif serial_data == "bottom left":
+                    try:
+                        crate_text = self.crate(("2"))
+                        self.loop.run_until_complete(SerialSoundboardCog.async_print(crate_text))
+                    except:
+                        pass
+                elif serial_data == "bottom middle":
+                    try:
+                        crate_text = self.crate(("3"))
+                        self.loop.run_until_complete(SerialSoundboardCog.async_print(crate_text))
+                    except:
+                        pass
+                elif serial_data == "bottom right":
+                    try:
+                        crate_text = self.crate(())
+                        self.loop.run_until_complete(SerialSoundboardCog.async_print(crate_text))
+                    except:
+                        pass
+            except:
+                error = traceback.format_exc()
+                print(error)               
 
         def connection_lost(self, exc):
             print('port closed')
             asyncio.get_event_loop().stop()
     
-    
+        def crate(self, args):
+            if (args == ()) or (len(args) == 1 and args[0] == "m249"):
+                squad = ("simon", "hugo", "travis", "steve")
+            elif args[0] == "2":
+                squad = ("1", "2")
+            elif args[0] == "3":
+                squad = ("1", "2", "3")
+            elif args[0] == "4":
+                squad = ("1", "2", "3", "4")
+            else:
+                squad = args
 
+            # Create a list from the *args tuple, to make it mutable.
+            squad = list(squad)
+
+            # Determines size of squad and distributes guns accordingly.
+            # Returns size of squad and gun list containing n=squadsize lists.
+            gunsplit, armorsplit = self.roll_guns(squad)
+            output = self.generate_crate_text(squad, gunsplit, armorsplit)
+
+            return output
+
+        def roll_guns(self, squad):
+            _CRATEGUNS_ALL = [
+                "AWM",
+                "AUG",
+                "Groza",
+                "MK14",
+                "Ghillie",
+                "Helm",
+                "Vest",
+                "M249",
+            ]
+            GUNS = _CRATEGUNS_ALL[:4]
+            EQUIPMENT = _CRATEGUNS_ALL[4:]
+
+            # Shuffle lists
+            random.shuffle(squad)
+            random.shuffle(GUNS)
+            random.shuffle(EQUIPMENT)
+
+            # Divide lists by len(squad)
+            squadsize = len(squad)
+
+            gunsplit = numpy.array_split(GUNS, squadsize)
+            armorsplit = numpy.array_split(EQUIPMENT, squadsize)
+
+            # Reroll if one of the gunsplit indices is ["M249"] or ["Ghillie"]
+
+            return gunsplit, armorsplit
+
+        def generate_crate_text(self, squad, gunsplit, armorsplit):
+            squadsize = len(squad)
+            # Generate discord bot output
+            output = "```"
+            for n in range(squadsize):
+                squad_member = str(squad[n])[0:].capitalize()
+                gun = str(gunsplit[n])[1:-1].replace("'", "")
+                equipment = str(armorsplit[n])[1:-1].replace("'", "")
+                text_line = ""
+                text_line = f"{squad_member}: " f"{gun} " f"{equipment}\n"
+                output += text_line
+            output += "```"
+            return output
