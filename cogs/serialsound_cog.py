@@ -89,27 +89,29 @@ class SerialSoundboardCog:
         global bot_global
         global sound_folder
         global sound_list
+        user_voice_channel = 0
 
         guild = bot_global.get_guild(133332608296681472)
         for voice_channel in guild.voice_channels:
             for member in voice_channel.members:
                 if member.id == 103890994440728576:
                     user_voice_channel = voice_channel.id
+        
+        if user_voice_channel != 0:
+            try:
+                test_voice_channel = bot_global.get_channel(user_voice_channel)
+            except AttributeError:
+                raise discord.DiscordException
 
-        try:
-            test_voice_channel = bot_global.get_channel(user_voice_channel)
-        except AttributeError:
-            raise discord.DiscordException
+            try:
+                vc = await test_voice_channel.connect()
+            except discord.ClientException:
+                raise discord.DiscordException
 
-        try:
-            vc = await test_voice_channel.connect()
-        except discord.ClientException:
-            raise discord.DiscordException
-
-        vc.play(
-            discord.FFmpegPCMAudio(sound_folder + "/" + args + ".mp3"),
-            after=lambda e: SoundboardCog.disconnector(vc, bot_global),
-        )
+            vc.play(
+                discord.FFmpegPCMAudio(sound_folder + "/" + args + ".mp3"),
+                after=lambda e: SoundboardCog.disconnector(vc, bot_global),
+            )
 
     class Output(asyncio.Protocol):
         def __init__(self):
