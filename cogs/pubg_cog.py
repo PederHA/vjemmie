@@ -189,9 +189,17 @@ class PUBGCog:
         squadsize = len(squad)
 
         gunsplit = numpy.array_split(GUNS, squadsize)
+        random.shuffle(gunsplit)
+        
         armorsplit = numpy.array_split(EQUIPMENT, squadsize)
 
-        # Reroll if one of the gunsplit indices is ["M249"] or ["Ghillie"]
+        # Reroll if one person gets 4 items in a 3-man squad.
+        if squadsize == 3:
+            for n in range(squadsize):
+                while len(gunsplit[n]) == 2 and len(armorsplit[n]) == 2:
+                    random.shuffle(gunsplit)
+                    random.shuffle(armorsplit)
+
 
         return gunsplit, armorsplit
 
