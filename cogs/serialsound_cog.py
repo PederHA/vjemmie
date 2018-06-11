@@ -128,29 +128,29 @@ class SerialSoundboardCog:
             serial_data = serial_data[:-1]
             serial_data = serial_data
             try:
-                if serial_data == "top left":
+                if serial_data == "tl":
                     try:
                         self.loop.run_until_complete(
-                            SerialSoundboardCog.serial_play("mw2nexttime")
+                            SerialSoundboardCog.serial_play("oyoy")
                         )
                         self.loop.stop()
                     except:
                         pass
-                elif serial_data == "top middle":
+                elif serial_data == "tm":
                     try:
                         self.loop.run_until_complete(
                             SerialSoundboardCog.serial_play("noice")
                         )
                     except:
                         pass
-                elif serial_data == "top right":
+                elif serial_data == "tr":
                     try:
                         self.loop.run_until_complete(
-                            SerialSoundboardCog.serial_play("rod")
+                            SerialSoundboardCog.serial_play("ezmoney")
                         )
                     except:
                         pass
-                elif serial_data == "bottom left":
+                elif serial_data == "bl":
                     try:
                         crate_text = self.crate(("2"))
                         self.loop.run_until_complete(
@@ -158,7 +158,7 @@ class SerialSoundboardCog:
                         )
                     except:
                         pass
-                elif serial_data == "bottom middle":
+                elif serial_data == "bm":
                     try:
                         crate_text = self.crate(("3"))
                         self.loop.run_until_complete(
@@ -166,7 +166,7 @@ class SerialSoundboardCog:
                         )
                     except:
                         pass
-                elif serial_data == "bottom right":
+                elif serial_data == "br":
                     try:
                         crate_text = self.crate(())
                         self.loop.run_until_complete(
