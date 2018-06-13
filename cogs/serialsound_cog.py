@@ -91,16 +91,23 @@ class SerialSoundboardCog:
         global bot_global
         global sound_folder
         global sound_list
-        user_voice_channel = 0
-
-        guild = bot_global.get_guild(133332608296681472)
-        for voice_channel in guild.voice_channels:
-            for member in voice_channel.members:
-                if member.id == 103890994440728576:
-                    user_voice_channel = voice_channel.id
-                    break
+        guilds = [
+                  133332608296681472, 
+                  340921036201525248
+                 ]
         
-        if user_voice_channel != 0:
+        for guild_id in guilds:         
+            guild = bot_global.get_guild(guild_id)
+            for voice_channel in guild.voice_channels:
+                for member in voice_channel.members:
+                    if member.id == 103890994440728576:
+                        user_voice_channel = voice_channel.id
+                        voice_connected = True
+                        break
+                else:
+                    voice_connected = False
+        
+        if voice_connected:
             try:
                 test_voice_channel = bot_global.get_channel(user_voice_channel)
             except AttributeError:
