@@ -59,21 +59,23 @@ class SerialSoundboardCog:
         sound_list = self.sound_list
         shitposting_channel = 348610981204590593
 
-    async def serialconnection(self):
+    async def serialconnection(self, com: str, from_command=False, origin_channel=0):
         try:
             loop = asyncio.get_event_loop()
             serial_coro = serial_asyncio.create_serial_connection(
-                loop, self.Output, "COM10", baudrate=9600
+                loop, self.Output, com, baudrate=9600
             )
-            loop.run_until_complete(asyncio.gather(serial_coro))
-            loop.run_forever()
-            loop.close()
-        except:
-            pass
+            asyncio.ensure_future(serial_coro)
+        except:       
+            if from_command:
+                message_channel = self.bot.get_channel(origin_channel)
+                print(origin_channel)  
+                await message_channel.send("Something went wrong.")
+
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
-        await self.serialconnection()
+        await self.serialconnection("COM3")
 
     @staticmethod
     async def async_print(value):
@@ -96,6 +98,7 @@ class SerialSoundboardCog:
             for member in voice_channel.members:
                 if member.id == 103890994440728576:
                     user_voice_channel = voice_channel.id
+                    break
         
         if user_voice_channel != 0:
             try:
@@ -112,6 +115,19 @@ class SerialSoundboardCog:
                 discord.FFmpegPCMAudio(sound_folder + "/" + args + ".mp3"),
                 after=lambda e: SoundboardCog.disconnector(vc, bot_global),
             )
+    
+    @commands.command(name="serial_connect")
+    async def serial_connect(self, ctx: commands.Context, *args):
+        com_port = args[0]
+        com_port = com_port.upper()
+        if com_port[:3] == "COM":
+            try:
+                com_num = int(com_port[3:])
+            except:
+                await ctx.send("COM port not specified correctly.")
+            else:
+                await self.serialconnection(com_port, True, ctx.channel.id)
+
 
     class Output(asyncio.Protocol):
         def __init__(self):
