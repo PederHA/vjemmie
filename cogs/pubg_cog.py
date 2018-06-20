@@ -4,6 +4,7 @@ from ext_module import ExtModule
 import random
 import numpy
 from events_module import EventsModule
+from bot_resources import GUILDS
 
 
 class PUBGCog:
@@ -16,8 +17,6 @@ class PUBGCog:
         self.send_log = None  # will be assigned
 
     async def on_ready(self):
-        """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
-        """
         self.send_log = ExtModule.get_send_log(self)
 
     @commands.command(
@@ -134,8 +133,6 @@ class PUBGCog:
         of squad members.
         """
 
-        # This whole clusterfuck needs a re-do
-        # TODO: Move to function
         valid_args = True
 
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
@@ -146,12 +143,15 @@ class PUBGCog:
             squad = ("1", "2", "3")
         elif args[0] == "4":
             squad = ("1", "2", "3", "4")
+        elif args[0] in ["channel", "c", "ch", "chanel"]:
+            squad = await self.get_squad_from_channel(ctx)
         elif len(args) == 1:
             await ctx.send("Can't roll crate for 1 player.")
+            valid_args = False
         else:
             squad = args
 
-        if valid_args:
+        if valid_args and squad != None:
             # Create a list from the *args tuple, to make it mutable.
             squad = list(squad)
 
@@ -165,6 +165,9 @@ class PUBGCog:
             output = await self.generate_crate_text(squad, gunsplit, armorsplit)
 
             await ctx.send(output)
+
+        if squad == None:
+            await ctx.send("Cannot find channel members to roll crate for.")
 
     async def roll_guns(self, squad):
         _CRATEGUNS_ALL = [
@@ -190,7 +193,7 @@ class PUBGCog:
 
         gunsplit = numpy.array_split(GUNS, squadsize)
         random.shuffle(gunsplit)
-        
+
         armorsplit = numpy.array_split(EQUIPMENT, squadsize)
 
         # Reroll if one person gets 4 items in a 3-man squad.
@@ -200,14 +203,21 @@ class PUBGCog:
                     random.shuffle(gunsplit)
                     random.shuffle(armorsplit)
 
-
         return gunsplit, armorsplit
 
     async def generate_crate_text(self, squad, gunsplit, armorsplit):
         squadsize = len(squad)
+        try:
+            try_int = int(squad[0])
+            is_int = True
+        except:
+            is_int = False
+
         # Generate discord bot output
         output = "```"
         for n in range(squadsize):
+            if is_int:
+                squad.sort()
             squad_member = str(squad[n])[0:].capitalize()
             gun = str(gunsplit[n])[1:-1].replace("'", "")
             equipment = str(armorsplit[n])[1:-1].replace("'", "")
@@ -220,4 +230,17 @@ class PUBGCog:
         async def split_guns(self, squad, squadsize, m249):
             pass
 
-        # End of crate command
+    async def get_squad_from_channel(self, ctx):
+        for guild_id in GUILDS:
+            guild = self.bot.get_guild(guild_id)
+            squad_list = []
+            for voice_channel in guild.voice_channels:
+                for member in voice_channel.members:
+                    if member.id == ctx.message.author.id:
+                        author_voice_channel = voice_channel
+                        for member in author_voice_channel.members:
+                            if member.nick != None:
+                                squad_list.append(member.nick)
+                            else:
+                                squad_list.append(member.name)
+                        return squad_list
