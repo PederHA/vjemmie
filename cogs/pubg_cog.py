@@ -4,7 +4,7 @@ from ext_module import ExtModule
 import random
 import numpy
 from events_module import EventsModule
-from bot_resources import GUILDS
+from bot_resources import GUILDS, NON_PUBG_PLAYERS
 
 
 class PUBGCog:
@@ -227,9 +227,6 @@ class PUBGCog:
         output += "```"
         return output
 
-        async def split_guns(self, squad, squadsize, m249):
-            pass
-
     async def get_squad_from_channel(self, ctx):
         for guild_id in GUILDS:
             guild = self.bot.get_guild(guild_id)
@@ -239,8 +236,9 @@ class PUBGCog:
                     if member.id == ctx.message.author.id:
                         author_voice_channel = voice_channel
                         for member in author_voice_channel.members:
-                            if member.nick != None:
-                                squad_list.append(member.nick)
-                            else:
-                                squad_list.append(member.name)
-                        return squad_list
+                            if member.id not in NON_PUBG_PLAYERS:
+                                if member.nick != None:
+                                    squad_list.append(member.nick)
+                                else:
+                                    squad_list.append(member.name)
+                            return squad_list
