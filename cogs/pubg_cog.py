@@ -14,7 +14,7 @@ class PUBGCog:
     def __init__(self, bot: commands.Bot, log_channel_id: int = None):
         self.bot = bot
         self.log_channel_id = log_channel_id
-        self.send_log = None  # will be assigned
+        self.send_log = None
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
@@ -133,7 +133,7 @@ class PUBGCog:
         of squad members.
         """
 
-        valid_args = True
+        enough_players = True
 
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
             squad = ("simon", "hugo", "travis", "steve")
@@ -145,17 +145,22 @@ class PUBGCog:
             squad = ("1", "2", "3", "4")
         elif args[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
+            if squad == []:
+                enough_players = False
+                bot_msg = "Cannot find channel members to roll crate for."
         elif len(args) == 1:
-            await ctx.send("Can't roll crate for 1 player.")
-            valid_args = False
+            bot_msg = "Can't roll crate for 1 player."
+            enough_players = False
         else:
             squad = args
 
-        if valid_args and squad != None:
+        if not enough_players:
+            await ctx.send(bot_msg)
+
+        else:
             # Create a list from the *args tuple, to make it mutable.
             squad = list(squad)
 
-            # Temporary
             if EventsModule.contains_rad(squad):
                 await ctx.message.add_reaction(":8xscope:417396529452810241")
 
@@ -165,9 +170,6 @@ class PUBGCog:
             output = await self.generate_crate_text(squad, gunsplit, armorsplit)
 
             await ctx.send(output)
-
-        if squad == None:
-            await ctx.send("Cannot find channel members to roll crate for.")
 
     async def roll_guns(self, squad):
         _CRATEGUNS_ALL = [
@@ -216,9 +218,16 @@ class PUBGCog:
         # Generate discord bot output
         output = "```"
         for n in range(squadsize):
-            if is_int:
-                squad.sort()
-            squad_member = str(squad[n])[0:].capitalize()
+            # If using int argument to invoke command.
+            if is_int: 
+                # Sort squad numerically
+                squad.sort() 
+            # Create string object from list index
+            squad_member = squad[n]
+            if squad_member.islower():
+                squad_member = squad_member.capitalize()
+            else:
+                squad[n] = squad_member
             gun = str(gunsplit[n])[1:-1].replace("'", "")
             equipment = str(armorsplit[n])[1:-1].replace("'", "")
             text_line = ""
@@ -228,17 +237,21 @@ class PUBGCog:
         return output
 
     async def get_squad_from_channel(self, ctx):
-        for guild_id in GUILDS:
-            guild = self.bot.get_guild(guild_id)
-            squad_list = []
-            for voice_channel in guild.voice_channels:
-                for member in voice_channel.members:
-                    if member.id == ctx.message.author.id:
-                        author_voice_channel = voice_channel
-                        for member in author_voice_channel.members:
-                            if member.id not in NON_PUBG_PLAYERS:
-                                if member.nick != None:
-                                    squad_list.append(member.nick)
-                                else:
-                                    squad_list.append(member.name)
-                            return squad_list
+        """
+        Instead of using a non-PUBG player blacklist
+        it is possible to use `member.game`. 
+        However, since not everyone has current game 
+        status enabled, this approach is unreliable.
+        """
+
+        squad_list = []
+        for member in ctx.message.author.voice.channel.members:
+            if not member.voice.self_deaf:
+                if member.id not in NON_PUBG_PLAYERS:
+                    if member.nick != None:
+                        squad_list.append(member.nick)
+                    else:
+                        squad_list.append(member.name)
+        return squad_list
+
+        
