@@ -13,6 +13,8 @@ from discord.ext import commands
 from ext_module import ExtModule
 
 from cogs.sound_cog import SoundboardCog
+from bot_resources import GUILDS
+
 
 
 class SerialSoundboardCog:
@@ -66,12 +68,11 @@ class SerialSoundboardCog:
                 loop, self.Output, com, baudrate=9600
             )
             asyncio.ensure_future(serial_coro)
-        except:       
+        except:
             if from_command:
                 message_channel = self.bot.get_channel(origin_channel)
-                print(origin_channel)  
+                print(origin_channel)
                 await message_channel.send("Something went wrong.")
-
 
     async def on_ready(self):
         self.send_log = ExtModule.get_send_log(self)
@@ -91,12 +92,9 @@ class SerialSoundboardCog:
         global bot_global
         global sound_folder
         global sound_list
-        guilds = [
-                  133332608296681472, 
-                  340921036201525248
-                 ]
-        
-        for guild_id in guilds:         
+        voice_connected = False
+
+        for guild_id in GUILDS:
             guild = bot_global.get_guild(guild_id)
             for voice_channel in guild.voice_channels:
                 for member in voice_channel.members:
@@ -104,17 +102,15 @@ class SerialSoundboardCog:
                         user_voice_channel = voice_channel.id
                         voice_connected = True
                         break
-                else:
-                    voice_connected = False
-        
+
         if voice_connected:
             try:
-                test_voice_channel = bot_global.get_channel(user_voice_channel)
+                voice_channel = bot_global.get_channel(user_voice_channel)
             except AttributeError:
                 raise discord.DiscordException
 
             try:
-                vc = await test_voice_channel.connect()
+                vc = await voice_channel.connect()
             except discord.ClientException:
                 raise discord.DiscordException
 
@@ -122,7 +118,7 @@ class SerialSoundboardCog:
                 discord.FFmpegPCMAudio(sound_folder + "/" + args + ".mp3"),
                 after=lambda e: SoundboardCog.disconnector(vc, bot_global),
             )
-    
+
     @commands.command(name="serial_connect")
     async def serial_connect(self, ctx: commands.Context, *args):
         com_port = args[0]
@@ -134,7 +130,6 @@ class SerialSoundboardCog:
                 await ctx.send("COM port not specified correctly.")
             else:
                 await self.serialconnection(com_port, True, ctx.channel.id)
-
 
     class Output(asyncio.Protocol):
         def __init__(self):
@@ -260,7 +255,15 @@ class SerialSoundboardCog:
             squadsize = len(squad)
             # Generate discord bot output
             output = "```"
+            try:
+                try_int = int(squad[0])
+                is_int = True
+            except:
+                is_int = False
+
             for n in range(squadsize):
+                if is_int:
+                    squad.sort()
                 squad_member = str(squad[n])[0:].capitalize()
                 gun = str(gunsplit[n])[1:-1].replace("'", "")
                 equipment = str(armorsplit[n])[1:-1].replace("'", "")
