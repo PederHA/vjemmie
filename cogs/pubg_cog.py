@@ -69,13 +69,13 @@ class PUBGCog:
         ERANGEL_LOCATIONS_HOT = ERANGEL_LOCATIONS_ALL[:9]
 
         VALID_MAPS = ["Erangel", "Miramar"]
+        invalid_args_msg = 'Invalid arguments. Syntax: "!drop <map> (hot)"'
 
         # Only valid_args if an argument is given.
         if args != ():
 
             pubgmap = args[0].lower()
             pubgmap = pubgmap[0:].capitalize()
-            # TODO: 'hot' check and its associated error message should only have to be done once.
 
             # Check if arg is a valid pubg map
             if pubgmap in VALID_MAPS:
@@ -85,9 +85,7 @@ class PUBGCog:
                         if args[1] == "hot":
                             droplocation = random.choice(MIRAMAR_LOCATIONS_HOT)
                         else:
-                            await ctx.send(
-                                'Invalid arguments. Syntax: "!drop map (hot)"'
-                            )
+                            await ctx.send(invalid_args_msg)
                     else:
                         droplocation = random.choice(MIRAMAR_LOCATIONS_ALL)
 
@@ -96,9 +94,7 @@ class PUBGCog:
                         if args[1] == "hot":
                             droplocation = random.choice(ERANGEL_LOCATIONS_HOT)
                         else:
-                            await ctx.send(
-                                'Invalid arguments. Syntax: "!drop map (hot)"'
-                            )
+                            await ctx.send(invalid_args_msg)
                     else:
                         droplocation = random.choice(ERANGEL_LOCATIONS_ALL)
 
@@ -110,11 +106,17 @@ class PUBGCog:
                     "\nMaps currently in the pool are: "
                     + (str(VALID_MAPS)[1:-1]).replace("'", "")
                 )
-        # TODO Don't hardcode this error message. Allow for maps to be added to the pool without having to come back to this message.
+
         else:
-            await ctx.send(
-                'No map specified. Type "!drop erangel (hot)" or "!drop miramar (hot)".'
-            )
+            message = "No map specified. Type "
+            for pubgmap in VALID_MAPS:
+                message+= f"`!drop {pubgmap} (hot)`"
+                message += " or "
+            else:
+                # Remove last "or" & add period. Pretty ugly.
+                message = message[:-4]
+                message += "."
+            await ctx.send(message)
 
     # Start of Crate command
     @commands.command(
@@ -134,6 +136,7 @@ class PUBGCog:
         """
 
         enough_players = True
+        bot_msg = ""
 
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
             squad = ("simon", "hugo", "travis", "steve")
@@ -146,13 +149,14 @@ class PUBGCog:
         elif args[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
             if squad == []:
-                enough_players = False
                 bot_msg = "Cannot find channel members to roll crate for."
         elif len(args) == 1:
             bot_msg = "Can't roll crate for 1 player."
-            enough_players = False
         else:
             squad = args
+        
+        if bot_msg != "":
+            enough_players = False
 
         if not enough_players:
             await ctx.send(bot_msg)
@@ -216,18 +220,21 @@ class PUBGCog:
             is_int = False
 
         # Generate discord bot output
-        output = "```"
+        output = "```"        
         for n in range(squadsize):
             # If using int argument to invoke command.
             if is_int: 
                 # Sort squad numerically
                 squad.sort() 
+            
             # Create string object from list index
-            squad_member = squad[n]
+            squad_member = squad[n] 
+            
             if squad_member.islower():
                 squad_member = squad_member.capitalize()
             else:
                 squad[n] = squad_member
+
             gun = str(gunsplit[n])[1:-1].replace("'", "")
             equipment = str(armorsplit[n])[1:-1].replace("'", "")
             text_line = ""
@@ -245,13 +252,16 @@ class PUBGCog:
         """
 
         squad_list = []
-        for member in ctx.message.author.voice.channel.members:
-            if not member.voice.self_deaf:
-                if member.id not in NON_PUBG_PLAYERS:
-                    if member.nick != None:
-                        squad_list.append(member.nick)
-                    else:
-                        squad_list.append(member.name)
+        try:
+            for member in ctx.message.author.voice.channel.members:
+                if not member.voice.self_deaf:
+                    if member.id not in NON_PUBG_PLAYERS:
+                        if member.nick != None:
+                            squad_list.append(member.nick)
+                        else:
+                            squad_list.append(member.name)
+        except:
+            pass
         return squad_list
 
         
