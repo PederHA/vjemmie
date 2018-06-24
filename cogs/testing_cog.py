@@ -18,7 +18,6 @@ class TestingCog:
     @commands.command(name="spotify")
     async def spotify_test(self, ctx: commands.Context, *args):
         if ctx.message.author.activity.__class__ == discord.activity.Spotify:
-            print(ctx.message.author.activity.album_cover_url)
             album_cover_url = ctx.message.author.activity.album_cover_url
             self.download_album_art(album_cover_url)
             await ctx.send("I am listening to: " 
