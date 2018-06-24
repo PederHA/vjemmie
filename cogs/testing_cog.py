@@ -27,7 +27,6 @@ class TestingCog:
 
     def download_album_art(self, url):
         r = requests.get(url, stream=True)
-        f = b''
         with open("temp/album_cover.jpeg", 'wb') as f:
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, f)   
