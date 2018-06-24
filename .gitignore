@@ -23,3 +23,6 @@ cogs/mac_pubg_cog.py
 cogs/serial_cog.py
 requirements.txt
 cogs/message_cog.py
+testfile.py
+bot_resources.py
+temp
