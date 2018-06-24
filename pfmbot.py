@@ -18,6 +18,8 @@ from cogs.user_cog import UserCog
 from cogs.wowprogress_cog import WPCog
 from cogs.youtube_cog import YTCog
 from cogs.serialsound_cog import SerialSoundboardCog
+from cogs.soundbomb_cog import SoundBombCog
+from cogs.testing_cog import TestingCog
 from events_module import EventsModule
 from ext_module import ExtModule
 
@@ -34,8 +36,9 @@ bot.add_cog(WPCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(PFMCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
-#bot.add_cog(SerialSoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
-
+bot.add_cog(SerialSoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
+bot.add_cog(SoundBombCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
+bot.add_cog(TestingCog(bot=bot, log_channel_id=log_channel_id))
 @bot.async_event
 def on_ready():
     print("Client logged in")

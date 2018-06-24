@@ -27,8 +27,8 @@ class AdminCog:
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
         """
         self.send_log = ExtModule.get_send_log(self)
-        game = discord.Game(name='Wakaliwood Productions')
-        await self.bot.change_presence(game=game)
+        activity = discord.Game(name='Wakaliwood Productions')
+        await self.bot.change_presence(activity=activity)
 
     async def on_guild_join(self, guild: discord.Guild):
         """Is called when the bot joins a new guild. Sends an informative message to the log_channel

@@ -246,9 +246,9 @@ class PUBGCog:
     async def get_squad_from_channel(self, ctx):
         """
         Instead of using a non-PUBG player blacklist
-        it is possible to use `member.game`. 
-        However, since not everyone has current game 
-        status enabled, this approach is unreliable.
+        it is possible to use `member.activity`. 
+        However, since not everyone has game activity
+        enabled, this would prove to be unreliable.
         """
 
         squad_list = []
