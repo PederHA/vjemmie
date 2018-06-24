@@ -6,7 +6,6 @@ import asyncio
 from random import randint
 from discord import opus
 from gtts import gTTS
-import re
 
 
 class SoundboardCog:
@@ -36,7 +35,6 @@ class SoundboardCog:
             self.tag_dict[tag] = [
                 name for name in self.tag_dict[tag] if name in self.sound_list]
 
-    #@commands.command(name="reloadsounds")
     async def reloadsounds(self):
         self.sound_list = SoundboardCog._load_songs(self.folder)
 
@@ -185,30 +183,31 @@ class SoundboardCog:
                       aliases=["tts", "text-to-speech"])
     async def texttospeech(self, ctx: commands.Context, *args):
         valid_langs = gTTS.LANGUAGES.keys()
-
         if len(args) == 3:
-
             text, language, command_name = args
-
             if language in valid_langs:
                 tts = gTTS(text=text, lang=language)
                 tts.save("sounds/" + command_name + ".mp3")
                 await ctx.send(f'Sound created: **{command_name}**')
+                
+                # Reload list of sound files
                 await self.reloadsounds()
+                
+                # Check if message author is connected to voice
+                if ctx.message.author.voice.channel != None:
+                    # Play sound file in author's voice channel
+                    cmd  = self.bot.get_command('play')
+                    await ctx.invoke(cmd, command_name)
             else:
                 await ctx.send("Invalid language."
                                "Type `!tts help` for more information about available languages.")
         else:
             if len(args) >= 1:
                 if args[0] == ("help") or ("lang"):
-
                     output = '```Available languages:\n\n'
-
                     for lang in gTTS.LANGUAGES:
                         output += f"{gTTS.LANGUAGES[lang]}: {lang}\n"
-
                     output += "```"
-
                     await ctx.send(output)
                 else:
                     await ctx.send(f"{args[0]} is not a valid argument")
