@@ -203,7 +203,7 @@ class SoundboardCog:
                                "Type `!tts help` for more information about available languages.")
         else:
             if len(args) >= 1:
-                if args[0] == ("help") or ("lang"):
+                if args[0] in ["help", "lang"]:
                     output = '```Available languages:\n\n'
                     for lang in gTTS.LANGUAGES:
                         output += f"{gTTS.LANGUAGES[lang]}: {lang}\n"
