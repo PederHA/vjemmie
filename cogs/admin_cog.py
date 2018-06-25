@@ -49,7 +49,6 @@ class AdminCog:
                       description='Prints a list of all the servers'
                                   ' this bot is a member of to the admin log_channel')
     @ExtModule.is_admin()
-    
     async def serverlist(self, ctx: commands.Context):
         """This function sends a list with all the servers this bot is a member of to the self.log_channel
         Args:
@@ -67,7 +66,6 @@ class AdminCog:
     @commands.command(name='leave',
                       description='(ID) || The bot will attempt to leave the server with the given ID.')
     @ExtModule.is_admin()
-    
     async def leave(self, ctx: commands.Context, guild_id: int=None):
         """This commands makes the bot leave the server with the given ID
         Args:
@@ -91,7 +89,6 @@ class AdminCog:
                       description='(textblock) || The bot will attempt to send the textblock to every server'
                                   ' he is a member of. Do NOT use for spamming purposes.')
     @ExtModule.is_admin()
-    
     async def sendtoall(self, ctx: commands.Context, *args):
         """This command tries to send a message to all guilds this bot is a member of.
         Args:
@@ -122,7 +119,6 @@ class AdminCog:
                       aliases=['admin-help', 'admin_help', 'helpadmin'],
                       description='Sends you the names, aliases and description of all commands per PM!')
     @ExtModule.is_admin()
-    
     async def adminhelp(self, ctx: commands.Context):
         """This function sends a list of all the admin commands + aliases + description to the requester
                 Args:
@@ -150,16 +146,16 @@ class AdminCog:
                       aliases=['change_game'],
                       description='Changes the activity in the activity feed of the bot')
     @ExtModule.is_admin()
-    
     async def change_activity(self, ctx: commands.Context, *args):
-        """This function changes sets the activity in the activity feed of the bot to the words delivered in args
-        Args:
-            *args: The words of the activity
-            ctx: The context of the command, which is mandatory in rewrite
-        """
-        activity = ''
+        activity_name = ""
+        first_word = True
+        
         for word in args:
-            activity = activity + ' ' + str(word)
-        game = discord.Game(name=activity)
-        await self.bot.change_presence(game=game)
-        await self.send_log('Changed activity to: ' + activity)
+            if not first_word:
+                activity_name += " "
+            activity_name += word
+            first_word = False
+        
+        activity = discord.Game(name=activity_name)
+        await self.bot.change_presence(activity=activity)
+        await self.send_log(f"Changed activity to: {activity_name}")
