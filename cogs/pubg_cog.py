@@ -109,12 +109,13 @@ class PUBGCog:
 
         else:
             message = "No map specified. Type "
+            first_map = True
             for pubgmap in VALID_MAPS:
+                if not first_map:
+                    message += " or "
                 message+= f"`!drop {pubgmap} (hot)`"
-                message += " or "
+                first_map = False
             else:
-                # Remove last "or" & add period. Pretty ugly.
-                message = message[:-4]
                 message += "."
             await ctx.send(message)
 
