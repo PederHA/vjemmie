@@ -132,7 +132,7 @@ class PFMCog:
                 "https://cdn.discordapp.com/attachments/133332608296681472/192817286183124993/huyairl.png",
                 "https://cdn.discordapp.com/attachments/133332608296681472/343209878619422720/Sadhuya.jpg",
                 "https://cdn.discordapp.com/attachments/133332608296681472/343210046198382594/ss2017-01-29at03.38.43.jpg",
-                "https://gyazo.com/5d35dd4085634a555c4e397ee86f4fee",
+                "https://i.gyazo.com/5d35dd4085634a555c4e397ee86f4fee.mp4",
                 "https://cdn.discordapp.com/attachments/133332608296681472/343337484861702145/image.jpg"] 
         await self.pfm_meme_embed(ctx, pics, args)
 
@@ -217,13 +217,14 @@ class PFMCog:
         """
         embed = discord.Embed()
         file_type = ""
-        check_filetype = True
-        correct_file_type = False
+        check_file_type = True
+        post_as_embed = True
 
         if args == ():     
             random_pic = random.choice(pics)
             if random_pic.startswith("https://www.youtube.com/"):
-                check_filetype = False
+                check_file_type = False
+                post_as_embed = False
             else:
                 embed.set_image(url=random_pic)
         
@@ -233,7 +234,7 @@ class PFMCog:
             for i in pics:
                 embed.add_field(name=f"Pic {str(iteration)}", value=i, inline=False)
                 iteration+=1
-                check_filetype = False
+                check_file_type = False
         else:
             try:
                 index_number = int(args[0])
@@ -245,17 +246,19 @@ class PFMCog:
                 random_pic = pics[index_number]
                 embed.set_image(url=random_pic)
         
-        if check_filetype:
-            _, file_type = embed.image.url.rsplit(".", 1)
-            file_type = file_type.lower()
-            if file_type in self.image_file_types:
-                correct_file_type = True
+        if check_file_type:
+            try:
+                _, file_type = embed.image.url.rsplit(".", 1)
+                file_type = file_type.lower()
+            except:
+                post_as_embed = False
             else:
-                correct_file_type = False 
+                if file_type not in self.image_file_types:
+                    post_as_embed = False
 
-        if not correct_file_type or not check_filetype:
+        if not post_as_embed:
             await ctx.send(random_pic)
-        elif check_filetype and correct_file_type:
+        else:
             await ctx.send(embed=embed)
 
     async def meme_embed_dict(self, ctx, pics, args):
@@ -265,7 +268,7 @@ class PFMCog:
         """
         embed = discord.Embed()
         file_type = ""
-        check_filetype = True
+        check_file_type = True
 
         if args == ():  
             random_pic = random.choice(list(pics.keys()))
@@ -277,7 +280,7 @@ class PFMCog:
             for v in pics.values():
                 embed.add_field(name=f"Pic {str(iteration)}", value=v, inline=False)
                 iteration+=1
-                check_filetype = False
+                check_file_type = False
         else:
             try:
                 index_number = int(args[0])
@@ -289,14 +292,14 @@ class PFMCog:
                 random_pic = list(pics.keys())[index_number]
                 embed.set_image(url=random_pic)
         
-        if check_filetype:
+        if check_file_type:
             try:
                 _, file_type = embed.image.url.rsplit(".", 1)
                 file_type = file_type.lower()
             except:
                 file_type = "text"
             
-        if file_type not in self.image_file_types and check_filetype:
+        if file_type not in self.image_file_types and check_file_type:
             await ctx.send(random_pic)
         else:
             await ctx.send(embed=embed)
