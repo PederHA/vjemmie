@@ -70,6 +70,8 @@ class PUBGCog:
 
         VALID_MAPS = ["Erangel", "Miramar"]
         invalid_args_msg = 'Invalid arguments. Syntax: "!drop <map> (hot)"'
+        invalid_map = False
+        no_map = False
 
         # Only valid_args if an argument is given.
         if args != ():
@@ -101,14 +103,17 @@ class PUBGCog:
                 await ctx.send("Drop location: " + droplocation)
 
             else:
-                await ctx.send(
-                    pubgmap[0:].capitalize() + " is not a valid map."
-                    "\nMaps currently in the pool are: "
-                    + (str(VALID_MAPS)[1:-1]).replace("'", "")
-                )
+                invalid_map = True
 
         else:
-            message = "No map specified. Type "
+            no_map = True
+        
+        if no_map or invalid_map:
+            if no_map:
+                message = "No map specified. Type "
+            if invalid_map:
+                message = "Invalid map specified. Type "
+            
             first_map = True
             for pubgmap in VALID_MAPS:
                 if not first_map:
@@ -118,6 +123,7 @@ class PUBGCog:
             else:
                 message += "."
             await ctx.send(message)
+
 
     # Start of Crate command
     @commands.command(
@@ -149,21 +155,23 @@ class PUBGCog:
             squad = ("1", "2", "3", "4")
         elif args[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
-            if squad == []:
-                bot_msg = "Cannot find channel members to roll crate for."
+            if len(squad)==0:    
+                bot_msg = "Must be connected to a voice channel to use <channel> argument."
+            elif len(squad)==1:
+                bot_msg = "Only 1 user is connected to the voice channel. Crate cannot be rolled."
         elif len(args) == 1:
             bot_msg = "Can't roll crate for 1 player."
         else:
             squad = args
         
         if bot_msg != "":
-            enough_players = False
+            enough_players = False # If any `bot_msg` is specified, command will exit.
 
         if not enough_players:
             await ctx.send(bot_msg)
 
         else:
-            # Create a list from the *args tuple, to make it mutable.
+            # Create a list from the `*args`` tuple to make it mutable.
             squad = list(squad)
 
             if EventsModule.contains_rad(squad):
@@ -214,33 +222,33 @@ class PUBGCog:
 
     async def generate_crate_text(self, squad, gunsplit, armorsplit):
         squadsize = len(squad)
+        
         try:
             try_int = int(squad[0])
-            is_int = True
         except:
             is_int = False
+        else:
+            is_int = True
 
         # Generate discord bot output
         output = "```"        
-        for n in range(squadsize):
-            # If using int argument to invoke command.
-            if is_int: 
-                # Sort squad numerically
-                squad.sort() 
-            
+        if is_int: 
+            # Sort squad numerically
+            squad.sort() 
+        
+        for n in range(squadsize):    
             # Create string object from list index
             squad_member = squad[n] 
             
             if squad_member.islower():
                 squad_member = squad_member.capitalize()
-            else:
-                squad[n] = squad_member
 
             gun = str(gunsplit[n])[1:-1].replace("'", "")
             equipment = str(armorsplit[n])[1:-1].replace("'", "")
             text_line = ""
             text_line = f"{squad_member}: " f"{gun} " f"{equipment}\n"
             output += text_line
+        
         output += "```"
         return output
 
@@ -261,8 +269,9 @@ class PUBGCog:
                             squad_list.append(member.nick)
                         else:
                             squad_list.append(member.name)
-        except:
-            pass
+        except AttributeError:
+            pass # This error will be handled by `crate` method.
+        
         return squad_list
 
         
