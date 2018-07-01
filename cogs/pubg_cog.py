@@ -147,12 +147,20 @@ class PUBGCog:
 
         if (args == ()) or (len(args) == 1 and args[0] == "m249"):
             squad = ("simon", "hugo", "travis", "steve")
-        elif args[0] == "2":
-            squad = ("1", "2")
-        elif args[0] == "3":
-            squad = ("1", "2", "3")
-        elif args[0] == "4":
-            squad = ("1", "2", "3", "4")
+        elif args[0].isdigit():
+            number_of_players = int(args[0])
+            if 1 > number_of_players <= 4:
+                int_list = list(range(number_of_players + 1))
+                squad = int_list[1:]
+                squad_list = []
+                for n in squad:
+                    n = str(n)
+                    squad_list.append(n)
+                squad = squad_list
+            elif number_of_players > 4:
+                bot_msg = "Can't roll crate for more than 4 players."
+            else:
+                bot_msg = "The specified range is too low. 2-4 players are needed."
         elif args[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
             if len(squad)==0:    
