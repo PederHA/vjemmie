@@ -144,9 +144,10 @@ class PUBGCog:
 
         enough_players = True
         bot_msg = ""
+        default_squad = ("simon", "hugo", "travis", "steve")
 
-        if (args == ()) or (len(args) == 1 and args[0] == "m249"):
-            squad = ("simon", "hugo", "travis", "steve")
+        if args == ():
+            squad = default_squad
         elif args[0].isdigit():
             number_of_players = int(args[0])
             if 1 > number_of_players <= 4:
