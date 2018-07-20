@@ -23,9 +23,10 @@ class TestingCog:
             embed = discord.Embed(title="Spotify", 
                                   description=f"{ctx.message.author.activity.artist} - {ctx.message.author.activity.title}", 
                                   type="link", 
-                                  url=f"https://open.spotify.com/track/{ctx.message.author.activity.track_id}", provider=(None, "Spotify"), 
+                                  url=f"https://open.spotify.com/track/{ctx.message.author.activity.track_id}", 
+                                  provider=(None, "Spotify") 
                                  )
-            await ctx.send(f"**{ctx.message.author.name}** currently playing: " 
+            await ctx.send(f"**{ctx.message.author.name}** is currently listening to: " 
                           f"{ctx.message.author.activity.artist} - "
                           f"{ctx.message.author.activity.title}",
                           embed=embed, file=discord.File("temp/album_cover.jpeg"))
@@ -40,14 +41,34 @@ class TestingCog:
 
     @commands.command(name="get_msg")
     async def get_msg(self, ctx: commands.Context, *args):
+        message = int(args[0])
         new_channel = self.bot.get_channel(340921036201525248)
-        new_msg = await new_channel.get_message(460456222144069632)
-
+        new_msg = await new_channel.get_message(message)
         for m in new_msg.embeds:
-            print(dir(m))
-            print(repr(m.image))
-            print(m.footer)
-            print(m.url)
-            m_dict = m.to_dict()
-            for k, v in m_dict.items():
-                print(k, v)
+            #print(dir(m))
+            pass
+
+        #print(dir(new_msg))
+        for embed in new_msg.embeds:
+            print(dir(embed))
+            print(dir(embed.footer))
+            print(embed.footer.text)
+
+    @commands.command(name="run_code")
+    async def run_code(self, ctx: commands.Context, args):
+        print(args)
+        print(repr(args))
+        eval(args)
+    
+    @commands.command(name="emojis")
+    async def emojis(self, ctx:commands.Context, *args):
+        if len(args)>1:
+            input_string = args[0]
+            input_string = input_string.upper()
+            
+            emoji = args[1]
+
+            input_string = input_string.replace(" ", f" {emoji} ")
+            output_string = f"{emoji} {input_string} {emoji}"
+
+            await ctx.send(output_string)
