@@ -53,12 +53,6 @@ class TestingCog:
             print(dir(embed))
             print(dir(embed.footer))
             print(embed.footer.text)
-
-    @commands.command(name="run_code")
-    async def run_code(self, ctx: commands.Context, args):
-        print(args)
-        print(repr(args))
-        eval(args)
     
     @commands.command(name="emojis")
     async def emojis(self, ctx:commands.Context, *args):
