@@ -50,77 +50,85 @@ class RedditCog:
         self.send_log = ExtModule.get_send_log(self)
 
     @commands.command()
-    async def emojipasta(self, ctx: commands.Context, *args: str):
+    async def emojipasta(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "emojipasta"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command()
-    async def ipfb(self, ctx: commands.Context, *args: str):
+    async def ipfb(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "indianpeoplefacebook"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command()
-    async def spt(self, ctx: commands.Context, *args: str):
+    async def spt(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "scottishpeopletwitter"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command(
         help='Valid args: "week, month, year"',
         brief="Edgy memes",
         aliases=["dm", "2edgy4me"],
     )
-    async def dankmemes(self, ctx: commands.Context, *args: str):
+    async def dankmemes(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "dankmemes"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command(aliases=["dfm"])
-    async def deepfriedmemes(self, ctx: commands.Context, *args: str):
+    async def deepfriedmemes(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "deepfriedmemes"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command()
-    async def copypasta(self, ctx: commands.Context, *args: str):
+    async def copypasta(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "copypasta"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command(aliases=["mmirl", "mmi"])
-    async def metal_me_irl(self, ctx: commands.Context, *args: str):
+    async def metal_me_irl(self, ctx: commands.Context, *args: str) -> None:
         subreddit = "metal_me_irl"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "img"
 
-        await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
+
+    @commands.command(aliases=["smooby"])
+    async def smoobypost(self, ctx: commands.Context, *args: str) -> None:
+        subreddit = "smoobypost"
+        postlimit = self.ALL_POST_LIMIT
+        sub_type = "img"
+
+        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command()
-    async def reddit(self, ctx: commands.Context, *args):
+    async def reddit(self, ctx: commands.Context, *args: str) -> None:
         if len(args) >= 1:
             subreddit = args[0]
             postlimit = self.ALL_POST_LIMIT
             sub_type = "img"
 
-            await self.random_post(ctx.message, subreddit, postlimit, sub_type, args)
+            await self.random_post(ctx, subreddit, postlimit, sub_type, args)
         else:
             await ctx.send("No subreddit provided. Usage: !reddit [subreddit]")
 
-    async def random_post(self, ctx, subreddit, postlimit: int, sub_type, args):
+    async def random_post(self, ctx: commands.Context, subreddit: str, postlimit: int, sub_type: str, args: tuple) -> None:
         """
         Calls 1 of 2 methods; ``img_subreddit()`` or ``txt_subreddit()``,
         and sends return value to the channel the command was invoked in.
@@ -133,10 +141,6 @@ class RedditCog:
             bot: The bot instance the cog is added to.
             args: Tuple containing optional arguments for time filter and content filter (hot/top)
         """
-
-        channel = self.bot.get_channel(ctx.channel.id)
-
-        args = list(args)
 
         if len(args) > 1:
             for sf in self.sorting_filters:
@@ -165,17 +169,18 @@ class RedditCog:
                 post = await self.img_subreddit(
                     subreddit, postlimit, sorting_filter, time_filter
                 )
-            await channel.send(post)
+            await ctx.send(post)
+        
         except:
             error = traceback.format_exc()
             await RedditCog.send_error(self, error)
 
             if "Must be 2000 or fewer in length." in error:
-                await channel.send("The reddit post exceeded Discord's character limit")
+                await ctx.send("The reddit post exceeded Discord's character limit")
             else:
-                await channel.send("An unexpected error occured.")
+                await ctx.send("An unexpected error occured.")
 
-    async def txt_subreddit(self, subreddit, postlimit: int, sorting_filter, time_filter):
+    async def txt_subreddit(self, subreddit: str, postlimit: int, sorting_filter: str, time_filter: str) -> str:
         if sorting_filter == "top":
             sub = reddit.subreddit(subreddit)
             posts = sub.top(time_filter=time_filter, limit=postlimit)
@@ -204,9 +209,7 @@ class RedditCog:
             error = traceback.format_exc()
             await RedditCog.send_error(self, error)
 
-    async def img_subreddit(
-        self, subreddit, postlimit: int, sorting_filter, time_filter
-    ):
+    async def img_subreddit(self, subreddit: str, postlimit: int, sorting_filter: str, time_filter: str) -> str:
         if sorting_filter == "top":
             sub = reddit.subreddit(subreddit)
             posts = sub.top(time_filter=time_filter, limit=postlimit)
@@ -227,6 +230,6 @@ class RedditCog:
             await RedditCog.send_error(self, error)
             return "An unexpected error occured."
 
-    async def send_error(self, error):
+    async def send_error(self, error: str) -> None:
         channel = self.bot.get_channel(340921036201525248)
-        await channel.send(str(error))
+        await channel.send(error)
