@@ -43,6 +43,7 @@ class RedditCog:
         self.image_hosts = ["imgur.com", "i.redd.it"]
         self.time_filters = ["all", "year", "month", "week", "day"]
         self.sorting_filters = ["hot", "top"]
+        self.top_all = (self.sorting_filters[1], self.time_filters[0])
 
     async def on_ready(self):
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
@@ -54,7 +55,9 @@ class RedditCog:
         subreddit = "emojipasta"
         postlimit = self.ALL_POST_LIMIT
         sub_type = "txt"
-
+        default_args = self.top_all
+        if args == ():
+            args = default_args
         await self.random_post(ctx, subreddit, postlimit, sub_type, args)
 
     @commands.command()
