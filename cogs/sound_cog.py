@@ -6,6 +6,7 @@ import asyncio
 from random import randint
 from discord import opus
 from gtts import gTTS
+import pickle
 
 
 class SoundboardCog:
@@ -49,6 +50,11 @@ class SoundboardCog:
             """
         sound_list = sorted([i[:-4].lower()
                              for i in os.listdir(folder) if '.mp3' in i])
+        
+        # Pickle sound_list 
+        with open("soundlist.pkl", "wb") as f:
+            pickle.dump(sound_list, f)
+
         if not sound_list:
             raise Exception("No mp3 files in the given folder")
         return sound_list
@@ -184,36 +190,37 @@ class SoundboardCog:
     async def texttospeech(self, ctx: commands.Context, *args):
         valid_langs = gTTS.LANGUAGES.keys()
         if len(args) == 3:
-            text, language, command_name = args
+            text, language, sound_name = args
             if language in valid_langs:
                 tts = gTTS(text=text, lang=language)
-                tts.save("sounds/" + command_name + ".mp3")
-                await ctx.send(f'Sound created: **{command_name}**')
+                tts.save("sounds/" + sound_name + ".mp3")
+                await ctx.send(f'Sound created: **{sound_name}**')
                 
                 # Reload list of sound files
                 await self.reloadsounds()
                 
-                # Check if message author is connected to voice
-                if ctx.message.author.voice.channel != None:
-                    # Play sound file in author's voice channel
-                    cmd  = self.bot.get_command('play')
-                    await ctx.invoke(cmd, command_name)
+                # Play created sound in author's voice channel
+                try:
+                    if ctx.message.author.voice.channel != None:
+                        cmd  = self.bot.get_command('play')
+                        await ctx.invoke(cmd, sound_name)
+                # Suppress error if voice channel does not exist
+                except:
+                    pass
             else:
                 await ctx.send("Invalid language."
                                "Type `!tts help` for more information about available languages.")
         else:
             if len(args) >= 1:
-                if args[0] in ["help", "lang"]:
+                if args[0] in ["languages", "lang", "options"]:
                     output = '```Available languages:\n\n'
                     for lang in gTTS.LANGUAGES:
                         output += f"{gTTS.LANGUAGES[lang]}: {lang}\n"
                     output += "```"
                     await ctx.send(output)
                 else:
-                    await ctx.send(f"{args[0]} is not a valid argument")
-            else:
-                await ctx.send("3 arguments required: "
-                               "`text` "
-                               "`language` "
-                               "`command_name`."
-                               "\nType `!tts lang` for more information about available languages.")
+                    await ctx.send("3 arguments required: "
+                                "`text` "
+                                "`language` "
+                                "`sound_name`."
+                                "\nType `!tts lang` for more information about available languages.")
