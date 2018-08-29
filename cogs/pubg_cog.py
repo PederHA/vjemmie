@@ -5,6 +5,7 @@ import random
 import numpy
 from events_module import EventsModule
 from bot_resources import GUILDS, NON_PUBG_PLAYERS
+from utils.ext_utils import is_int
 
 
 class PUBGCog:
@@ -150,11 +151,11 @@ class PUBGCog:
             squad = default_squad
         elif args[0].isdigit():
             number_of_players = int(args[0])
-            if 1 > number_of_players <= 4:
+            if 1 < number_of_players <= 4:
                 int_list = list(range(number_of_players + 1))
-                squad = int_list[1:]
+                int_list = int_list[1:]
                 squad_list = []
-                for n in squad:
+                for n in int_list:
                     n = str(n)
                     squad_list.append(n)
                 squad = squad_list
@@ -232,16 +233,11 @@ class PUBGCog:
     async def generate_crate_text(self, squad, gunsplit, armorsplit):
         squadsize = len(squad)
         
-        try:
-            try_int = int(squad[0])
-        except:
-            is_int = False
-        else:
-            is_int = True
+
 
         # Generate discord bot output
         output = "```"        
-        if is_int: 
+        if squad[0].isdigit(): 
             # Sort squad numerically
             squad.sort() 
         
