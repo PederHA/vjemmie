@@ -26,12 +26,19 @@ class DatabaseHandler:
     async def get_memes(self, topic: str, ctx: commands.Context, args: tuple):
         meme_index = None
         print_list = False
+        print_all_memes = False
 
-        self.c.execute(f'SELECT title, description, content, media_type FROM pfm_memes WHERE topic == "{topic}" ')
+        if topic == "list_memes":
+            topic_query = ""
+            topic_col = "topic, "
+            print_all_memes = True
+        else:
+            topic_col = ""
+            topic_query = f'WHERE topic == "{topic}" ' 
+        self.c.execute(f'SELECT {topic_col}title, description, content, media_type FROM pfm_memes {topic_query}')
         
         # Users can request specific images by adding an integer as argument to a meme command
         # Example: `!nezgroul 5` will always post the same, specific image
-        # TODO: Add overview of all images and their respective numbers
 
         if len(args) > 0:
             if is_int(args[0]):
@@ -67,9 +74,17 @@ class DatabaseHandler:
         
         else:
             output = "```"
+            meme_topic = ""
             n = 1
             for meme in memes:
-                title, description, content, media_type = meme
+                if print_all_memes:
+                    topic, title, description, content, media_type = meme
+                else:
+                    title, description, content, media_type = meme
+                if meme_topic != topic:
+                    output += f"\n{topic.capitalize()}\n-----\n"
+                    meme_topic = topic
+                    n = 1
                 output += f"{n}: {title}\n"
                 n += 1
             else:

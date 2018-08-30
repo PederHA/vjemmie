@@ -123,7 +123,6 @@ class PFMCog:
     async def doobies(self, ctx: commands.Context, *args):
         await self.db.get_memes("doobies", ctx, args)
 
-
     @commands.command()
     async def psio(self, ctx: commands.Context, *args):
         with open('memes/psio.txt', 'r', encoding='utf8') as meme:
@@ -133,3 +132,7 @@ class PFMCog:
     async def goodshit(self, ctx: commands.Context, *args):
         with open('memes/goodshit.txt', 'r', encoding='utf8') as meme:
             await ctx.send(meme.read())
+
+    @commands.command(name="memes", alias=["list_memes"])
+    async def list_memes(self, ctx: commands.Context, *args):
+        await self.db.get_memes("list_memes", ctx, ("list",))
