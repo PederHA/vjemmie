@@ -7,7 +7,7 @@ from random import randint
 from discord import opus
 from gtts import gTTS
 import pickle
-
+from pathlib import Path
 
 class SoundboardCog:
     """Cog for the soundboard feature"""
@@ -101,7 +101,7 @@ class SoundboardCog:
         if len(_name_cut) == 0:  # play a random sound if the tags have no cut
             _name_cut = self.sound_list
             try:
-                await ctx.send(content='No name with all the tags given. Playing a random sound.')
+                await ctx.send('No name with all the tags given. Playing a random sound.')
             except discord.DiscordException:
                 pass
         name = _name_cut[randint(1, len(_name_cut)) - 1]
@@ -193,13 +193,18 @@ class SoundboardCog:
             text, language, sound_name = args
             if language in valid_langs:
                 tts = gTTS(text=text, lang=language)
-                tts.save("sounds/" + sound_name + ".mp3")
-                await ctx.send(f'Sound created: **{sound_name}**')
+                file_path = f"sounds/{sound_name}.mp3"
+                # Check if a file with identical name already exists
+                if Path(file_path).exists():
+                    await ctx.send(f"A sound file with the name **{sound_name}** already exists. Choose another name!")
+                else:
+                    tts.save(file_path)
+                    await ctx.send(f'Sound created: **{sound_name}**')
                 
                 # Reload list of sound files
                 await self.reloadsounds()
                 
-                # Play created sound in author's voice channel
+                # Play created sound file in author's voice channel
                 try:
                     if ctx.message.author.voice.channel != None:
                         cmd  = self.bot.get_command('play')
