@@ -35,6 +35,7 @@ class DatabaseHandler:
         else:
             topic_col = ""
             topic_query = f'WHERE topic == "{topic}" ' 
+        # DB columns: topic, title, description, content, media_type 
         self.c.execute(f'SELECT {topic_col}title, description, content, media_type FROM pfm_memes {topic_query}')
         
         # Users can request specific images by adding an integer as argument to a meme command
@@ -82,7 +83,7 @@ class DatabaseHandler:
                 else:
                     title, description, content, media_type = meme
                 if meme_topic != topic:
-                    output += f"\n{topic.capitalize()}\n-----\n"
+                    output += f"\n!{topic}\n-----\n"
                     meme_topic = topic
                     n = 1
                 output += f"{n}: {title}\n"
