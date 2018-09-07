@@ -3,7 +3,7 @@ Some frying methods in this module are based on https://github.com/asdvek/DeepFr
 but modified to fit into a class structure, rather than being standalone functions.
 
 Original methods such as `add_text()` and `add_caption()` are added to provide
-a richer set of functionality than what DeepFryBot provides.
+a richer set of functionality than what DeepFryBot provides. 
 """
 
 from PIL import Image, ImageDraw, ImageFont
