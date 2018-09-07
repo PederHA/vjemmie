@@ -19,14 +19,7 @@ class FryingCog:
     @commands.command(name="deepfry")
     async def deepfry(self, ctx: commands.Context, image_url="", emoji="", text="", caption="") -> None:
         args = (image_url, emoji, text, caption)
-        print(args)
         if image_url != "list":
-            # User args: image_url, emoji, text, caption
-
-            # TODO: 
-            # * Parse args more carefully. 
-            # * Exception handling.
-            #image_url, emoji, text, caption = args
             try:
                 fryer = ImageFryer(image_url)
                 fryer.fry(emoji, text, caption)
