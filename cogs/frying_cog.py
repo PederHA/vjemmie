@@ -28,11 +28,10 @@ class FryingCog:
             else:
                 await ctx.send(file=discord.File("deepfryer/temp/fried_img.jpg"))
         elif args[0] == "list":
-            if args[1] in ["emojis", "emoji"]:
-                await ctx.send(content=ImageFryer.get_files_in_dir("emojis"))
-            elif args[1] in ["caption", "captions"]:
-                await ctx.send(content=ImageFryer.get_files_in_dir("captions"))
-            elif args[1] in ["all", "everything", ""]:
-                await ctx.send(content=ImageFryer.get_files_in_dir("all"))
+            returned = ImageFryer.get_files_in_dir(args[1])
+            if returned is not None:
+                await ctx.send(returned)
+            else:
+                await ctx.send("**List syntax:** `!deepfry list <emojis/captions/all>`")        
         else:
-            await ctx.send("**Syntax:** <URL to image \***required**> <emoji -_optional_> <text _optional_> <caption graphic _optional_>")
+            await ctx.send("**Syntax:** `!deepfry <URL to image \***required**> <emoji -_optional_> <text _optional_> <caption graphic _optional_>`")
