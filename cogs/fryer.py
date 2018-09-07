@@ -13,6 +13,7 @@ from random import randint
 import requests
 import shutil
 from os import listdir
+from typing import Iterable
 
 
 class ImageFryer:
@@ -37,17 +38,52 @@ class ImageFryer:
         return img
     
     @staticmethod
-    def get_files_in_dir(item_type: str) -> str:
-        item_types = ["emojis", "captions"]
-        if item_type in item_types:
-            item_list = []
-            for item in listdir(f"deepfryer/images/{item_type}"):
-                item, _ = item.split(".")
-                item_list.append(item)
-            return ImageFryer.format_output(item_list, item_type)
+    def get_files_in_dir(item_category: str) -> str:
+        """
+        This method was repurposed to work with an "all" filter, which lists
+        both emojis and captions. To make this happen using the existing
+        functionality of the method, a sort of hacky band-aid fix was put
+        in place. It looks ugly, but it works for now.
+
+        At the moment, this method suffers from god-awful variable names, 
+        which might make its logic confusing at first glance.
+        """
+
+        item_categories = ["emojis", "captions", "all"]
+        if item_category in item_categories:
+            items = []
+            output_buffer = ""
+            
+            if item_category == "all":
+                # Take first 2 indices of `item_categories`
+                items = item_categories[:2]
+            else:
+                # Make a 1 index long list, so it doesn't break the for-loop below
+                items.append(item_category)
+
+            # Is only iterated through once if not called with the "all" argument  
+            for item_type in items:
+                item_list = []
+                for item in listdir(f"deepfryer/images/{item_type}"):
+                    item, _ = item.split(".")
+                    item_list.append(item)
+                if item_category != "all":
+                    return ImageFryer.format_output(item_list, item_type)
+                else:
+                    output_buffer += ImageFryer.format_output(item_list, item_type)
+            # Is only reached if for-loop finishes iteration without hitting the return statement above
+            else:
+                return output_buffer
+                    
     
     @staticmethod
-    def format_output(list_of_items: list, item_type: str) -> str:
+    def format_output(list_of_items: Iterable, item_type: str) -> str:
+        """
+        Formats an iterable, and creates a markdown multi-line code block
+        in which every item in the iterable is placed on separate lines.
+
+        Returns a string containing said multi-line code block.
+        """
         output = "```"
         output += f"Available {item_type}:\n\n"
         for item in list_of_items:
@@ -72,13 +108,12 @@ class ImageFryer:
         tmp = img.copy()
         default_emoji = 'smilelaugh'
         try:
-            emoji = Image.open(f'deepfryer/images/emojis/{emoji_name}.png')
+            emoji = Image.open(f'deepfryer/images/emojis/{emoji_name.lower()}.png')
         except:
             emoji = Image.open(f"deepfryer/images/emojis/{default_emoji}.png")
         for i in range(1, randint(max-2,max)):
             # add laughing emoji to random coordinates
             coord = np.random.random(2)*np.array([img.width, img.height])
-            # print("\tLaughing emoji added to ({0}, {1})".format(int(coord[0]), int(coord[1])))
             resized = emoji.copy()
             size = int((img.width/10)*(np.random.random(1)[0]+1))
             resized.thumbnail((size, size), Image.ANTIALIAS)
@@ -131,7 +166,7 @@ class ImageFryer:
     def fry(self, emoji, text, caption) -> None:
         # TODO: Each method should modify the instance variable `self.img`, 
         # rather than returning a new `Image.Image` object each time
-        interpret_as_none = ["-", " ", "None", "none"]
+        interpret_as_none = ["-", " ", "", "None", "none"]
         img = self.img
         if emoji not in interpret_as_none:
             img = self.add_emojis(img, emoji, 5)
@@ -143,7 +178,8 @@ class ImageFryer:
             img = self.add_text(img, text)
 
         jpg_copy = img.copy().convert("RGB")
-
+        # For now, the image is just saved to disk, and not returned
+        # as a file-like object to the !deepfry method.
         jpg_copy.save("deepfryer/temp/fried_img.jpg", "JPEG")
 
 
