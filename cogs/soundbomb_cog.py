@@ -24,7 +24,7 @@ class SoundBombCog():
         for tag in self.tag_dict.keys():  # removing invalid filenames
             self.tag_dict[tag] = [
                 name for name in self.tag_dict[tag] if name in self.sound_list]
-
+    
     @staticmethod
     def _load_songs(folder):
         """This function returns a list with all the mp3-file names in the given folder
