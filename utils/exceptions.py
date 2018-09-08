@@ -1,0 +1,2 @@
+class WordExceededLimit(Exception):
+    pass

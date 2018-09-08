@@ -3,7 +3,9 @@ Some frying methods in this module are based on https://github.com/asdvek/DeepFr
 but modified to fit into a class structure, rather than being standalone functions.
 
 Original methods such as `add_text()` and `add_caption()` are added to provide
-a richer set of functionality than what DeepFryBot provides. 
+a richer set of functionality than what DeepFryBot provides.
+
+# TODO: Make methods async
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -14,6 +16,8 @@ import requests
 import shutil
 from os import listdir
 from typing import Iterable
+import textwrap
+from utils.exceptions import WordExceededLimit
 
 
 class ImageFryer:
@@ -106,7 +110,7 @@ class ImageFryer:
     def add_emojis(self, img: Image.Image, emoji_name:str, max: int):
         # create a temporary copy if img
         tmp = img.copy()
-        default_emoji = 'smilelaugh'
+        default_emoji = 'b'
         try:
             emoji = Image.open(f'deepfryer/images/emojis/{emoji_name.lower()}.png')
         except:
@@ -120,7 +124,7 @@ class ImageFryer:
             tmp.paste(resized, (int(coord[0]), int(coord[1])), resized)
         return tmp
 
-    def add_caption(self, img, caption_name):
+    def add_caption(self, img: Image.Image, caption_name: str) -> Image.Image:
         tmp = img.copy()
         try:
             caption = Image.open(f'deepfryer/images/captions/{caption_name}.png')
@@ -146,24 +150,39 @@ class ImageFryer:
         on top of a white background. 
         A bit hacky in its implementation, but works alright for now.
         """
+
         tmp = img.copy()        
         tmp = tmp.convert("RGBA")
 
         txt = Image.new("RGBA", tmp.size, (255,255,255,0))
-        fnt = ImageFont.truetype(".deepfryer/fonts/arial.ttf", 50)
+        fnt = ImageFont.truetype(".deepfryer/fonts/LiberationSans-Regular.ttf", tmp.height//8)         
         d = ImageDraw.Draw(txt)
-        d.text((10,60), text_string, font=fnt, fill=(0,0,0,255))
         
+        # Each character is aproximately 26 pixels
+        try:
+            lines = textwrap.wrap(text_string, width=(int(tmp.width)//26.5))
+        except:
+            raise WordExceededLimit
+        y_text = 0
+        # Used to determine height of text background
+        line_count = 0
+        for  line in lines:
+            if line_count < 2:
+                width, height = fnt.getsize(line)
+                d.text((0,y_text), line, font=fnt, fill=(0,0,0,255), align="center")
+                y_text += height
+                line_count += 1
+            
         white_bg = Image.new("RGBA", tmp.size, (255,255,255,0))
         image_caption_box = ImageDraw.Draw(white_bg)
-        coords = ((tmp.width, 0),(0, tmp.height//6.4))
+        coords = ((tmp.width, 0),(0, (tmp.height//6.4)*line_count))
         image_caption_box.rectangle(coords, fill="white", outline="white")
 
         text_box = Image.alpha_composite(white_bg, txt)
         out = Image.alpha_composite(tmp, text_box)
         return out
 
-    def fry(self, emoji, text, caption) -> None:
+    def fry(self, emoji: str, text: str, caption: str) -> None:
         # TODO: Each method should modify the instance variable `self.img`, 
         # rather than returning a new `Image.Image` object each time
         interpret_as_none = ["-", " ", "", "None", "none"]

@@ -4,6 +4,8 @@ from ext_module import ExtModule
 import requests
 import shutil
 from cogs.fryer import ImageFryer
+from utils.exceptions import WordExceededLimit
+import traceback
 
 class FryingCog:
     """Cog for deep frying images
@@ -23,6 +25,9 @@ class FryingCog:
             try:
                 fryer = ImageFryer(image_url)
                 fryer.fry(emoji, text, caption)
+            except WordExceededLimit:
+                # Catch exception that is raised when textwrap tries to wrap a word that exceeds its limit
+                await ctx.send("A single word in a given string cannot exceed 26 characters.")
             except:
                 await ctx.send("Something went wrong when trying to fry the source provided. Make sure the URL is a direct link to an image.")
             else:
