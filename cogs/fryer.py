@@ -6,6 +6,7 @@ Original methods such as `add_text()` and `add_caption()` are added to provide
 a richer set of functionality than what DeepFryBot provides.
 
 # TODO: Make methods async
+#       Remove image_url from __init__. Should be passed into `fry()` instead.
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -17,7 +18,7 @@ import shutil
 from os import listdir
 from typing import Iterable
 import textwrap
-from utils.exceptions import WordExceededLimit
+from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
 
 
 class ImageFryer:
@@ -28,14 +29,20 @@ class ImageFryer:
 
     def download_img(self, url: str) -> None:
         r = requests.get(url, stream=True)
-        file_type = url.rsplit(".")[-1].lower()
+        try:
+            file_type = url.rsplit(".")[-1].lower()
+        except:
+            raise InvalidURL
         img_file_types = ["jpg", "jpeg", "png", "gif"]
         if file_type in img_file_types:
             path = f"temp/image_to_fry.{file_type}"
             with open(path, 'wb+') as f:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
-        return path
+            return path
+        else:
+            raise NonImgURL
+        
 
     def get_img(self, path: str) -> Image.Image:
         img =  Image.open(path)
@@ -125,6 +132,10 @@ class ImageFryer:
         return tmp
 
     def add_caption(self, img: Image.Image, caption_name: str) -> Image.Image:
+        """
+        Adds a user-defined graphic on the bottom of the base image,
+        that is stretched to fit the width of the image
+        """
         tmp = img.copy()
         try:
             caption = Image.open(f'deepfryer/images/captions/{caption_name}.png')
@@ -148,7 +159,11 @@ class ImageFryer:
         """
         Adds text to an image based on a user-defined string. Text is placed
         on top of a white background. 
-        A bit hacky in its implementation, but works alright for now.
+
+        Known issues:
+        *   Currently adds the text ON TOP of the base image, rather 
+            than adding it above the image, thereby causing the text 
+            and its background to obscure parts of the image.
         """
 
         tmp = img.copy()        
@@ -160,12 +175,13 @@ class ImageFryer:
         
         # Each character is aproximately 26 pixels
         try:
-            lines = textwrap.wrap(text_string, width=(int(tmp.width)//26.5))
+            lines = textwrap.wrap(text_string, width=(tmp.width//26.5))
         except:
             raise WordExceededLimit
-        y_text = 0
-        # Used to determine height of text background
+        # Line count is used to determine height of text background
+        # as well as limiting the amount of text that is displayed
         line_count = 0
+        y_text = 0
         for  line in lines:
             if line_count < 2:
                 width, height = fnt.getsize(line)
@@ -183,7 +199,7 @@ class ImageFryer:
         return out
 
     def fry(self, emoji: str, text: str, caption: str) -> None:
-        # TODO: Each method should modify the instance variable `self.img`, 
+        # (Maybe?) TODO: Each method should modify the instance variable `self.img`, 
         # rather than returning a new `Image.Image` object each time
         interpret_as_none = ["-", " ", "", "None", "none"]
         img = self.img

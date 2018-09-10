@@ -4,7 +4,8 @@ from ext_module import ExtModule
 import requests
 import shutil
 from cogs.fryer import ImageFryer
-from utils.exceptions import WordExceededLimit
+from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
+from requests.exceptions import ConnectionError, MissingSchema
 import traceback
 
 class FryingCog:
@@ -25,11 +26,19 @@ class FryingCog:
             try:
                 fryer = ImageFryer(image_url)
                 fryer.fry(emoji, text, caption)
+            except InvalidURL:
+                await ctx.send("Could not parse URL.")
+            except NonImgURL:
+                await ctx.send("The provided URL has to be a direct link to an image.")
             except WordExceededLimit:
                 # Catch exception that is raised when textwrap tries to wrap a word that exceeds its limit
                 await ctx.send("A single word in a given string cannot exceed 26 characters.")
+            except ConnectionError:
+                await ctx.send("Could not connect to the provided URL.")
+            except MissingSchema:
+                await ctx.send("The URL must include a schema (http/https).")
             except:
-                await ctx.send("Something went wrong when trying to fry the source provided. Make sure the URL is a direct link to an image.")
+                await ctx.send("Something went wrong when trying to fry the image provided.")
             else:
                 await ctx.send(file=discord.File("deepfryer/temp/fried_img.jpg"))
         elif args[0] == "list":
