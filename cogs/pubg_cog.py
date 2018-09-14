@@ -69,7 +69,7 @@ class PUBGCog:
 
         ERANGEL_LOCATIONS_HOT = ERANGEL_LOCATIONS_ALL[:9]
 
-        VALID_MAPS = ["Erangel", "Miramar"]
+        VALID_MAPS = ["Erangel", "Miramar", "Sanhok [NYI!]"]
         invalid_args_msg = 'Invalid arguments. Syntax: "!drop <map> (hot)"'
         invalid_map = False
         no_map = False
@@ -115,12 +115,12 @@ class PUBGCog:
             if invalid_map:
                 message = "Invalid map specified. Type "
             
-            first_map = True
+            n = 0
             for pubgmap in VALID_MAPS:
-                if not first_map:
-                    message += " or "
+                n += 1
                 message+= f"`!drop {pubgmap} (hot)`"
-                first_map = False
+                if n < len(VALID_MAPS):
+                    message += " or "
             else:
                 message += "."
             await ctx.send(message)
