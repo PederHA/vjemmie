@@ -83,12 +83,11 @@ class FunCog:
     @commands.command(name='randomchoice',
                       aliases=['random'],
                       description='Random choice of two or more args')
-    async def roll2(self, ctx: commands.Context, *args):
+    async def roll2(self, ctx: commands.Context, *args) -> None:
         """
         Basically https://xkcd.com/221/.
         """
-        async def roll_names(names):
-            
+        async def roll_names(names: tuple) -> str:           
             # Implemented due to complaints about rigged RNG :thinking:
             for i in range(random.randint(2,5)):
                 random_name = random.choice(names)
@@ -119,35 +118,50 @@ class FunCog:
     @commands.command(name="fpl")
     async def fantasy_pl(self, ctx: commands.Context, *args) -> None:
         """
+        Fantasy Premier League commands. 
+        -----
+        Only functionality implemented so far is printing the best or
+        worst player from the current game week.
+        """
+        
+        TIMEFRAME_ARGS = ["week", "all"]
+        FILTERING_ARGS = ["worst", "best"]
+        DEBUG_ARGS = ["test"]
+        
+        if args == ():
+            args = (FILTERING_ARGS[0], TIMEFRAME_ARGS[1])
+        if args != ():
+            timeframe, filtering = parse_args(args, 2)
+            if timeframe in TIMEFRAME_ARGS:
+                if filtering == FILTERING_ARGS[1] or filtering == None:
+                    returned = await self.fpl_week_points(best=True)
+                elif filtering == FILTERING_ARGS[0]:
+                    returned = await self.fpl_week_points(best=False)
+            # Duplicate code, but will be refactored later
+            elif timeframe in DEBUG_ARGS:
+                if filtering == "best" or filtering == None:
+                    returned = await self.fpl_week_points(best=True, test=True)
+                else:
+                    returned = await self.fpl_week_points(best=False, test=True)
+            await ctx.send(returned)
+            
+
+    async def fpl_week_points(self, best=True, test=False) -> str:
+        """
         I feel like I shouldn't need to manually access dict keys when using an API
         wrapper, however the `get_standings()` method returned None for me, so here we are.
         """
-        
-        valid_args = ["worst", "best"]
-        
-        if args == ():
-            args = ("week", "best")
-        if args != ():
-            timeframe, filtering = parse_args(args, 2)
-            if args[0] == timeframe:
-                if filtering == "best" or filtering == None:
-                    returned = await self.fpl_week_points(best=True)
-                elif filtering == "worst":
-                    returned = await self.fpl_week_points(best=False)
-                await ctx.send(returned)
-
-    async def fpl_week_points(self, best=True, test=False):
         if not test:
             _fpl = FPL()
             league = _fpl.get_classic_league(FPL_LEAGUE_ID)
             league_info = league._get_information()
         
         elif test:
-            # For testing purposes
+            # For debugging point tie scenarios
             league_info = {
                 "standings": {
                     "results": [
-                        {"player_name": list(REALNAME_ID.keys())[0], "event_total": 666},
+                        {"player_name": list(REALNAME_ID.keys())[0], "event_total": 2},
                         {"player_name": list(REALNAME_ID.keys())[6], "event_total": 420},
                         {"player_name": list(REALNAME_ID.keys())[3], "event_total": 420},
                         {"player_name": list(REALNAME_ID.keys())[1], "event_total": 420},
@@ -195,7 +209,7 @@ class FunCog:
                     if k == player:
                         player = self.bot.get_user(v)
                         player = player.name
-                        return f"The {filtering} player this week is {player} with {score} points!"
+                        output_msg = f"The {filtering} player this week is {player} with {score} points!"
 
             else:
                 player_usernames = []
@@ -215,5 +229,7 @@ class FunCog:
                             if len(player_usernames) - n == 1:
                                 fmt_names += " and "  
                             else:
-                                fmt_names += ", "  
-                    return f"The {filtering} players this week are {fmt_names} with {score} points!"
+                                fmt_names += ", "
+                    output_msg = f"The {filtering} players this week are {fmt_names} with {score} points!"
+            
+            return output_msg
