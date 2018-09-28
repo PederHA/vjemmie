@@ -1,4 +1,5 @@
 from typing import Iterable
+from discord.ext import commands
 
 def is_int(string: str) -> bool:
     try:
@@ -8,7 +9,7 @@ def is_int(string: str) -> bool:
     else:
         return True
 
-def format_output(list_of_items: Iterable[str], item_type: str) -> str:
+async def format_output(list_of_items: Iterable[str], item_type: str) -> str:
     """
     Creates a multi-line codeblock in markdown formatting
     with an `item_type` heading and each index of the iterable
@@ -21,3 +22,15 @@ def format_output(list_of_items: Iterable[str], item_type: str) -> str:
     else:
         output += "```"
     return output
+
+async def get_users_in_author_voice_channel(ctx: commands.Context) -> list:
+    squad_list = []
+    try:
+        for member in ctx.message.author.voice.channel.members:
+            if member.nick != None:
+                squad_list.append(member.nick)
+            else:
+                squad_list.append(member.name)
+    except:
+        pass
+    return squad_list
