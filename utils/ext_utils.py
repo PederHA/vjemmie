@@ -26,11 +26,13 @@ async def format_output(list_of_items: Iterable[str], item_type: str) -> str:
 async def get_users_in_author_voice_channel(ctx: commands.Context) -> list:
     squad_list = []
     try:
-        for member in ctx.message.author.voice.channel.members:
-            if member.nick != None:
-                squad_list.append(member.nick)
-            else:
-                squad_list.append(member.name)
+        if ctx.message.author.voice.channel.members is not None:
+            for member in ctx.message.author.voice.channel.members:
+                if member.nick != None:
+                    squad_list.append(member.nick)
+                else:
+                    squad_list.append(member.name)
     except:
-        pass
-    return squad_list
+        return None
+    else:
+        return squad_list
