@@ -4,6 +4,12 @@ from ext_module import ExtModule
 import random
 import traceback
 import asyncio
+from utils.ext_utils import get_users_in_author_voice_channel
+from utils.argsparsing import parse_args
+from fpl import FPL
+from secrets import FPL_LEAGUE_ID, REALNAME_ID
+from pprint import pprint
+
 
 
 class FunCog:
@@ -97,11 +103,117 @@ class FunCog:
                 await ctx.send("An error occured.")
             else:
                 await ctx.send(random_name[0:].capitalize())
+        elif args == ("c",):
+            roll_list = await get_users_in_author_voice_channel(ctx)
+            if roll_list is not None:
+                random_name = await roll_names(roll_list)
+                await ctx.send(random_name[0:].capitalize())
         else:
             if len(args) == 0:
                 error_amount = "No arguments"
             else:
                 error_amount = "Only **1** argument was"
-            
+        
             await ctx.send(f"{error_amount} provided. Type `!random` followed by at least 2 words.")
-    
+        
+    @commands.command(name="fpl")
+    async def fantasy_pl(self, ctx: commands.Context, *args) -> None:
+        """
+        I feel like I shouldn't need to manually access dict keys when using an API
+        wrapper, however the `get_standings()` method returned None for me, so here we are.
+        """
+        
+        valid_args = ["worst", "best"]
+        
+        if args == ():
+            args = ("week", "best")
+        if args != ():
+            timeframe, filtering = parse_args(args, 2)
+            if args[0] == timeframe:
+                if filtering == "best" or filtering == None:
+                    returned = await self.fpl_week_points(best=True)
+                elif filtering == "worst":
+                    returned = await self.fpl_week_points(best=False)
+                await ctx.send(returned)
+
+    async def fpl_week_points(self, best=True, test=False):
+        if not test:
+            _fpl = FPL()
+            league = _fpl.get_classic_league(FPL_LEAGUE_ID)
+            league_info = league._get_information()
+        
+        elif test:
+            # For testing purposes
+            league_info = {
+                "standings": {
+                    "results": [
+                        {"player_name": list(REALNAME_ID.keys())[0], "event_total": 666},
+                        {"player_name": list(REALNAME_ID.keys())[6], "event_total": 420},
+                        {"player_name": list(REALNAME_ID.keys())[3], "event_total": 420},
+                        {"player_name": list(REALNAME_ID.keys())[1], "event_total": 420},
+                    ]
+                }
+            }
+            pprint(league_info)
+
+        score = 0
+        player = ""
+        players = []
+        point_tie = False
+            
+        if best:
+            filtering = "best"
+        else:
+            filtering = "worst"        
+
+        try:
+            for team in league_info["standings"]["results"]:
+                if score == team["event_total"] and score != 0:
+                    if not point_tie:
+                        player_1 = player
+                        players.append(player_1)
+                    point_tie = True   
+                    players.append(team["player_name"])
+                
+                if best:
+                    if score == 0 or team["event_total"] > score:
+                        score = team["event_total"]
+                        player = team["player_name"]
+                else:
+                    if score == 0 or team["event_total"] < score:
+                        score = team["event_total"]
+                        player = team["player_name"]
+                
+        except:
+            return "Something went wrong. Try again later."
+        
+        else:
+            # Generate message response
+            # TODO: Improve logic to get rid of code duplication
+            if not point_tie:
+                for k, v in REALNAME_ID.items():
+                    if k == player:
+                        player = self.bot.get_user(v)
+                        player = player.name
+                        return f"The {filtering} player this week is {player} with {score} points!"
+
+            else:
+                player_usernames = []
+                for k, v in REALNAME_ID.items():
+                    for player in players:
+                        if k == player:
+                            p_username = self.bot.get_user(v)
+                            p_username = p_username.name
+                            player_usernames.append(p_username)
+                else:
+                    fmt_names = ""
+                    n = 0
+                    for name in player_usernames:
+                        n += 1
+                        fmt_names += name
+                        if len(player_usernames) != n:
+                            if len(player_usernames) - n == 1:
+                                fmt_names += " and "  
+                            else:
+                                fmt_names += ", "  
+                    return f"The {filtering} players this week are {fmt_names} with {score} points!"
