@@ -6,3 +6,9 @@ class NonImgURL(Exception):
 
 class InvalidURL(Exception):
     pass
+
+class EmptyArgsError(Exception):
+    pass
+
+class InvalidObjectType(Exception):
+    pass

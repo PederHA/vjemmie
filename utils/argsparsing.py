@@ -1,6 +1,10 @@
-def parse_args(args: tuple, max_length: int):
+from utils.exceptions import EmptyArgsError, InvalidObjectType
+
+def parse_args(args: tuple, max_length: int) -> tuple:
     if args == ():
-        return (True)
+        raise EmptyArgsError
+    elif type(args) is not tuple:
+        raise InvalidObjectType(f"Object 'args' is of type {type(args)}, not tuple.")
     if len(args) <= max_length:
         returned = []
         for arg in args:
@@ -9,9 +13,7 @@ def parse_args(args: tuple, max_length: int):
         if remaining > 0:
             for n in range(remaining):
                 returned.append(None)
-            returned = tuple(returned)
+        returned = tuple(returned)
         return returned
     else:
         return args[:max_length]
-
-        
