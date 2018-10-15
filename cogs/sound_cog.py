@@ -3,11 +3,13 @@ import discord
 from ext_module import ExtModule
 import os
 import asyncio
-from random import randint
+import random
 from discord import opus
 from gtts import gTTS
 import pickle
 from pathlib import Path
+import youtube_dl
+
 
 class SoundboardCog:
     """Cog for the soundboard feature"""
@@ -24,23 +26,11 @@ class SoundboardCog:
         self.folder = folder
         self.bot = bot
         self.log_channel_id = log_channel_id
-        self.send_log = None             # will be assigned later
-        self.sound_list = SoundboardCog._load_songs(self.folder)
-        self.tag_dict = tag_dict
-        self.tag_dict = dict((k.lower(), v)
-                             for k, v in self.tag_dict.items())  # lower all keys
-        for value in self.tag_dict:     # lower all values
-            self.tag_dict[value] = [name.lower()
-                                    for name in self.tag_dict[value]]
-        for tag in self.tag_dict.keys():  # removing invalid filenames
-            self.tag_dict[tag] = [
-                name for name in self.tag_dict[tag] if name in self.sound_list]
+        self.send_log = None
 
-    async def reloadsounds(self):
-        self.sound_list = SoundboardCog._load_songs(self.folder)
 
-    @staticmethod
-    def _load_songs(folder):
+    @property
+    def sound_list(self):
         """This function returns a list with all the mp3-file names in the given folder
         Args:
             folder: The folder with the mp3 files (String)
@@ -49,11 +39,11 @@ class SoundboardCog:
         This function raises an Exception, if the folder was empty
             """
         sound_list = sorted([i[:-4].lower()
-                             for i in os.listdir(folder) if '.mp3' in i])
+                             for i in os.listdir(self.folder) if '.mp3' in i])
         
         # Pickle sound_list 
-        with open("soundlist.pkl", "wb") as f:
-            pickle.dump(sound_list, f)
+        #with open("soundlist.pkl", "wb") as f:
+            #pickle.dump(sound_list, f)
 
         if not sound_list:
             raise Exception("No mp3 files in the given folder")
@@ -86,37 +76,27 @@ class SoundboardCog:
             await ctx.send(content='To use this command you have to be connected to a voice channel!')
             raise discord.DiscordException
 
-        _name_cut = self.sound_list
-
+        # Find sound file in sound folder
         for arg in args:  # check if one is a name
             if arg.lower() in self.sound_list:
-                _name_cut = [arg.lower()]
-                break
-        if len(_name_cut) > 1:
-            for arg in args:  # if no name is found go through the tags
-                if arg.lower() in self.tag_dict.keys():
-                    # update the cut
-                    _name_cut = [
-                        name for name in _name_cut if name in self.tag_dict[arg.lower()]]
-        if len(_name_cut) == 0:  # play a random sound if the tags have no cut
-            _name_cut = self.sound_list
-            try:
-                await ctx.send('No name with all the tags given. Playing a random sound.')
-            except discord.DiscordException:
-                pass
-        name = _name_cut[randint(1, len(_name_cut)) - 1]
-
-        await self.name_reaction(name, ctx.message)
-
+                sound_name = arg.lower()
+                break 
+        else:
+            if len(args)>0:
+                await ctx.send(f"Could not find sound with name {args[0]}")
+                raise Exception(f"Could not find sound with name {args[0]}")
+            else:
+                sound_name = random.choice(self.sound_list)
+       
         try:
             vc = await voice_channel.connect()
         except discord.ClientException:
             await ctx.send('I am already playing in a voice channel.'
                            ' Please try again later or stop me with the stop command!')
             raise discord.DiscordException
-        vc.play(discord.FFmpegPCMAudio(self.folder + '/' + name + '.mp3'),
+        vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
                 after=lambda e: SoundboardCog.disconnector(vc, self.bot))
-        await self.send_log('Playing: ' + name)
+        await self.send_log('Playing: ' + sound_name)
 
     @commands.command(name='stop',
                       aliases=['halt'],
@@ -138,31 +118,17 @@ class SoundboardCog:
         Args:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
             """
-        _sound_string = 'List of all sounds (command format !play [soundname]):'
-        for sound in self.sound_list:
-            if len(_sound_string) + 1 + len(sound) > 1800:
-                await ctx.channel.send('```\n' + _sound_string + '```\n')
-            _sound_string = _sound_string + '\n' + sound
-        await ctx.channel.send('```\n' + _sound_string + '```\n')
+        
+        sounds_header = 'List of all sounds (command format !play [soundname]):'
+        sound_string = f"{sounds_header}\n"
 
-    @commands.command(name='taglist',
-                      aliases=['tags'], description='Prints a list of all tags with soundnames on the soundboard.')
-    async def taglist(self, ctx: commands.Context):
-        """This function prints a list of all the tags with their sounds on the Soundboard to the
-         channel/user where it was requested.
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-            """
-        _tag_string = 'tag || sounds\n'
-        for tag in self.tag_dict.keys():
-            if len(_tag_string) > 1800:
-                await ctx.channel.send('```\n' + _tag_string + '```\n')
-                _tag_string = ''
-            _tag_string = _tag_string + tag + ' || '
-            for sound in self.tag_dict[tag]:
-                _tag_string = _tag_string + sound + ' '
-            _tag_string = _tag_string + '\n'
-        await ctx.channel.send('```\n' + _tag_string + '```\n')
+        for sound in self.sound_list:
+            if len(sound_string) + 1 + len(sound) > 1800:
+                await ctx.send(f"```{sound_string}```\n")
+                sound_string = ""
+            sound_string += f"{sound}\n"
+        await ctx.send(f"```{sound_string}```")
+
 
     @staticmethod
     def disconnector(voice_client: discord.VoiceClient, bot: commands.Bot):
@@ -200,17 +166,14 @@ class SoundboardCog:
                 else:
                     tts.save(file_path)
                     await ctx.send(f'Sound created: **{sound_name}**')
-                
-                # Reload list of sound files
-                await self.reloadsounds()
-                
-                # Play created sound file in author's voice channel
+
+                # Play created sound file in author's voice channel afterwards
                 try:
                     if ctx.message.author.voice.channel != None:
                         cmd  = self.bot.get_command('play')
                         await ctx.invoke(cmd, sound_name)
                 # Suppress error if voice channel does not exist
-                except:
+                except AttributeError:
                     pass
             else:
                 await ctx.send("Invalid language."
@@ -229,3 +192,31 @@ class SoundboardCog:
                                 "`language` "
                                 "`sound_name`."
                                 "\nType `!tts lang` for more information about available languages.")
+
+    @commands.command(name="ytdl")
+    async def ytdl(self, ctx: commands.Context, *args):
+        if len(args)>0:
+            url = args[0]
+        ydl_opts = {
+                'outtmpl': 'sounds/%(id)s.%(ext)s',
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192'}]
+                    }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info(url=url, download=True, extra_info=ydl_opts)
+            res = ydl.prepare_filename(result)
+            path, _ = res.split(".")
+            _, _file = path.split("\\")
+
+        try:
+            if ctx.message.author.voice.channel != None:
+                cmd  = self.bot.get_command('play')
+                await ctx.invoke(cmd, _file)
+        # Suppress error if voice channel does not exist
+        except AttributeError:
+            await ctx.send("Must be in a voice channel to use this command.")
+        
+
