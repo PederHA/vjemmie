@@ -22,20 +22,25 @@ class ExtModule:
         return commands.check(ExtModule.is_admin_predicate)
 
     @staticmethod
-    def _help(command: commands.Command):
+    def _help(command: commands.Command) -> str:
         """The body of the help and the adminhelp command
         Args:
             command: The command that will be formatted properly (commands.Command)
         Returns:
             _command_help: Formatted string (str)
             """
-        _name = command.name
-        _description = command.description if command.description is not '' else 'No help description available'
-        _aliases = ''
+        name = command.name
+        description = command.description if command.description is not '' else 'No help description available'
+        aliases = ''
         for alias in command.aliases:
-            _aliases = _aliases + str(alias) + ', '
-        _aliases = '(' + _aliases[:-2] + ')'
-        return _name + ' ' + _aliases + ': ' + _description
+            aliases += f"{str(alias)}, "
+        else:
+            # Remove trailing comma and space for last alias
+            aliases = aliases[:-2]
+        if aliases is not "":
+            # Enclose aliases in parentheses
+            aliases = f" ({aliases})"
+        return f"{name}{aliases}: {description}"
 
     @staticmethod
     def _send_log_generator(log_channel):
