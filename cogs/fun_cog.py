@@ -9,23 +9,10 @@ from utils.argsparsing import parse_args
 from fpl import FPL
 from secrets import FPL_LEAGUE_ID, REALNAME_ID
 from pprint import pprint
+from cogs.base_cog import BaseCog
 
 
-
-class FunCog:
-    """PUBG Bot Commands
-    """
-
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None                # will be assigned
-
-    async def on_ready(self):
-        """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
-        """
-        self.send_log = ExtModule.get_send_log(self)
-           
+class FunCog(BaseCog): 
     @commands.command(name='roll',
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')
@@ -126,10 +113,11 @@ class FunCog:
         
         TIMEFRAME_ARGS = ["week", "all"]
         FILTERING_ARGS = ["worst", "best"]
-        DEBUG_ARGS = ["test"]
+        DEBUG_ARGS = ["test", "debug"]
         
         if args == ():
-            args = (FILTERING_ARGS[0], TIMEFRAME_ARGS[1])
+            # Defaults to "week" & "best"
+            args = (TIMEFRAME_ARGS[1], FILTERING_ARGS[1])
         if args != ():
             timeframe, filtering = parse_args(args, 2)
             if timeframe in TIMEFRAME_ARGS:
@@ -140,39 +128,39 @@ class FunCog:
             # Duplicate code, but will be refactored later
             elif timeframe in DEBUG_ARGS:
                 if filtering == "best" or filtering == None:
-                    returned = await self.fpl_week_points(best=True, test=True)
+                    returned = await self.fpl_week_points(best=True, debug=True)
                 else:
-                    returned = await self.fpl_week_points(best=False, test=True)
+                    returned = await self.fpl_week_points(best=False, debug=True)
             await ctx.send(returned)
             
 
-    async def fpl_week_points(self, best=True, test=False) -> str:
+    async def fpl_week_points(self, best=True, debug=False) -> str:
         """
         I feel like I shouldn't need to manually access dict keys when using an API
         wrapper, however the `get_standings()` method returned None for me, so here we are.
         """
-        if not test:
+        if not debug:
             _fpl = FPL()
             league = _fpl.get_classic_league(FPL_LEAGUE_ID)
             league_info = league._get_information()
         
-        elif test:
+        elif debug:
             # For debugging point tie scenarios
             league_info = {
                 "standings": {
                     "results": [
-                        {"player_name": list(REALNAME_ID.keys())[0], "event_total": 2},
-                        {"player_name": list(REALNAME_ID.keys())[6], "event_total": 420},
-                        {"player_name": list(REALNAME_ID.keys())[3], "event_total": 420},
-                        {"player_name": list(REALNAME_ID.keys())[1], "event_total": 420},
+                        {"player_name": list(REALNAME_ID.keys())[0], "event_total": 0},
+                        {"player_name": list(REALNAME_ID.keys())[6], "event_total": 1},
+                        {"player_name": list(REALNAME_ID.keys())[3], "event_total": 1},
+                        {"player_name": list(REALNAME_ID.keys())[1], "event_total": 1},
                     ]
                 }
             }
             pprint(league_info)
 
         score = 0
-        player = ""
         players = []
+        active_gameweek = False
         point_tie = False
             
         if best:
@@ -182,36 +170,54 @@ class FunCog:
 
         try:
             for team in league_info["standings"]["results"]:
-                if score == team["event_total"] and score != 0:
-                    if not point_tie:
-                        player_1 = player
-                        players.append(player_1)
-                    point_tie = True   
-                    players.append(team["player_name"])
+                team_score = team["event_total"]
+                player_name = team["player_name"]
+                
+                if team_score == score and score == 0:
+                    players.append(player_name)
+ 
+                if team["event_total"] > 0:
+                    active_gameweek = True
                 
                 if best:
-                    if score == 0 or team["event_total"] > score:
-                        score = team["event_total"]
-                        player = team["player_name"]
+                    if team_score > score:
+                        score = team_score
+                        players = [player_name]
+                    elif team_score == score and score != 0:
+                        players.append(player_name)  
                 else:
-                    if score == 0 or team["event_total"] < score:
-                        score = team["event_total"]
-                        player = team["player_name"]
-                
+                    if team_score < score:
+                        score = team_score
+                        players = [player_name]
+                    elif team_score == score and score != 0:
+                        players.append(player_name)
+  
+
         except:
             return "Something went wrong. Try again later."
         
         else:
-            # Generate message response
-            # TODO: Improve logic to get rid of code duplication
-            if not point_tie:
+            if len(players) == 1:
+                point_tie = False
+            elif len(players) > 1:
+                point_tie = True
+    
+            if debug:
+                print(f"players: {players}\nscore: {score}\npoint_tie: {point_tie}")
+            
+            # Generate discord message
+            if not active_gameweek:
+                output_msg = "No games have been played yet this week."
+
+            elif not point_tie:
                 for k, v in REALNAME_ID.items():
-                    if k == player:
+                    if k == players[0]:
                         player = self.bot.get_user(v)
                         player = player.name
                         output_msg = f"The {filtering} player this week is {player} with {score} points!"
 
-            else:
+            elif point_tie:
+                # TODO: Refactor to use the dict builtin method .get()
                 player_usernames = []
                 for k, v in REALNAME_ID.items():
                     for player in players:

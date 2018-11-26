@@ -5,24 +5,15 @@ from ext_module import ExtModule
 import time
 from urllib.parse import urlencode
 import urllib.request
+from cogs.base_cog import BaseCog
 
-class YTCog:
-    """PUBG Bot Commands
+class YTCog(BaseCog):
+    """YouTube commands
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None                # will be assigned
-    
-    async def on_ready(self):
-        """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
-        """
-        self.send_log = ExtModule.get_send_log(self)
     
     @commands.command(name='youtube',
                         aliases=['yt', 'utube'],
-                        description='YouTube search that returns top result for search query.')
-                         
+                        description='YouTube search that returns top result for search query.')                       
     async def youtube(self, ctx: commands.Context, *args: str):
         start_time = time.time()
         

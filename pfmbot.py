@@ -21,8 +21,12 @@ from cogs.youtube_cog import YTCog
 from cogs.soundbomb_cog import SoundBombCog
 from cogs.testing_cog import TestingCog
 from cogs.frying_cog import FryingCog
+from cogs.weather_cog import WeatherCog
+from cogs.cod_cog import CodCog
 from events_module import EventsModule
 from ext_module import ExtModule
+from utils.config import GENERAL_DB_PATH
+from cogs.db_cog import DatabaseHandler
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 sound_folder = "sounds"
@@ -41,20 +45,18 @@ bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(SoundBombCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
 bot.add_cog(TestingCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FryingCog(bot=bot, log_channel_id=log_channel_id))
+bot.add_cog(WeatherCog(bot=bot, log_channel_id=log_channel_id))
+bot.add_cog(CodCog(bot=bot, log_channel_id=log_channel_id))
 
-@bot.async_event
-def on_ready():
+@bot.event
+async def on_ready():
     print("Client logged in")
 
-# Move out of main?
 @bot.listen()
 async def on_message(message):
-    if EventsModule.is_travis(message):
-        pass
-    if EventsModule.is_rad(message):
-        if any(word in message.content.lower() for word in secrets.RAD_WORDS):
-            await message.add_reaction(':PedoRad:237754662361628672')
-    if PFMSecrets.base64_compare(message):
+    if PFMSecrets.offensive_word(message):
+        db = DatabaseHandler(GENERAL_DB_PATH)
+        await db.whosaidit(message)
         await message.add_reaction(':cmonpfm:427842995748995082')
 
 bot.run(secrets.BOT_TOKEN)

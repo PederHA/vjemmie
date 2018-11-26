@@ -23,7 +23,7 @@ class DatabaseHandler:
         self.c = self.conn.cursor()
     
 
-    async def get_memes(self, topic: str, ctx: commands.Context, args: tuple):
+    async def get_memes(self, topic: str, ctx: commands.Context, args: tuple) -> None:
         meme_index = None
         print_list = False
         print_all_memes = False
@@ -92,7 +92,7 @@ class DatabaseHandler:
                 output += "```"
             await ctx.send(output)
 
-    async def format_meme(self, meme, ctx):
+    async def format_meme(self, meme, ctx) -> tuple:
         embed = discord.Embed()
         title, description, content, media_type = meme
         
@@ -105,6 +105,29 @@ class DatabaseHandler:
         elif media_type == "img":
             embed.set_image(url=content)
             return None, embed
+    
+    async def whosaidit(self, message: discord.Message) -> None:
+        """
+        Tracking begun 19/09/2018
+        """
+        update_row = False
+        msg_author = message.author.name    
+        for name, occurences in self.c.execute(f'SELECT "NAME", "occurences" FROM "wordtrack"'):
+            if name == msg_author:
+                update_row = True
+                break
+        else:
+            # Create new entry in DB if message author's name does not exist already
+            self.c.execute(f'INSERT INTO `wordtrack`(`name`,`occurences`) VALUES ("{msg_author}",1);')
+        if update_row:
+            try:
+                occurences = int(occurences)
+                occurences += 1
+            except:
+                pass
+            else:
+                self.c.execute(f'UPDATE `wordtrack` SET `occurences`={occurences} WHERE "name"="{name}";')
+        self.conn.commit()
 
     ###################################################
     # Some DB methods leftover from a different project

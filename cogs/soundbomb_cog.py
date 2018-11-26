@@ -40,8 +40,7 @@ class SoundBombCog():
             raise Exception("No mp3 files in the given folder")
         return sound_list
 
-    async def on_ready(self):
-        self.send_log = ExtModule.get_send_log(self)
+    async def on_ready(self) -> None:
         opus.load_opus('libopus')
 
     @commands.command(name='sbomb',

@@ -19,7 +19,8 @@ from os import listdir
 from typing import Iterable
 import textwrap
 from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
-
+import math
+import progressbar
 
 class ImageFryer:
     def __init__(self, img_url):
@@ -197,20 +198,117 @@ class ImageFryer:
         text_box = Image.alpha_composite(white_bg, txt)
         out = Image.alpha_composite(tmp, text_box)
         return out
+    
+    def bulge(self, img, f, r, a, h, ior):
+        """
+        Pretty much just copy-pasted from DeepFryBot.
+        
+        This implementation of image bulging is _very_ slow, and as a result
+        it is currently disabled.
+        """
+        # return the length of vector v
+        def length(v):
+            return np.sqrt(np.sum(np.square(v)))
 
+
+        # returns the unit vector in the direction of v
+        def normalise(v):
+            return v/length(v)
+
+        # print("Creating a bulge at ({0}, {1}) with radius {2}... ".format(f[0], f[1], r))
+
+        # load image to numpy array
+        width = img.width
+        height = img.height
+        img_data = np.array(img)
+
+        # ignore too large images
+        if width*height > 3000*3000:
+            return img
+
+        # determine range of pixels to be checked (square enclosing bulge), max exclusive
+        x_min = int(f[0] - r)
+        if x_min < 0:
+            x_min = 0
+        x_max = int(f[0] + r)
+        if x_max > width:
+            x_max = width
+        y_min = int(f[1] - r)
+        if y_min < 0:
+            y_min = 0
+        y_max = int(f[1] + r)
+        if y_max > height:
+            y_max = height
+
+        # make sure that bounds are int and not np array
+        if isinstance(x_min, type(np.array([]))):
+            x_min = x_min[0]
+        if isinstance(x_max, type(np.array([]))):
+            x_max = x_max[0]
+        if isinstance(y_min, type(np.array([]))):
+            y_min = y_min[0]
+        if isinstance(y_max, type(np.array([]))):
+            y_max = y_max[0]
+
+        # array for holding bulged image
+        bulged = np.copy(img_data)
+        for y in (range(y_min, y_max)):
+            for x in range(x_min, x_max):
+                ray = np.array([x, y])
+
+                # find the magnitude of displacement in the xy plane between the ray and focus
+                s = length(ray - f)
+
+                # if the ray is in the centre of the bulge or beyond the radius it doesn't need to be modified
+                if 0 < s < r:
+                    # slope of the bulge relative to xy plane at (x, y) of the ray
+                    m = -s/(a*math.sqrt(r**2-s**2))
+
+                    # find the angle between the ray and the normal of the bulge
+                    theta = np.pi/2 + np.arctan(1/m)
+
+                    # find the magnitude of the angle between xy plane and refracted ray using snell's law
+                    # s >= 0 -> m <= 0 -> arctan(-1/m) > 0, but ray is below xy plane so we want a negative angle
+                    # arctan(-1/m) is therefore negated
+                    phi = np.abs(np.arctan(1/m) - np.arcsin(np.sin(theta)/ior))
+
+                    # find length the ray travels in xy plane before hitting z=0
+                    k = (h+(math.sqrt(r**2-s**2)/a))/np.sin(phi)
+
+                    # find intersection point
+                    intersect = ray + normalise(f-ray)*k
+
+                    # assign pixel with ray's coordinates the colour of pixel at intersection
+                    if 0 < intersect[0] < width-1 and 0 < intersect[1] < height-1:
+                        bulged[y][x] = img_data[int(intersect[1])][int(intersect[0])]
+                    else:
+                        bulged[y][x] = [0, 0, 0]
+                else:
+                    bulged[y][x] = img_data[y][x]
+        img = Image.fromarray(bulged)
+        return img
+    
     def fry(self, emoji: str, text: str, caption: str) -> None:
         # (Maybe?) TODO: Each method should modify the instance variable `self.img`, 
         # rather than returning a new `Image.Image` object each time
+        bulge_enabled = False
         interpret_as_none = ["-", " ", "", "None", "none"]
         img = self.img
         if emoji not in interpret_as_none:
             img = self.add_emojis(img, emoji, 5)
-        if caption not in interpret_as_none:
-            img = self.add_caption(img, caption)
+
         img = self.change_contrast(img, 100)
         img = self.add_noise(img, 1)
+        if bulge_enabled:
+            [w, h] = [img.width - 1, img.height - 1]
+            w *= np.random.random(1)
+            h *= np.random.random(1)
+            r = int(((img.width + img.height) / 10) * (np.random.random(1)[0] + 1))
+            img = self.bulge(img, np.array([int(w), int(h)]), r, 3, 5, 1.8)
         if text not in interpret_as_none:
             img = self.add_text(img, text)
+        if caption not in interpret_as_none:
+            img = self.add_caption(img, caption)    
 
         jpg_copy = img.copy().convert("RGB")
         # For now, the image is just saved to disk, and not returned

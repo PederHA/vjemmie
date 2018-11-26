@@ -7,20 +7,14 @@ from cogs.fryer import ImageFryer
 from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
 from requests.exceptions import ConnectionError, MissingSchema
 import traceback
+from cogs.base_cog import BaseCog
 
-class FryingCog:
+class FryingCog(BaseCog):
     """Cog for deep frying images
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None
-    
-    async def on_ready(self):
-        self.send_log = ExtModule.get_send_log(self)
 
     @commands.command(name="deepfry")
-    async def deepfry(self, ctx: commands.Context, image_url="", emoji="", text="", caption="") -> None:
+    async def deepfry(self, ctx: commands.Context, image_url: str="", emoji: str="", text: str="", caption: str="") -> None:
         args = (image_url, emoji, text, caption)
         if image_url != "list":
             try:
@@ -38,6 +32,10 @@ class FryingCog:
             except MissingSchema:
                 await ctx.send("The URL must include a schema (http/https).")
             except:
+                exc = traceback.format_exc()
+                with open("traceback.txt", mode="w+") as f:
+                    f.write(exc)
+                print(exc)
                 await ctx.send("Something went wrong when trying to fry the image provided.")
             else:
                 await ctx.send(file=discord.File("deepfryer/temp/fried_img.jpg"))

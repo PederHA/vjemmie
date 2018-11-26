@@ -4,16 +4,13 @@ import requests
 from geopy import Nominatim
 import xmltodict
 from pprint import pprint
+from cogs.base_cog import BaseCog
 
-class WeatherCog:
+class WeatherCog(BaseCog):
     """
     Holds various weather commands, with data obtained
     via the met.no weather API.
     """
-
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
-        self.bot = bot
-        self.log_channel_id = log_channel_id
     
     @commands.command()
     async def weather(self, ctx: commands.Context, loc: str) -> None:

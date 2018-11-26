@@ -8,21 +8,22 @@ from discord import opus
 import gtts
 from pathlib import Path
 import youtube_dl
+from cogs.base_cog import BaseCog
 
-
-class SoundboardCog:
+class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
 
-    def __init__(self, bot: commands.Bot, folder=None, log_channel_id: int=None, tag_dict: dict={}) -> None:
+    def __init__(self, bot: commands.Bot, log_channel_id: int=None, folder=None,) -> None:
         """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
         Args:
             bot: The bot the Cog will be added to (commands.Bot)
             folder: The path to the folder with the sound files (str)
             log_channel_id: The id of the log_channel (int)
             """
+        super().__init__(bot, log_channel_id)
         self.folder = folder
-        self.bot = bot
-        self.log_channel_id = log_channel_id
+        #self.bot = bot
+        #self.log_channel_id = log_channel_id
 
 
     @property
@@ -43,7 +44,7 @@ class SoundboardCog:
         return sound_list
 
     async def on_ready(self) -> None:
-        self.send_log = ExtModule.get_send_log(self)
+        #self.send_log = ExtModule.get_send_log(self)
         opus.load_opus('libopus')
 
     @commands.command(name='play',
@@ -69,8 +70,6 @@ class SoundboardCog:
             await ctx.send(content='To use this command you have to be connected to a voice channel!')
             raise discord.DiscordException
 
-
-
         arg = " ".join(args).lower()
         if arg in self.sound_list:
             sound_name = arg
@@ -89,7 +88,7 @@ class SoundboardCog:
             raise discord.DiscordException
         vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
                 after=lambda e: self.disconnector(vc))
-        #await self.send_log('Playing: ' + sound_name)
+        await self.send_log('Playing: ' + sound_name)
 
     @commands.command(name='stop',
                       aliases=['halt'],

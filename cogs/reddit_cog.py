@@ -7,6 +7,7 @@ import asyncio
 import re
 import secrets
 import traceback
+from cogs.base_cog import BaseCog
 
 reddit = praw.Reddit(
     client_id=secrets.REDDIT_ID,
@@ -15,7 +16,7 @@ reddit = praw.Reddit(
 )
 
 
-class RedditCog:
+class RedditCog(BaseCog):
     """
     Reddit cog.
     ====
@@ -25,18 +26,10 @@ class RedditCog:
     ----
     ``!spt`` or ``!emojipasta``
 
-    TODO:
-    ----
-    More precise tuning of results. (Top All-time/Year/Month/Week)
-
-    Filtering for type of result when using the ``!reddit`` command. (img/txt)
-
     """
 
     def __init__(self, bot: commands.Bot, log_channel_id: int = None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None
+        super().__init__(bot, log_channel_id)
         self.ALL_POST_LIMIT = 250
         self.OTHER_POST_LIMIT = 100
         self.image_extensions = [".jpg", ".png", ".gif"]
@@ -44,11 +37,6 @@ class RedditCog:
         self.time_filters = ["all", "year", "month", "week", "day"]
         self.sorting_filters = ["hot", "top"]
         self.top_all = (self.sorting_filters[1], self.time_filters[0])
-
-    async def on_ready(self):
-        """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
-        """
-        self.send_log = ExtModule.get_send_log(self)
 
     @commands.command()
     async def emojipasta(self, ctx: commands.Context, *args: str) -> None:

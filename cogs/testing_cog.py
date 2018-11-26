@@ -3,17 +3,12 @@ import discord
 from ext_module import ExtModule
 import requests
 import shutil
+from cogs.base_cog import BaseCog
 
-class TestingCog:
+
+class TestingCog(BaseCog):
     """Testing Bot Commands
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None
-    
-    async def on_ready(self):
-        self.send_log = ExtModule.get_send_log(self)
 
     @commands.command(name="spotify")
     async def spotify_test(self, ctx: commands.Context, *args):

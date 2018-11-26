@@ -8,7 +8,7 @@ class AdminCog:
     """This cog contains commands that can be used by the bots admin(s).
     This will not contain commands, which ban and kick a user or let the bot behave as a server admin.
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
+    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
         """The constructor for the AdminCog class, it assigns the important variables used by the commands below
         Args:
             bot: The bot the commands will be added to (commands.Bot)
@@ -18,26 +18,26 @@ class AdminCog:
         self.log_channel_id = log_channel_id
         self.send_log = None                  # will be assigned in the on_ready event
 
-    async def on_resumed(self):
+    async def on_resumed(self) -> None:
         """Is called when the bot made a successfull reconnect, after disconnecting
         """
         await self.send_log("Restarted successfully")
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
         """
         self.send_log = ExtModule.get_send_log(self)
         activity = discord.Game(name='Wakaliwood Productions')
         await self.bot.change_presence(activity=activity)
 
-    async def on_guild_join(self, guild: discord.Guild):
+    async def on_guild_join(self, guild: discord.Guild) -> None:
         """Is called when the bot joins a new guild. Sends an informative message to the log_channel
         Args:
             guild: The guild which the bot joined on (discord.Guild)
             """
         await self.send_log('Joined guild: ' + guild.name)
 
-    async def on_guild_remove(self, guild: discord.Guild):
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Is called when the bot leaves a guild. Sends an informative message to the log_channel
         Args:
             guild: The guild which was left by the bot (discord.Guild)
@@ -49,7 +49,7 @@ class AdminCog:
                       description='Prints a list of all the servers'
                                   ' this bot is a member of to the admin log_channel')
     @ExtModule.is_admin()
-    async def serverlist(self, ctx: commands.Context):
+    async def serverlist(self, ctx: commands.Context) -> None:
         """This function sends a list with all the servers this bot is a member of to the self.log_channel
         Args:
             ctx: The context of the command, which is mandatory in rewrite
@@ -66,7 +66,7 @@ class AdminCog:
     @commands.command(name='leave',
                       description='(ID) || The bot will attempt to leave the server with the given ID.')
     @ExtModule.is_admin()
-    async def leave(self, ctx: commands.Context, guild_id: int=None):
+    async def leave(self, ctx: commands.Context, guild_id: int=None) -> None:
         """This commands makes the bot leave the server with the given ID
         Args:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
@@ -89,7 +89,7 @@ class AdminCog:
                       description='(textblock) || The bot will attempt to send the textblock to every server'
                                   ' he is a member of. Do NOT use for spamming purposes.')
     @ExtModule.is_admin()
-    async def sendtoall(self, ctx: commands.Context, *args):
+    async def sendtoall(self, ctx: commands.Context, *args) -> None:
         """This command tries to send a message to all guilds this bot is a member of.
         Args:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
@@ -119,7 +119,7 @@ class AdminCog:
                       aliases=['admin-help', 'admin_help', 'helpadmin'],
                       description='Sends you the names, aliases and description of all commands per PM!')
     @ExtModule.is_admin()
-    async def adminhelp(self, ctx: commands.Context):
+    async def adminhelp(self, ctx: commands.Context) -> None:
         """This function sends a list of all the admin commands + aliases + description to the requester
                 Args:
                     ctx: The context of the command, which is mandatory in rewrite (commands.Context)
@@ -146,7 +146,7 @@ class AdminCog:
                       aliases=['change_game'],
                       description='Changes the activity in the activity feed of the bot')
     @ExtModule.is_admin()
-    async def change_activity(self, ctx: commands.Context, *args):
+    async def change_activity(self, ctx: commands.Context, *args) -> None:
         activity_name = ""
         first_word = True
         

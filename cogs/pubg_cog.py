@@ -6,20 +6,12 @@ import numpy
 from events_module import EventsModule
 from bot_resources import GUILDS, NON_PUBG_PLAYERS
 from utils.ext_utils import is_int
+from cogs.base_cog import BaseCog
 
-
-class PUBGCog:
+class PUBGCog(BaseCog):
     """PUBG Bot Commands
     """
-
-    def __init__(self, bot: commands.Bot, log_channel_id: int = None):
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None
-
-    async def on_ready(self):
-        self.send_log = ExtModule.get_send_log(self)
-
+    
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"
     )
@@ -278,5 +270,5 @@ class PUBGCog:
             pass # This error will be handled by `crate` method.
         
         return squad_list
-
+    
         
