@@ -11,7 +11,6 @@ from secrets import FPL_LEAGUE_ID, REALNAME_ID
 from pprint import pprint
 from cogs.base_cog import BaseCog
 
-
 class FunCog(BaseCog): 
     @commands.command(name='roll',
                       aliases=['dice'],
@@ -239,3 +238,27 @@ class FunCog(BaseCog):
                     output_msg = f"The {filtering} players this week are {fmt_names} with {score} points!"
             
             return output_msg
+
+    @commands.command(name="teams")
+    async def teams(self, ctx: commands.Context, team_size: int=None) -> None:
+
+        # Get list of usernames in message author's voice channel
+        users = get_users_in_author_voice_channel(ctx)
+
+        if team_size is None:
+            team_size = len(users) // 2
+        else:
+            # Cast to int to avoid float nums. Raises exception if not a number.
+            team_size = int(team_size)
+        
+        # Raise exception for 99% of user errors and send helpful reply
+        if len(users) <= 2 or team_size >= len(users):
+            await ctx.send("you dumb or what")
+            raise discord.DiscordException
+        
+        team_1 = random.sample(users, team_size)
+        team_2 = [user for user in users if user not in team_1]
+        # Should use regular expressions or smth
+        team_1 = str(team_1).replace("[", "").replace("]", "").replace("'", "")
+        team_2 = str(team_2).replace("[", "").replace("]", "").replace("'", "")
+        await ctx.send(f"**Team 1:** {team_1}.\n**Team 2:** {team_2}")
