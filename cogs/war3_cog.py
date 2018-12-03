@@ -1,9 +1,13 @@
+import asyncio
+
 import discord
+import trueskill
 from discord.ext import commands
+
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-import trueskill
 from utils.ext_utils import get_users_in_author_voice_channel
+
 
 class War3Cog(BaseCog):
     def __init__(self, bot: commands.Bot, log_channel_id: int, replays_folder: str) -> None:
@@ -54,34 +58,39 @@ class War3Cog(BaseCog):
         Winners and losers are passed in as separate strings. Players are separated 
         by spaces.
         """
+
+        def pred(m: discord.Message) -> bool:
+                    return m.author == ctx.message.author and m.channel == ctx.message.channel
         
-        winners = winners.lower().split(" ")
+        # List from string of names separated by spaces. Remove duplicates.
+        winners = list(set(winners.lower().split(" ")))
         winners.sort()
+        # Copy of winners that will not be modified
         winners_names = list(winners)
         if losers is not None:
-            losers = losers.lower().split(" ")
+            losers = list(set(losers.lower().split(" ")))
             losers.sort()
             losers_names = list(losers)
         else:
+            # Detect losing team from voice channel if `losers` is None
             _voice_chatters = await get_users_in_author_voice_channel(ctx)
             losers = list(set(_voice_chatters) - set(winners))
             if len(losers) > len(winners):
                 losers_str = ", ".join(losers)
                 await ctx.send(f"Detected uneven teams. Is this the correct losing team?\n{losers_str}\n"
                                "Type **yes** to confirm and **no** to abort rating update.")
-                def pred(m):
-                    return m.author == ctx.message.author and m.channel == ctx.message.channel
-                msg = await self.bot.wait_for("message", check=pred)
-                if msg.content.lower() != "yes":
+                msg = await self.bot.wait_for("message", check=pred, timeout=10.0)
+                if msg.content.lower() not in  ["yes", "y", "ja"]:
                     await ctx.send("Aborting rating update.")
                     raise Exception
-                
+        # Get players from db as list of tuples        
         players = self.db.get_players(game, alias=alias)
         _players = [player for player, _, _, _ in players]
+        # Temporary lists that will replace winners/losers after names are parsed
         _winners = []
         _losers = []        
 
-        def filter_participants(participant):
+        def filter_participants(participant: str) -> None:
             """
             OMEGAGIGA ugly function for matching players in db with
             players in `winners` and `losers`.
@@ -111,13 +120,17 @@ class War3Cog(BaseCog):
             elif participant not in _players or (participant in winners and participant in losers):
                 abort = "abort"
                 cmd = self.bot.get_command("add")
-                def pred(m):
-                    return m.author == ctx.message.author and m.channel == ctx.message.channel
                 await ctx.send(f"Could not find player {participant}.\n" 
                                f"Add {participant} to database by typing user's User ID.\n"
-                               f"Type **{abort}** to abort")
+                               f"Type **{abort}** to abort")               
+                try:
+                    msg = await self.bot.wait_for("message", check=pred, timeout=15.0)
+                # Raise exception if 15 seconds pass without reply from user
+                except asyncio.TimeoutError:
+                    await ctx.send("No reply from user. Aborting.")
+                    raise Exception
                 
-                msg = await self.bot.wait_for("message", check=pred)
+                # If user responds, check message content
                 if msg.content.lower() == abort:
                     await ctx.send("Aborting. Rating will not be updated.")
                     raise Exception("Rating update aborted by user.")    
@@ -162,7 +175,6 @@ class War3Cog(BaseCog):
             self.db.update_rating(winners_names[idx], winner, win=True, game=game)
             rating_gain = int((winner.mu - ts_winners[0].mu)*40)
             msg += f"{winners[idx][0]}: +{rating_gain} rating.\n"
-        
         for idx, loser in enumerate(losers_new):
             self.db.update_rating(losers_names[idx], loser, win=False, game=game)
             rating_loss = int((ts_losers[0].mu - loser.mu)*40)
@@ -170,33 +182,6 @@ class War3Cog(BaseCog):
         msg += "```"
         await ctx.send(msg)
 
+        # Post leaderboard after reporting individual rating changes
         cmd = self.bot.get_command("leaderboard")
         await ctx.invoke(cmd, game)
-    
-    @commands.command(name="waiton")
-    async def waiton(self, ctx, *args) -> None:
-        game = "legiontd"
-        abort = "abort"
-        player = "VJ EMMIE"
-        cmd = self.bot.get_command("add")
-        def pred(m):
-            return m.author == ctx.message.author and m.channel == ctx.message.channel
-        await ctx.send(f"Could not find player {player}.\n" 
-                        f"Add {player} to database by typing user's User ID.\n"
-                        f"Type **{abort}** to abort")
-        msg = await self.bot.wait_for("message", check=pred)
-        if msg.content.lower() == abort:
-            await ctx.send("Aborting. Rating will not be updated.")
-            raise Exception("Rating update aborted.")
-        else:
-            user_id, *alias = msg.content.split(" ")
-            if alias != []:
-                alias = alias[0]
-            else:
-                alias = None
-            try:
-                user_id = int(user_id)
-            except:
-                await ctx.send("User ID must be an integer.")
-                raise Exception(f"User provided non-int user_id: {user_id}")
-            await ctx.invoke(cmd, user_id, alias, game)
