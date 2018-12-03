@@ -11,7 +11,7 @@ class TestingCog(BaseCog):
     """
 
     @commands.command(name="spotify")
-    async def spotify_test(self, ctx: commands.Context, *args):
+    async def spotify_test(self, ctx: commands.Context, *args) -> None:
         if ctx.message.author.activity.__class__ == discord.activity.Spotify:
             album_cover_url = ctx.message.author.activity.album_cover_url
             self.download_album_art(album_cover_url)
@@ -35,7 +35,7 @@ class TestingCog(BaseCog):
             shutil.copyfileobj(r.raw, f)   
 
     @commands.command(name="get_msg")
-    async def get_msg(self, ctx: commands.Context, *args):
+    async def get_msg(self, ctx: commands.Context, *args) -> None:
         message = int(args[0])
         new_channel = self.bot.get_channel(340921036201525248)
         new_msg = await new_channel.get_message(message)
@@ -50,7 +50,7 @@ class TestingCog(BaseCog):
             print(embed.footer.text)
     
     @commands.command(name="emojis")
-    async def emojis(self, ctx:commands.Context, *args):
+    async def emojis(self, ctx:commands.Context, *args) -> None:
         if len(args)>1:
             input_string = args[0]
             input_string = input_string.upper()
@@ -61,3 +61,11 @@ class TestingCog(BaseCog):
             output_string = f"{emoji} {input_string} {emoji}"
 
             await ctx.send(output_string)
+
+    @commands.command(name="user")
+    async def user(self, ctx, user_id: int) -> None:
+        #user = self.bot.get_user(user_id)
+        for member in self.bot.get_all_members():
+            if member.id == user_id:
+                user = member
+    

@@ -12,10 +12,10 @@ class CodCog:
     async def codstats(self, ctx: commands.Context, battletag: str, time_filter: str=None) -> None:
         if time_filter in ["weekly", "week"]:
             weekly = True
-        elif time_filter is None:
+        elif time_filter is None or time_filter in ["lifetime", "all"]:
             weekly = False
         else:
-            await ctx.send(f'Invalid optional time argument **{weekly}**. Use **week** for weekly stats.')
+            await ctx.send(f'Invalid time argument "**{time_filter}**". Type `!cod <btag> week` for weekly stats.')
             raise Exception
         
         try:

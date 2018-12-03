@@ -13,23 +13,14 @@ from cogs.base_cog import BaseCog
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None, folder=None,) -> None:
-        """The constructor for the SoundboardCog class, it assigns the important variables used by the commands below
-        Args:
-            bot: The bot the Cog will be added to (commands.Bot)
-            folder: The path to the folder with the sound files (str)
-            log_channel_id: The id of the log_channel (int)
-            """
+    def __init__(self, bot: commands.Bot, log_channel_id: int, folder=None) -> None:
         super().__init__(bot, log_channel_id)
         self.folder = folder
-        #self.bot = bot
-        #self.log_channel_id = log_channel_id
-
 
     @property
     def sound_list(self) -> list:
         """
-        Returns list of files in the sound folder provided on object instantiation.
+        Returns list of files in the sound folder provided on class instantiation.
         
         Returns:
             sound_list: list of file names, all lowercase and without the .mp3 file extension.
