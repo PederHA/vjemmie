@@ -8,21 +8,8 @@ from discord import opus
 from discord.ext import commands
 from discord.ext.commands import Bot
 
-from cogs.admin_cog import AdminCog
-from cogs.fun_cog import FunCog
-from cogs.pfm_memes_cog import PFMCog
-from cogs.pubg_cog import PUBGCog
-from cogs.reddit_cog import RedditCog
-from cogs.sound_cog import SoundboardCog
-from cogs.user_cog import UserCog
-from cogs.wowprogress_cog import WPCog
-from cogs.youtube_cog import YTCog
-#from cogs.serialsound_cog import SerialSoundboardCog
-from cogs.soundbomb_cog import SoundBombCog
-from cogs.testing_cog import TestingCog
-from cogs.frying_cog import FryingCog
-from cogs.weather_cog import WeatherCog
-from cogs.cod_cog import CodCog
+
+from cogs import *
 from events_module import EventsModule
 from ext_module import ExtModule
 from utils.config import GENERAL_DB_PATH
@@ -47,6 +34,7 @@ bot.add_cog(TestingCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FryingCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(WeatherCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(CodCog(bot=bot, log_channel_id=log_channel_id))
+bot.add_cog(War3Cog(bot=bot, log_channel_id=log_channel_id, replays_folder=None))
 
 @bot.event
 async def on_ready():
