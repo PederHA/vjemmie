@@ -2,22 +2,25 @@
 Not technically cog, but who's gonna fucking arrest me, huh?
 """
 
-import sqlite3
-import os
+import copy
 import datetime
-import time
+import os
 import random
+import sqlite3
+import time
+import traceback
 from collections import namedtuple
 from typing import Tuple
-import copy
+
 import discord
-from utils.ext_utils import is_int
 from discord.ext import commands
 
+from utils.ext_utils import is_int
+import trueskill
 
 class DatabaseHandler:
 
-    def __init__(self, db_path):
+    def __init__(self, db_path: str) -> None:
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.c = self.conn.cursor()
@@ -127,6 +130,57 @@ class DatabaseHandler:
                 pass
             else:
                 self.c.execute(f'UPDATE `wordtrack` SET `occurences`={occurences} WHERE "name"="{name}";')
+        self.conn.commit()
+
+    # Rating
+
+    def add_user(self, user: discord.Member, realname: str, game: str, base_rating: float) -> str:
+        base_rating = float(base_rating)
+        realname = realname.lower()
+        username = user.name.lower()
+        
+        try:
+            self.c.execute(f'INSERT INTO `{game}`(`name`,`alias`,`id`,`rating`, `wins`, `losses`) VALUES (?, ? ,? ,?, ?, ?)', 
+                          (realname, username, user.id, base_rating, 0, 0))
+        except sqlite3.IntegrityError:
+            msg = "User with that name or ID already exists in the database!"
+        except:
+            exc = traceback.format_exc()
+            print(exc)
+            msg = "Unknown error occured!"
+        else: 
+            self.conn.commit()
+            msg = f"Added {user.name} to DB!"
+        finally:
+            return msg
+    
+    def get_players(self, game: str, alias: bool=False) -> list:
+        players = []
+        if alias:
+            _name = "alias"
+        else:
+            _name = "name"
+        for name, _alias, rating, wins, losses in self.c.execute(f'SELECT "name", "alias", "rating", "wins", "losses" from {game}'):
+            if alias:
+                if _alias is None:
+                    continue
+                else:
+                    nick = _alias
+            if not alias or _alias is None:
+                nick = name       
+            players.append((nick, rating, wins, losses))
+        players = sorted(players, key=lambda x: x[1], reverse=True)
+        return players
+
+    def update_rating(self, player: str, rating: trueskill.Rating, win: bool=True, game: str="legiontd") -> None:
+        if win:
+            result = "wins"
+        else:
+            result = "losses"
+        self.c.execute(f"""SELECT "{result}" FROM {game} WHERE name == "{player}" """)
+        result_n = self.c.fetchone()
+        result_n = result_n[0] + 1
+        self.c.execute(f"""UPDATE {game} SET rating = {rating.mu}, {result} = {result_n}, last_played = {time.time()}  WHERE name == "{player}" """)
         self.conn.commit()
 
     ###################################################
