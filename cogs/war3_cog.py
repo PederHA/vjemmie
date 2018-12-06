@@ -1,4 +1,6 @@
 import asyncio
+import math
+import sqlite3
 
 import discord
 import trueskill
@@ -6,7 +8,6 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-from utils.ext_utils import get_users_in_author_voice_channel
 
 
 class War3Cog(BaseCog):
@@ -41,14 +42,14 @@ class War3Cog(BaseCog):
             _spc = 10 - len(name)
             for i in range(_spc):
                 spc+=" "
-            output += f"{name.capitalize()}{spc}\tRating: {int(rating*40)}\tWins: {wins}\tLosses: {losses}\n"
+            output += f"{name.capitalize()}{spc}\tRating: {round(rating*40)}\tWins: {wins}\tLosses: {losses}\n"
         else:
             output += "```"
             await ctx.send(output)
         
     
     @commands.command(name="result")
-    async def result(self, ctx:commands.Context, winners: str, losers: str=None, game="legiontd", alias: bool=False):
+    async def result(self, ctx:commands.Context, winners: str, losers: str=None, game="legiontd", alias: bool=False, preview: bool=False):
         """
         Report result of a game, resulting in a rating update for the players involved.
 
@@ -64,25 +65,30 @@ class War3Cog(BaseCog):
         
         # List from string of names separated by spaces. Remove duplicates.
         winners = list(set(winners.lower().split(" ")))
-        winners.sort()
+        winners.sort()  
         # Copy of winners that will not be modified
-        winners_names = list(winners)
+        winners_names = list(winners)    
         if losers is not None:
             losers = list(set(losers.lower().split(" ")))
             losers.sort()
             losers_names = list(losers)
         else:
             # Detect losing team from voice channel if `losers` is None
-            _voice_chatters = await get_users_in_author_voice_channel(ctx)
+            _voice_chatters = await self.get_users_in_voice(ctx)
             losers = list(set(_voice_chatters) - set(winners))
             if len(losers) > len(winners):
                 losers_str = ", ".join(losers)
                 await ctx.send(f"Detected uneven teams. Is this the correct losing team?\n{losers_str}\n"
                                "Type **yes** to confirm and **no** to abort rating update.")
-                msg = await self.bot.wait_for("message", check=pred, timeout=10.0)
+                try:
+                    msg = await self.bot.wait_for("message", check=pred, timeout=10.0)
+                except asyncio.TimeoutError:
+                    await ctx.send("No reply from user. Aborting.")
+                    raise Exception("User did not reply to confirmation prompt.")
                 if msg.content.lower() not in  ["yes", "y", "ja"]:
                     await ctx.send("Aborting rating update.")
                     raise Exception
+        
         # Get players from db as list of tuples        
         players = self.db.get_players(game, alias=alias)
         _players = [player for player, _, _, _ in players]
@@ -170,18 +176,86 @@ class War3Cog(BaseCog):
         winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)])
         
         # Update ratings in DB and generate Discord message
-        msg = "```Rating change:\n"
+        msg = "```Rating change:\n\n"
         for idx, winner in enumerate(winners_new):
             self.db.update_rating(winners_names[idx], winner, win=True, game=game)
-            rating_gain = int((winner.mu - ts_winners[0].mu)*40)
-            msg += f"{winners[idx][0]}: +{rating_gain} rating.\n"
+            rating_gain = round((winner.mu - ts_winners[0].mu)*40)
+            msg += f"{winners[idx][0].capitalize()}: +{rating_gain} rating.\n"
         for idx, loser in enumerate(losers_new):
             self.db.update_rating(losers_names[idx], loser, win=False, game=game)
-            rating_loss = int((ts_losers[0].mu - loser.mu)*40)
-            msg += f"{losers[idx][0]}: -{rating_loss} rating.\n"   
+            rating_loss = round((ts_losers[0].mu - loser.mu)*40)
+            msg += f"{losers[idx][0].capitalize()}: -{rating_loss} rating.\n"   
         msg += "```"
         await ctx.send(msg)
 
         # Post leaderboard after reporting individual rating changes
         cmd = self.bot.get_command("leaderboard")
         await ctx.invoke(cmd, game)
+
+    @commands.command(name="teams")
+    async def autobalance(self, ctx: commands.Context, players: str=None, game: str="legiontd") -> None:
+        """
+        Distributes `players` to 2 teams based on their rating.
+
+        """
+
+        help_str = """Usage: !teams "player1 player2 player3 player4" (opt: <game>)
+                      If command is called without arguments, pulls players from 
+                      message author's voice channel."""
+        
+        if players is None or players == "c":
+            # Get players from author's voice channel if no `players` argument is given
+            players = await self.get_users_in_voice(ctx)
+        else:
+            # Create list from string of names separated by spaces
+            players = players.split(" ")
+        
+        try:
+            db_players = self.db.get_players(game)
+        except sqlite3.OperationalError:
+            await ctx.send(f"Could not find player stats for game **{game}**.")
+            raise Exception
+        
+        players_ratings = []
+        for db_player in db_players:
+            name, rating, wins, losses = db_player
+            for player in players:
+                if name == player:
+                    players_ratings.append(db_player)
+                    break
+        
+        if len(players) % 2 == 0:
+            # If n players is even number, select every 2nd player in sorted list players_ratings
+            team1 = players_ratings[::2]
+        else:
+            # If teams are uneven, put highest rated players on the smaller team
+            _t1 = math.ceil(len(players) / 2)
+            team1 = players_ratings[:_t1]
+        team2 = list(set(players_ratings) - set(team1))
+        
+        team1_rating = 0
+        _t1_names = []
+        for player in team1:
+            name, rating, wins, losses = player
+            _t1_names.append(f"{name.capitalize()} ({int(rating*40)})")
+            team1_rating += rating*40
+        team1_rating = team1_rating/len(team1)
+        team1_names = ", ".join(_t1_names)
+
+        team2_rating = 0
+        _t2_names = []
+        for player in team2:
+            name, rating, wins, losses = player
+            _t2_names.append(f"{name.capitalize()} ({int(rating*40)})")
+            team2_rating += rating*40
+        team2_rating = team2_rating/len(team2)
+        team2_names = ", ".join(_t2_names)
+
+        t1_spaces = " "*(40-len(team1_names))
+        t2_spaces = " "*(40-len(team2_names))
+
+        msg = "```"
+        msg += f"Team 1: {team1_names}{t1_spaces} Average rating: {team1_rating}\n"
+        msg += f"Team 2: {team2_names}{t2_spaces} Average rating: {team2_rating}\n"
+        msg += "```"
+        await ctx.send(msg)
