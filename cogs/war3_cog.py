@@ -174,7 +174,18 @@ class War3Cog(BaseCog):
             ts_losers.append(_loser)            
 
         # Calculate new ratings
-        winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)])
+        if (len(winners) + len(losers)) % 2 == 0:
+            winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)])
+        else:
+            # Tune rating changes in uneven matches
+            # Placeholder value. I have no idea how to tune this right now.
+            quality = 1
+            if ts_winners > ts_losers:
+                winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)], 
+                                          weights=[tuple([quality for i in winners]), tuple([quality for x in losers])])
+            else:
+                winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)], 
+                            weights=[tuple([quality for i in winners]), tuple([quality for x in losers])])
         
         # Update ratings in DB and generate Discord message  
         msg = "```Rating change:\n\n"
