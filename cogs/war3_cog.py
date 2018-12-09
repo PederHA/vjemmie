@@ -1,6 +1,7 @@
 import asyncio
 import math
 import sqlite3
+from itertools import combinations
 
 import discord
 import trueskill
@@ -175,28 +176,34 @@ class War3Cog(BaseCog):
         # Calculate new ratings
         winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)])
         
-        # Update ratings in DB and generate Discord message
+        # Update ratings in DB and generate Discord message  
         msg = "```Rating change:\n\n"
         for idx, winner in enumerate(winners_new):
-            self.db.update_rating(winners_names[idx], winner, win=True, game=game)
-            rating_gain = round((winner.mu - ts_winners[0].mu)*40)
+            if not preview:
+                self.db.update_rating(winners_names[idx], winner, win=True, game=game)
+            rating_gain = round((winner.mu - ts_winners[idx].mu)*40)
             msg += f"{winners[idx][0].capitalize()}: +{rating_gain} rating.\n"
         for idx, loser in enumerate(losers_new):
-            self.db.update_rating(losers_names[idx], loser, win=False, game=game)
-            rating_loss = round((ts_losers[0].mu - loser.mu)*40)
+            if not preview:
+                self.db.update_rating(losers_names[idx], loser, win=False, game=game)
+            rating_loss = round((ts_losers[idx].mu - loser.mu)*40)
             msg += f"{losers[idx][0].capitalize()}: -{rating_loss} rating.\n"   
         msg += "```"
-        await ctx.send(msg)
 
-        # Post leaderboard after reporting individual rating changes
-        cmd = self.bot.get_command("leaderboard")
-        await ctx.invoke(cmd, game)
+        if not preview:
+            # Post rating change message
+            await ctx.send(msg)
+            cmd = self.bot.get_command("leaderboard")
+            # Post overall leaderboard
+            await ctx.invoke(cmd, game)
+        
+        if preview:
+            return rating_gain, rating_loss
 
     @commands.command(name="teams")
     async def autobalance(self, ctx: commands.Context, players: str=None, game: str="legiontd") -> None:
         """
-        Distributes `players` to 2 teams based on their rating.
-
+        Distributes players to 2 teams based on their rating.
         """
 
         help_str = """Usage: !teams "player1 player2 player3 player4" (opt: <game>)
@@ -213,6 +220,9 @@ class War3Cog(BaseCog):
         try:
             db_players = self.db.get_players(game)
         except sqlite3.OperationalError:
+            import traceback
+            err = traceback.format_exc()
+            await self.send_log(err)
             await ctx.send(f"Could not find player stats for game **{game}**.")
             raise Exception
         
@@ -224,15 +234,27 @@ class War3Cog(BaseCog):
                     players_ratings.append(db_player)
                     break
         
-        if len(players) % 2 == 0:
-            # If n players is even number, select every 2nd player in sorted list players_ratings
-            team1 = players_ratings[::2]
-        else:
-            # If teams are uneven, put highest rated players on the smaller team
-            _t1 = math.ceil(len(players) / 2)
-            team1 = players_ratings[:_t1]
-        team2 = list(set(players_ratings) - set(team1))
+        n_players = len(players_ratings)
+        _combs = combinations(players_ratings, r=(math.ceil((n_players)/2)))
+        # Sort list of player combinations by sum of player ratings from low->high
+        combs = sorted(_combs, key=lambda x: sum([rating for _, rating, _, _ in x]))
         
+        # Generate team1
+        if len(players_ratings) % 2 == 0:
+            middle = float(len(combs))/2
+            if middle % 2 != 0:
+                team1 = combs[int(middle - .5)]      
+            else:              
+                team1 = combs[int(middle)]   
+        else:
+            # If teams are uneven, stack the biggest team with the worst players
+            # Lazy implementation for now
+            team1 = combs[0]
+        
+        # Team2 is generated from set difference of all players and team1
+        team2 = list(set(players_ratings) - set(team1))
+
+        # A lot of duplicated code atm. Could move to separate method.
         team1_rating = 0
         _t1_names = []
         for player in team1:
@@ -251,11 +273,24 @@ class War3Cog(BaseCog):
         team2_rating = team2_rating/len(team2)
         team2_names = ", ".join(_t2_names)
 
+        # Generate number of spaces for alignment in output msg
         t1_spaces = " "*(40-len(team1_names))
         t2_spaces = " "*(40-len(team2_names))
 
+        # Get !result command to preview potential rating change
+        t1_names_only = [name for name, _, _, _ in team1]
+        t1 = " ".join(t1_names_only)
+        t2_names_only = [name for name, _, _, _ in team2]
+        t2 = " ".join(t2_names_only)
+        
+        # Get potential rating change for win AND loss for both teams
+        rating_change_cmd = self.bot.get_command("result")
+        team1_win, team2_loss = await ctx.invoke(rating_change_cmd, winners=t1, losers=t2, preview=True)
+        team2_win, team1_loss = await ctx.invoke(rating_change_cmd, winners=t2, losers=t1, preview=True)
+
+        # Create message  
         msg = "```"
-        msg += f"Team 1: {team1_names}{t1_spaces} Average rating: {team1_rating}\n"
-        msg += f"Team 2: {team2_names}{t2_spaces} Average rating: {team2_rating}\n"
+        msg += f"Team 1: {team1_names}{t1_spaces}\t+{team1_win}/-{team1_loss}  Average rating: {round(team1_rating)}\n"
+        msg += f"Team 2: {team2_names}{t2_spaces}\t+{team2_win}/-{team2_loss} Average rating: {round(team2_rating)}\n"
         msg += "```"
         await ctx.send(msg)
