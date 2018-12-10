@@ -1,6 +1,7 @@
 import asyncio
 import math
 import sqlite3
+import traceback
 from itertools import combinations
 
 import discord
@@ -222,8 +223,14 @@ class War3Cog(BaseCog):
                       message author's voice channel."""
         
         if players is None or players == "c":
-            # Get players from author's voice channel if no `players` argument is given
+            # Get players from author's voice channel if no argument to param `players` is given
             players = await self.get_users_in_voice(ctx)
+            if players is None:
+                await ctx.send("You are not connected to a voice channel")
+                raise Exception
+            elif len(players) == 1:
+                await ctx.send("At least 2 players have to be present in the voice channel.")
+                raise Exception
         else:
             # Create list from string of names separated by spaces
             players = players.split(" ")
@@ -231,7 +238,6 @@ class War3Cog(BaseCog):
         try:
             db_players = self.db.get_players(game)
         except sqlite3.OperationalError:
-            import traceback
             err = traceback.format_exc()
             await self.send_log(err)
             await ctx.send(f"Could not find player stats for game **{game}**.")
@@ -249,14 +255,47 @@ class War3Cog(BaseCog):
         _combs = combinations(players_ratings, r=(math.ceil((n_players)/2)))
         # Sort list of player combinations by sum of player ratings from low->high
         combs = sorted(_combs, key=lambda x: sum([rating for _, rating, _, _ in x]))
-        
         # Generate team1
         if len(players_ratings) % 2 == 0:
             middle = float(len(combs))/2
             if middle % 2 != 0:
-                team1 = combs[int(middle - .5)]      
+                # If middle index is not an integer, test both [middle + .5] and [middle - .5]
+
+                # Calculate average rating for first potential team 1
+                _t1_1 = combs[int(middle + .5)] 
+                _t1_1_rating = sum([rating for _, rating, _, _ in _t1_1])
+                _t2_1 = list(set(players_ratings) - set(_t1_1))
+                _t2_1_rating = sum([rating for _, rating, _, _ in _t2_1])
+
+                # Calculate average rating for second potential team 1
+                _t1_2 = combs[int(middle - .5)]
+                _t1_2_rating = sum([rating for _, rating, _, _ in _t1_2])
+                _t2_2 = list(set(players_ratings) - set(_t1_2))
+                _t2_2_rating = sum([rating for _, rating, _, _ in _t2_1])
+                
+                # Find difference in average rating for potential first team1 vs potential team2
+                # Difference is a number >=0
+                if _t1_1_rating >= _t2_1_rating:
+                    diff1 = _t1_1_rating - _t2_1_rating
+                else:
+                    diff1 = _t2_1_rating - _t1_1_rating
+                
+                # Same for second potential team1 vs second potential team2
+                if _t1_2_rating >= _t2_2_rating:
+                    diff2 = _t1_2_rating - _t2_2_rating
+                else:
+                    diff2 = _t2_2_rating - _t1_2_rating
+                
+                if diff1 <= diff2:
+                    # If difference1 is smallest, choose first team1
+                    team1 = _t1_1
+                else:
+                    # Otherwise choose second team1
+                    team1 = _t1_2
+            
             else:              
                 team1 = combs[int(middle)]   
+        
         else:
             # If teams are uneven, stack the biggest team with the worst players
             # Lazy implementation for now
@@ -301,7 +340,7 @@ class War3Cog(BaseCog):
 
         # Create message  
         msg = "```"
-        msg += f"Team 1: {team1_names}{t1_spaces}\t+{team1_win}/-{team1_loss}  Average rating: {round(team1_rating)}\n"
-        msg += f"Team 2: {team2_names}{t2_spaces}\t+{team2_win}/-{team2_loss} Average rating: {round(team2_rating)}\n"
+        msg += f"Team 1: {team1_names}{t1_spaces}\t+{team1_win}/-{team1_loss}\tAverage rating: {round(team1_rating)}\n"
+        msg += f"Team 2: {team2_names}{t2_spaces}\t+{team2_win}/-{team2_loss}\tAverage rating: {round(team2_rating)}\n"
         msg += "```"
         await ctx.send(msg)
