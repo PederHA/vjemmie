@@ -9,6 +9,7 @@ import gtts
 from pathlib import Path
 import youtube_dl
 from cogs.base_cog import BaseCog
+from collections import deque
 
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
@@ -16,6 +17,8 @@ class SoundboardCog(BaseCog):
     def __init__(self, bot: commands.Bot, log_channel_id: int, folder=None) -> None:
         super().__init__(bot, log_channel_id)
         self.folder = folder
+        self.queue = deque([], maxlen=10)
+        
 
     @property
     def sound_list(self) -> list:
@@ -45,41 +48,71 @@ class SoundboardCog(BaseCog):
                                   ' If no tags are found or no sound with all the given tags exists'
                                   ' the sound is chosen randomly.'
                                   ' Requires you to be in a voice channel!')
-    async def play(self, ctx: commands.Context, *args) -> None:
-        """This command plays the first sound name found in args, if one exists.
-        If none exists, all args will be interpreted as tags. The command will create the cut, of all
-        valid tag parameters and play a random file from that.
-        If that list is empty/no args is formatted validly this command plays a random sound
+    async def play(self, ctx: commands.Context, *args, **kwargs) -> None:
+        """
+        Plays sound in message author's voice channel, unless otherwise specified.
 
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-            args: Shall contain at least one filnename or multiple tags (all String)
-            """
-        try:  # user must be connected to a voice channel
-            voice_channel = ctx.author.voice.channel
-        except AttributeError:
-            await ctx.send(content='To use this command you have to be connected to a voice channel!')
-            raise discord.DiscordException
+        args:
+            *args: Name of sound file to play. If len(args)>1, args are joined into
+            single string separated by spaces.
+        """
+        # Remote voice channel
+        remote_vc = kwargs.pop("vc", None)
+        # Continue playing with an already established voice connection
+        voice_client = kwargs.pop("voice_client", None)
+        
+        if remote_vc is not None:
+            voice_channel = remote_vc
+        else:
+            try:  # user must be connected to a voice channel
+                voice_channel = ctx.author.voice.channel
+            except AttributeError:
+                await ctx.send(content='To use this command you have to be connected to a voice channel!')
+                raise discord.DiscordException
 
         arg = " ".join(args).lower()
         if arg in self.sound_list:
             sound_name = arg
         else:
             if len(args)>0:
-                await ctx.send(f"Could not find sound with name {args[0]}")
-                raise Exception(f"Could not find sound with name {args[0]}")
+                await ctx.send(f"Could not find sound with name {arg}")
+                raise Exception(f"Could not find sound with name {arg}")
             else:
                 sound_name = random.choice(self.sound_list)
        
         try:
-            vc = await voice_channel.connect()
+            if voice_client is None:
+                vc = await voice_channel.connect()
+            else:
+                vc = voice_client
+
         except discord.ClientException:
-            await ctx.send('I am already playing in a voice channel.'
+            self.queue.append(sound_name)
+            def_msg = ('I am already playing in a voice channel.'
                            ' Please try again later or stop me with the stop command!')
+            await ctx.send(f"{sound_name} added to queue.")
             raise discord.DiscordException
-        vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
-                after=lambda e: self.disconnector(vc))
+        else:
+            vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
+                    after=lambda e: self.disconnector(vc, ctx))
+
         await self.send_log('Playing: ' + sound_name)
+    
+    @commands.command(name="rplay")
+    async def remoteplay(self, ctx: commands.Context, channel_id: int, *args):
+        """
+        Command for playing sound in a given voice channel `channel_id` without 
+        requiring the user invoking the command to be connected to said channel.
+        """
+        help_str = "Usage: `!rplay <channel_id> <sound name>`"
+        
+        vc = discord.utils.get(self.bot.get_all_channels(), id=channel_id)
+        if vc is None:
+            err = f"Could not find voice channel with id {channel_id}.\n{help_str}"
+            await ctx.send(err)
+            raise Exception(err)
+        cmd = self.bot.get_command("play")
+        await ctx.invoke(cmd, *args, vc=vc)
 
     @commands.command(name='stop',
                       aliases=['halt'],
@@ -90,9 +123,18 @@ class SoundboardCog(BaseCog):
          Args:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
+        
         for connection in self.bot.voice_clients:
             if ctx.author.voice.channel == connection.channel:
-                return await connection.disconnect()
+                await connection.disconnect()
+                if len(self.queue) > 0:
+                    await self.play_next(ctx)
+
+    async def play_next(self, ctx: commands.Context) -> None:
+        play_cmd = self.bot.get_command("play")
+        next_sound = self.queue[0]
+        if next_sound is not None:
+            await ctx.invoke(play_cmd, next_sound)
 
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
@@ -113,67 +155,103 @@ class SoundboardCog(BaseCog):
         await ctx.send(f"```{sound_string}```")
 
 
-    def disconnector(self, voice_client: discord.VoiceClient) -> None:
+    def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
         """This function is passed as the after parameter of FFmpegPCMAudio() as it does not take coroutines.
         Args:
             voice_client: The voice client that will be disconnected (discord.VoiceClient)
-            bot: The bot that will terminate the voice client, which will be this very bot
             """
-        coro = voice_client.disconnect()
-        fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-        try:
-            fut.result()
-        except asyncio.CancelledError:
-            pass
+        if len(self.queue) > 0:   
+            next_sound = self.queue[0]
+            try:
+                play_cmd = self.bot.get_command("play")
+                self.bot.loop.run_until_complete(ctx.invoke(play_cmd, next_sound, voice_client=voice_client))
+            except discord.DiscordException:
+                pass
+            finally:
+                self.queue.popleft()
+        if len(self.queue) == 0:
+            coro = voice_client.disconnect()
+            fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+            try:
+                fut.result()
+            except asyncio.CancelledError:
+                pass
 
-    async def name_reaction(self, name, message) -> None:
-        if name == "mw2nuke":
-            await message.add_reaction('\U0001F4A3')
-        # Looks in spellbook for Pick Lock
-        if (name == "zonodoor") or (name == "rad1"):
-            await message.add_reaction(':PedoRad:237754662361628672')
-
+    @commands.command(name="queue")
+    async def display_queue(self, ctx:commands.Context):
+        _queue = ", ".join(self.queue)
+        if _queue is not "":
+            await ctx.send(f"Sound files currently queued up: **{_queue}**.")
+        else:
+            await ctx.send("No sound files in queue.")
+    
     @commands.command(name="texttospeech",
                       aliases=["tts", "text-to-speech"])
-    async def texttospeech(self, ctx: commands.Context, *args) -> None:
-        valid_langs = gtts.lang.tts_langs()
-        if len(args) == 3:
-            text, language, sound_name = args
-            if language in valid_langs.keys():
-                tts = gtts.gTTS(text=text, lang=language)
-                file_path = f"sounds/{sound_name}.mp3"
-                # Check if a file with identical name already exists
-                if Path(file_path).exists():
-                    await ctx.send(f"A sound file with the name **{sound_name}** already exists. Choose another name!")
-                else:
-                    tts.save(file_path)
-                    await ctx.send(f'Sound created: **{sound_name}**')
-
-                # Play created sound file in author's voice channel afterwards
-                try:
-                    if ctx.message.author.voice.channel != None:
-                        cmd  = self.bot.get_command('play')
-                        await ctx.invoke(cmd, sound_name)
-                # Suppress error if voice channel does not exist
-                except AttributeError:
-                    pass
-            else:
-                await ctx.send("Invalid language."
-                               "Type `!tts help` for more information about available languages.")
-        else:
-            if len(args) >= 1:
-                if args[0] in ["languages", "lang", "options"]:
-                    output = '```Available languages:\n\n'
-                    for language_long, language_short in valid_langs.items():
-                        output += f"{language_long}: {language_short}\n"
-                    output += "```"
-                    await ctx.send(output)
-                else:
-                    await ctx.send("3 arguments required: "
+    async def texttospeech(self, ctx: commands.Context, text: str, language: str="en", pitch: int=0) -> None:
+        
+        help_str = ("3 arguments required: "
                                 "`text` "
                                 "`language` "
                                 "`sound_name`."
                                 "\nType `!tts lang` for more information about available languages.")
+        
+        # gTTS exception handling. 
+        # The language list keeps breaking between versions.
+        try:
+            valid_langs = gtts.lang.tts_langs()
+        except:
+            await ctx.send("Google Text-to-Speech needs to be updated. Try again later.")
+            await self.send_log("**URGENT**: Update gTTS. <pip install -U gTTS> <@103890994440728576>")
+            raise Exception
+        # User error and help arguments
+        if text is None:
+            await ctx.send("Text for TTS must be specified.")
+            raise Exception 
+        elif text in ["languages", "lang", "options"]:
+            output = '```Available languages:\n\n'
+            for language_long, language_short in valid_langs.items():
+                output += f"{language_long}: {language_short}\n"
+            output += "```"
+            await ctx.send(output)
+            raise Exception
+
+        if language in valid_langs.keys():
+            tts = gtts.gTTS(text=text, lang=language)
+            sound_name = text.split(" ")[0]
+
+            # I'll implement pitch shit later sorry
+            if True:
+                file_prefix = ""
+            else:  
+                if pitch != 0:
+                    file_prefix = "_"
+                else:
+                    file_prefix = ""
+            
+            # Generate file name and relative file path
+            _num = 0
+            file_suffix = lambda x: "" if x == 0 else x
+            file_path = lambda n: f"sounds/{file_prefix}{sound_name}{file_suffix(n)}.mp3"
+            
+            # Check if a file with identical name already exists
+            while Path(file_path(_num)).exists():
+                _num += 1
+            else:
+                tts.save(file_path(_num))
+                sound_name = f"{sound_name}{file_suffix(_num)}"
+                await ctx.send(f'Sound created: **{sound_name}**')
+        else:
+            await ctx.send(f'"{language}" is not a valid TTS language option.')
+            raise Exception
+
+        # Try to play created sound file in author's voice channel afterwards
+        try:
+            if ctx.message.author.voice.channel is not None:
+                cmd  = self.bot.get_command('play')
+                await ctx.invoke(cmd, sound_name)
+        except AttributeError:
+            pass
+
 
     @commands.command(name="ytdl")
     async def ytdl(self, ctx: commands.Context, *args) -> None:
@@ -193,12 +271,9 @@ class SoundboardCog(BaseCog):
             print(path)
             _, _file = path.split("\\")
 
-        try:
-            if ctx.message.author.voice.channel != None:
-                cmd  = self.bot.get_command('play')
-                await ctx.invoke(cmd, _file)
-        # Suppress error if voice channel does not exist
-        except AttributeError:
-            await ctx.send("Must be in a voice channel to use this command.")
+        if ctx.message.author.voice.channel is not None:
+            cmd  = self.bot.get_command('play')
+            await ctx.invoke(cmd, _file)
+
         
 
