@@ -16,8 +16,10 @@ class SoundboardCog(BaseCog):
 
     def __init__(self, bot: commands.Bot, log_channel_id: int, folder=None) -> None:
         super().__init__(bot, log_channel_id)
+        self.is_playing = False
         self.folder = folder
         self.queue = deque([], maxlen=10)
+        self.vc = None
         
 
     @property
@@ -58,8 +60,6 @@ class SoundboardCog(BaseCog):
         """
         # Remote voice channel
         remote_vc = kwargs.pop("vc", None)
-        # Continue playing with an already established voice connection
-        voice_client = kwargs.pop("voice_client", None)
         
         if remote_vc is not None:
             voice_channel = remote_vc
@@ -69,34 +69,68 @@ class SoundboardCog(BaseCog):
             except AttributeError:
                 await ctx.send(content='To use this command you have to be connected to a voice channel!')
                 raise discord.DiscordException
-
+        
+        async def parse_sound_name(arg) -> str:
+            nonlocal ctx
+            if arg in self.sound_list:
+                sound_name = arg
+            else:
+                if len(args)>0:
+                    await ctx.send(f"Could not find sound with name {arg}")
+                    raise Exception(f"Could not find sound with name {arg}")
+                else:
+                    sound_name = random.choice(self.sound_list)
+            return sound_name
+        
         arg = " ".join(args).lower()
-        if arg in self.sound_list:
-            sound_name = arg
-        else:
-            if len(args)>0:
-                await ctx.send(f"Could not find sound with name {arg}")
-                raise Exception(f"Could not find sound with name {arg}")
-            else:
-                sound_name = random.choice(self.sound_list)
-       
-        try:
-            if voice_client is None:
+        sound_name = await parse_sound_name(arg)
+
+        
+        self.queue.append(sound_name)
+        if not self.is_playing:
+            try:
                 vc = await voice_channel.connect()
+            except discord.ClientException:
+                def_msg = ('I am already playing in a voice channel.'
+                            ' Please try again later or stop me with the stop command!')   
+                print("we are already connected!")   
+                #raise discord.DiscordException
             else:
-                vc = voice_client
+                # THIS IS AWFUL BUT IT WORKS. YIKES.
+                self.vc = vc
+                while(len(self.queue)) > 0:
+                    _nxt = self.queue.popleft()
+                    await self.play_vc(ctx, vc, _nxt)
+                    while self.is_playing:
+                        await asyncio.sleep(0.25)
+                else:
+                    for connection in self.bot.voice_clients:
+                        if ctx.author.voice.channel == connection.channel:
+                            await connection.disconnect()
 
-        except discord.ClientException:
-            self.queue.append(sound_name)
-            def_msg = ('I am already playing in a voice channel.'
-                           ' Please try again later or stop me with the stop command!')
-            await ctx.send(f"{sound_name} added to queue.")
-            raise discord.DiscordException
         else:
-            vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
-                    after=lambda e: self.disconnector(vc, ctx))
-
+            #self.queue.append(sound_name)
+            await ctx.send(f"**{sound_name}** added to queue.")
+    
+    async def play_vc(self, ctx, vc, sound_name) -> None:
+        self.is_playing = True
+        def after_playing() -> None:
+            self.is_playing = False
+        vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
+                            after=lambda e: after_playing())
         await self.send_log('Playing: ' + sound_name)
+
+    async def play_next_in_queue(self, ctx: commands.Context) -> None:
+        play_cmd = self.bot.get_command("play")
+        next_sound = self.queue.popleft()
+        await ctx.invoke(play_cmd, next_sound)
+
+    @commands.command(name="progress")
+    async def progress(self, ctx: commands.Command) -> None:
+        for k in dir(self.vc._player):
+            attr = getattr(self.vc._player, k)
+            print(k, attr, sep=": ")
+
     
     @commands.command(name="rplay")
     async def remoteplay(self, ctx: commands.Context, channel_id: int, *args):
@@ -123,19 +157,28 @@ class SoundboardCog(BaseCog):
          Args:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
-        
+        self.is_playing = False
+        self.vc.stop()
         for connection in self.bot.voice_clients:
             if ctx.author.voice.channel == connection.channel:
                 await connection.disconnect()
-                if len(self.queue) > 0:
-                    await self.play_next(ctx)
+    
+    @commands.command(name='skip',
+                      aliases=["next"])
+    async def skip(self, ctx: commands.Context) -> None:
+        self.is_playing = False
+        self.vc.stop()
+        if len(self.queue) > 0:
+            await self.play_next(ctx)   
 
     async def play_next(self, ctx: commands.Context) -> None:
+        self.is_playing = False
         play_cmd = self.bot.get_command("play")
         next_sound = self.queue[0]
         if next_sound is not None:
             await ctx.invoke(play_cmd, next_sound)
 
+        
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context) -> None:
@@ -154,29 +197,31 @@ class SoundboardCog(BaseCog):
             sound_string += f"{sound}\n"
         await ctx.send(f"```{sound_string}```")
 
-
+    ### UNUSED
     def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
         """This function is passed as the after parameter of FFmpegPCMAudio() as it does not take coroutines.
         Args:
             voice_client: The voice client that will be disconnected (discord.VoiceClient)
             """
+        self.is_playing = False
+
+        coro = voice_client.disconnect()
+        fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+        try:
+            fut.result()
+        except asyncio.CancelledError:
+            pass
+        
         if len(self.queue) > 0:   
             next_sound = self.queue[0]
             try:
                 play_cmd = self.bot.get_command("play")
-                self.bot.loop.run_until_complete(ctx.invoke(play_cmd, next_sound, voice_client=voice_client))
+                self.bot.loop.run_until_complete(ctx.invoke(play_cmd, next_sound))
             except discord.DiscordException:
                 pass
             finally:
                 self.queue.popleft()
-        if len(self.queue) == 0:
-            coro = voice_client.disconnect()
-            fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-            try:
-                fut.result()
-            except asyncio.CancelledError:
-                pass
-
+    
     @commands.command(name="queue")
     async def display_queue(self, ctx:commands.Context):
         _queue = ", ".join(self.queue)
@@ -201,7 +246,7 @@ class SoundboardCog(BaseCog):
             valid_langs = gtts.lang.tts_langs()
         except:
             await ctx.send("Google Text-to-Speech needs to be updated. Try again later.")
-            await self.send_log("**URGENT**: Update gTTS. <pip install -U gTTS> <@103890994440728576>")
+            await self.send_log(f"**URGENT**: Update gTTS. <pip install -U gTTS> {self.author_mention}")
             raise Exception
         # User error and help arguments
         if text is None:
@@ -251,7 +296,6 @@ class SoundboardCog(BaseCog):
                 await ctx.invoke(cmd, sound_name)
         except AttributeError:
             pass
-
 
     @commands.command(name="ytdl")
     async def ytdl(self, ctx: commands.Context, *args) -> None:
