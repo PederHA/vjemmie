@@ -84,46 +84,38 @@ class SoundboardCog(BaseCog):
         
         arg = " ".join(args).lower()
         sound_name = await parse_sound_name(arg)
-
-        
         self.queue.append(sound_name)
+        
         if not self.is_playing:
             try:
-                vc = await voice_channel.connect()
+                self.vc = await voice_channel.connect()
             except discord.ClientException:
                 def_msg = ('I am already playing in a voice channel.'
                             ' Please try again later or stop me with the stop command!')   
                 print("we are already connected!")   
-                #raise discord.DiscordException
             else:
                 # THIS IS AWFUL BUT IT WORKS. YIKES.
-                self.vc = vc
                 while(len(self.queue)) > 0:
                     _nxt = self.queue.popleft()
-                    await self.play_vc(ctx, vc, _nxt)
+                    await self.play_vc(ctx, _nxt)
                     while self.is_playing:
+                        # Workaround for threading issues
+                        # Without this while-loop, the vc instantly disconnects.
                         await asyncio.sleep(0.25)
                 else:
                     for connection in self.bot.voice_clients:
                         if ctx.author.voice.channel == connection.channel:
                             await connection.disconnect()
-
         else:
-            #self.queue.append(sound_name)
             await ctx.send(f"**{sound_name}** added to queue.")
     
-    async def play_vc(self, ctx, vc, sound_name) -> None:
+    async def play_vc(self, ctx, sound_name) -> None:
         self.is_playing = True
         def after_playing() -> None:
             self.is_playing = False
-        vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
+        self.vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
                             after=lambda e: after_playing())
         await self.send_log('Playing: ' + sound_name)
-
-    async def play_next_in_queue(self, ctx: commands.Context) -> None:
-        play_cmd = self.bot.get_command("play")
-        next_sound = self.queue.popleft()
-        await ctx.invoke(play_cmd, next_sound)
 
     @commands.command(name="progress")
     async def progress(self, ctx: commands.Command) -> None:
@@ -158,10 +150,11 @@ class SoundboardCog(BaseCog):
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
         self.is_playing = False
-        self.vc.stop()
         for connection in self.bot.voice_clients:
             if ctx.author.voice.channel == connection.channel:
                 await connection.disconnect()
+        else:
+            self.vc = None
     
     @commands.command(name='skip',
                       aliases=["next"])
@@ -174,11 +167,10 @@ class SoundboardCog(BaseCog):
     async def play_next(self, ctx: commands.Context) -> None:
         self.is_playing = False
         play_cmd = self.bot.get_command("play")
-        next_sound = self.queue[0]
+        next_sound = self.queue.popleft()
         if next_sound is not None:
             await ctx.invoke(play_cmd, next_sound)
 
-        
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context) -> None:
@@ -311,8 +303,9 @@ class SoundboardCog(BaseCog):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(url=url, download=True, extra_info=ydl_opts)
             res = ydl.prepare_filename(result)
-            path, _ = res.split(".")
-            print(path)
+            *_path, ext = res.split(".")
+            # If filename contains ".", stich string back together
+            path = ".".join(_path)
             _, _file = path.split("\\")
 
         if ctx.message.author.voice.channel is not None:
