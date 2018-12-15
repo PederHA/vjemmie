@@ -3,6 +3,7 @@ import math
 import sqlite3
 import traceback
 from itertools import combinations
+from typing import Tuple
 
 import discord
 import trueskill
@@ -33,21 +34,27 @@ class War3Cog(BaseCog):
             await ctx.send(msg)
     
     @commands.command(name="leaderboard")
-    async def leaderboard(self, ctx: commands.Context, game="legiontd", alias: bool=False) -> None:
+    async def leaderboard(self, ctx: commands.Context, game="legiontd", alias: bool=False, post_game: bool=False) -> None:
         players = self.db.get_players(game, alias=alias)
         output = "```\nDGVGK Legion TD Rankings:\n\n"
         for player in players:
             name, rating, wins, losses = player
+            name = name.capitalize()
+            rating = round(rating*40)
             if len(name) > 10:
                 name = name[:10]
-            spc = ""
-            _spc = 10 - len(name)
-            for i in range(_spc):
-                spc+=" "
-            output += f"{name.capitalize()}{spc}\tRating: {round(rating*40)}\tWins: {wins}\tLosses: {losses}\n"
+            # Align rows. Kinda hacky, looking for better solution.
+            name_spc = " " * (10 - len(name))
+            rating_spc = " " * (10 - len(str(rating)))
+            wins_spc = " " * (6 - len(str(wins)))
+            output += f"{name}{name_spc}\tRating: {rating}{rating_spc}Wins: {wins}{wins_spc}Losses: {losses}\n"
         else:
             output += "```"
-            await ctx.send(output)
+            if post_game:
+                deletion_timer = 60.0
+            else:
+                deletion_timer = None
+            await ctx.send(output, delete_after=deletion_timer)
         
     
     @commands.command(name="result")
@@ -102,7 +109,12 @@ class War3Cog(BaseCog):
             """
             OMEGAGIGA ugly function for matching players in db with
             players in `winners` and `losers`.
+
+            I don't like scattering specialized methods around in my Cogs. 
+            Since this function will only ever be used by `result()`, 
+            it is defined here.
             """
+
             nonlocal winners
             nonlocal _winners
             nonlocal losers
@@ -181,35 +193,36 @@ class War3Cog(BaseCog):
             # Tune rating changes in uneven matches
             # Placeholder value. I have no idea how to tune this right now.
             quality = 1
-            if ts_winners > ts_losers:
+            if len(ts_winners) > len(ts_losers):
                 winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)], 
                                           weights=[tuple([quality for i in winners]), tuple([quality for x in losers])])
             else:
                 winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)], 
                             weights=[tuple([quality for i in winners]), tuple([quality for x in losers])])
         
-        # Update ratings in DB and generate Discord message  
-        msg = "```Rating change:\n\n"
-        for idx, winner in enumerate(winners_new):
-            if not preview:
+        # Update ratings in DB and generate Discord message 
+        if not preview: 
+            msg = "```Rating change:\n\n"
+            for idx, winner in enumerate(winners_new):
                 self.db.update_rating(winners_names[idx], winner, win=True, game=game)
-            rating_gain = round((winner.mu - ts_winners[idx].mu)*40)
-            msg += f"{winners[idx][0].capitalize()}: +{rating_gain} rating.\n"
-        for idx, loser in enumerate(losers_new):
-            if not preview:
+                rating_gain = round((winner.mu - ts_winners[idx].mu)*40)
+                msg += f"{winners[idx][0].capitalize()}: +{rating_gain} rating.\n"
+            for idx, loser in enumerate(losers_new):
                 self.db.update_rating(losers_names[idx], loser, win=False, game=game)
-            rating_loss = round((ts_losers[idx].mu - loser.mu)*40)
-            msg += f"{losers[idx][0].capitalize()}: -{rating_loss} rating.\n"   
-        msg += "```"
+                rating_loss = round((ts_losers[idx].mu - loser.mu)*40)
+                msg += f"{losers[idx][0].capitalize()}: -{rating_loss} rating.\n"   
+            msg += "```"
 
-        if not preview:
             # Post rating change message
-            await ctx.send(msg)
+            await ctx.send(msg, delete_after=60.0)
             cmd = self.bot.get_command("leaderboard")
             # Post overall leaderboard
             await ctx.invoke(cmd, game)
         
         if preview:
+            # Rating change is the same for all players in a team
+            rating_gain = round((winners_new[0].mu - ts_winners[0].mu)*40) # Index is irrelevant
+            rating_loss = round((ts_losers[0].mu - losers_new[0].mu)*40)
             return rating_gain, rating_loss
 
     @commands.command(name="teams")
@@ -278,13 +291,12 @@ class War3Cog(BaseCog):
                 if _t1_1_rating >= _t2_1_rating:
                     diff1 = _t1_1_rating - _t2_1_rating
                 else:
-                    diff1 = _t2_1_rating - _t1_1_rating
-                
+                    diff1 = _t2_1_rating - _t1_1_rating    
                 # Same for second potential team1 vs second potential team2
                 if _t1_2_rating >= _t2_2_rating:
                     diff2 = _t1_2_rating - _t2_2_rating
                 else:
-                    diff2 = _t2_2_rating - _t1_2_rating
+                    diff2 = _t2_2_rating - _t1_2_rating 
                 
                 if diff1 <= diff2:
                     # If difference1 is smallest, choose first team1
@@ -304,35 +316,23 @@ class War3Cog(BaseCog):
         # Team2 is generated from set difference of all players and team1
         team2 = list(set(players_ratings) - set(team1))
 
-        # A lot of duplicated code atm. Could move to separate method.
-        team1_rating = 0
-        _t1_names = []
-        for player in team1:
-            name, rating, wins, losses = player
-            _t1_names.append(f"{name.capitalize()} ({int(rating*40)})")
-            team1_rating += rating*40
-        team1_rating = team1_rating/len(team1)
-        team1_names = ", ".join(_t1_names)
-
-        team2_rating = 0
-        _t2_names = []
-        for player in team2:
-            name, rating, wins, losses = player
-            _t2_names.append(f"{name.capitalize()} ({int(rating*40)})")
-            team2_rating += rating*40
-        team2_rating = team2_rating/len(team2)
-        team2_names = ", ".join(_t2_names)
-
-        # Generate number of spaces for alignment in output msg
-        t1_spaces = " "*(40-len(team1_names))
-        t2_spaces = " "*(40-len(team2_names))
-
-        # Get !result command to preview potential rating change
-        t1_names_only = [name for name, _, _, _ in team1]
-        t1 = " ".join(t1_names_only)
-        t2_names_only = [name for name, _, _, _ in team2]
-        t2 = " ".join(t2_names_only)
+        async def calc_team_rating(team: list) -> Tuple[float, str]:
+            team_rating = 0
+            _team_names = []
+            for player in team:
+                name, rating, wins, losses = player
+                _team_names.append(f"{name.capitalize()} ({round(rating*40)})")
+                team_rating += rating*40
+            team_rating = team_rating/len(team)
+            team_names = ", ".join(_team_names)
+            team_spaces = " "*(40-len(team_names))
+            t = " ".join([name for name, _, _, _ in team])
+            return team_rating, team_names, team_spaces, t
         
+        # Get formatted ratings, names(rating), spaces, names for output message
+        team1_rating, team1_names, t1_spaces, t1 = await calc_team_rating(team1)
+        team2_rating, team2_names, t2_spaces, t2 = await calc_team_rating(team2)
+
         # Get potential rating change for win AND loss for both teams
         rating_change_cmd = self.bot.get_command("result")
         team1_win, team2_loss = await ctx.invoke(rating_change_cmd, winners=t1, losers=t2, preview=True)
