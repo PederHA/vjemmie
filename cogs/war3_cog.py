@@ -5,6 +5,7 @@ import traceback
 from itertools import combinations, chain
 from typing import Tuple
 from collections import namedtuple
+from pprint import pprint
 
 import discord
 import trueskill
@@ -18,7 +19,7 @@ class War3Cog(BaseCog):
     def __init__(self, bot: commands.Bot, log_channel_id: int, replays_folder: str) -> None:
         super().__init__(bot, log_channel_id)
         self.replays_folder = replays_folder
-        self.db = DatabaseHandler("db/testrating.db")
+        self.db = DatabaseHandler("db/rating.db")
         self.base_rating = 25
         trueskill.setup(sigma=2.5)
 
@@ -265,54 +266,28 @@ class War3Cog(BaseCog):
             raise
         
         players_ratings = []
-        #Player = namedtuple("player", "name rating wins losses")
         for db_player in db_players:
-            name, rating, wins, losses = db_player
-            #_player = Player(name, rating, wins, losses)
             for player in players:
-                if name == player:
+                if db_player.name == player:
                     players_ratings.append(db_player)
                     break
 
         n_players = len(players_ratings)
+        # Generate all possible team combinations of size len(players)/2 rounded up
         _combs = combinations(players_ratings, r=(math.ceil((n_players)/2)))
         # Sort list of player combinations by sum of player ratings from low->high
         combs = sorted(_combs, key=lambda x: sum([rating for _, rating, _, _ in x]))
-        # Generate team1
         if n_players % 2 == 0:
-            middle = float(len(combs))/2
+            # Find team on middle index, which should have the most balanced complement
+            middle = (len(combs) / 2) - .5
             if middle % 2 != 0:
-                # If middle index is not an integer, test both [middle + .5] and [middle - .5]
-                
-                # Calculate average rating for first potential team 1
-                _t1_1 = combs[int(middle + .5)] 
-                _t1_1_rating = sum([rating for _, rating, _, _ in _t1_1])
-                _t2_1 = list(set(players_ratings) - set(_t1_1))
-                _t2_1_rating = sum([rating for _, rating, _, _ in _t2_1])
-
-                # Calculate average rating for second potential team 1
-                _t1_2 = combs[int(middle - .5)]
-                _t1_2_rating = sum([rating for _, rating, _, _ in _t1_2])
-                _t2_2 = list(set(players_ratings) - set(_t1_2))
-                _t2_2_rating = sum([rating for _, rating, _, _ in _t2_1])
-                
-                # Find difference in average rating for potential first team1 vs potential team2
-                # Difference is a number >=0
-                if _t1_1_rating >= _t2_1_rating:
-                    diff1 = _t1_1_rating - _t2_1_rating
-                else:
-                    diff1 = _t2_1_rating - _t1_1_rating    
-                # Same for second potential team1 vs second potential team2
-                if _t1_2_rating >= _t2_2_rating:
-                    diff2 = _t1_2_rating - _t2_2_rating
-                else:
-                    diff2 = _t2_2_rating - _t1_2_rating 
-                # Choose team1 based on smallest rating difference
-                team1 = min([(_t1_1, diff1), (_t1_2, diff2)], key=lambda n: n[1])[0]
+                # +.5 or -.5 is irrelevant, the matchup will always be the same
+                # -.5 is the complement of +.5
+                team1 = combs[int(middle+.5)]
             else:              
-                team1 = combs[int(middle)]   
+                team1 = combs[int(middle)]
         elif n_players == 1:
-            # This shouldn't happen, but somehow it did happen once.
+            # This shouldn't happen, but somehow it did happen once. Investigating.
             raise Exception
         else:
             # If teams are uneven, stack the biggest team with the worst players
@@ -326,10 +301,9 @@ class War3Cog(BaseCog):
             team_rating = 0
             _team_names = []
             for player in team:
-                name, rating, wins, losses = player
-                _team_names.append(f"{name.capitalize()} ({round(rating*40)})")
-                team_rating += rating*40
-            team_rating = team_rating/len(team)
+                _team_names.append(f"{player.name.capitalize()} ({round(player.rating*40)})")
+                team_rating += player.rating*40
+            team_rating = round(team_rating/len(team))
             team_names = ", ".join(_team_names)
             team_spaces = " "*(40-len(team_names))
             t = " ".join([name for name, _, _, _ in team])
@@ -346,7 +320,7 @@ class War3Cog(BaseCog):
 
         # Create message  
         msg = "```"
-        msg += f"Team 1: {team1_names}{t1_spaces}\t+{team1_win}/-{team1_loss}\tAverage rating: {round(team1_rating)}\n"
-        msg += f"Team 2: {team2_names}{t2_spaces}\t+{team2_win}/-{team2_loss}\tAverage rating: {round(team2_rating)}\n"
+        msg += f"Team 1: {team1_names}{t1_spaces}\t+{team1_win}/-{team1_loss}\tAverage rating: {team1_rating}\n"
+        msg += f"Team 2: {team2_names}{t2_spaces}\t+{team2_win}/-{team2_loss}\tAverage rating: {team2_rating}\n"
         msg += "```"
         await ctx.send(msg)
