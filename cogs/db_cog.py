@@ -133,10 +133,12 @@ class DatabaseHandler:
         self.conn.commit()
 
     # Rating
-
     def add_user(self, user: discord.Member, realname: str, game: str, base_rating: float) -> str:
         base_rating = float(base_rating)
-        realname = realname.lower()
+        if realname is not None:
+            realname = realname.lower()
+        else:
+            realname=user.name.lower()
         username = user.name.lower()
         
         try:
@@ -155,20 +157,19 @@ class DatabaseHandler:
             return msg
     
     def get_players(self, game: str, alias: bool=False) -> list:
+        Player = namedtuple("player", "name rating wins losses")
         players = []
         if alias:
             _name = "alias"
         else:
             _name = "name"
         for name, _alias, rating, wins, losses in self.c.execute(f'SELECT "name", "alias", "rating", "wins", "losses" from {game}'):
-            if alias:
-                if _alias is None:
-                    continue
-                else:
-                    nick = _alias
+            if alias and _alias is not None:
+                nick = _alias
             if not alias or _alias is None:
                 nick = name       
-            players.append((nick, rating, wins, losses))
+            players.append(Player(nick, rating, wins, losses))
+        # Sort players by rating from high to low.
         players = sorted(players, key=lambda x: x[1], reverse=True)
         return players
 
