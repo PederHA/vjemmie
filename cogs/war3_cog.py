@@ -74,13 +74,11 @@ class War3Cog(BaseCog):
                     return m.author == ctx.message.author and m.channel == ctx.message.channel
         
         # List from string of names separated by spaces. Remove duplicates.
-        winners = list(set(winners.lower().split(" ")))
-        #winners.sort()  
+        winners = list(set(winners.lower().split(" "))) 
         # Copy of winners that will not be modified
         winners_names = list(winners)    
         if losers is not None:
             losers = list(set(losers.lower().split(" ")))
-            #losers.sort()
             losers_names = list(losers)
         else:
             # Detect losing team from voice channel if `losers` is None
@@ -105,14 +103,15 @@ class War3Cog(BaseCog):
                 await ctx.send(f"{name} cannot be on both teams.")
                 raise Exception("!add: Duplicate name on winning and losing team")
         
-        # Get players from db as list of tuples        
+        # Get players from db as list of namedtuples        
         players = self.db.get_players(game, alias=alias)
-        _players = [player for player, _, _, _ in players]
+        _players = [player.name for player in players]
+        
         # Lists holding Player tuples that will replace winners/losers after names are parsed
         _winners = []
         _losers = []        
 
-        # Loop runs until all players are parsed
+        # Loops until all players are parsed
         while len(_winners+_losers) != len(winners+losers):
             for winner in winners:
                 for player in players:
@@ -159,9 +158,9 @@ class War3Cog(BaseCog):
                             await ctx.invoke(cmd, user_id, realname, game)
                             players = self.db.get_players(game, alias=False)
                             _players = [player for player, _, _, _ in players]
-                            #filter_participants(participant)
+
         else:
-            # After loop, replace lists of names with list of player tuples
+            # After loop, replace lists of names with list of player tuples (name, rating, wins losses)
             winners = _winners
             losers = _losers
 
@@ -188,12 +187,18 @@ class War3Cog(BaseCog):
             else:
                 winners_new, losers_new = trueskill.rate([tuple(ts_winners), tuple(ts_losers)], 
                             weights=[tuple([quality for i in winners]), tuple([quality for x in losers])])
-        # Update ratings in DB and generate Discord message 
+        
         if not preview:
             def update_rating(names: list, players_pre: list, players_post: list, db, *, win: bool, game: str) -> str:
+                """
+                Updates winners/losers ratings and generates string displaying
+                rating change, used in discord message.
+                """
                 _msg = ""
                 for idx, player in enumerate(players_post):
+                    # Update player rating in DB
                     db.update_rating(names[idx], player, win=True, game=game)
+                    # Rounded numbers for output msg
                     pre_rating = round(players_pre[idx].mu*40)
                     post_rating = round(player.mu*40)
                     rating_change = round(post_rating - pre_rating)
@@ -203,6 +208,8 @@ class War3Cog(BaseCog):
                         symbol = ""
                     _msg += f"{names[idx].capitalize()}: {pre_rating} -> {post_rating} ({symbol}{rating_change})\n"
                 return _msg
+            
+            # Update ratings in DB and generate Discord message 
             msg = "```Rating change:\n\n"
             msg += update_rating(winners_names, ts_winners, winners_new, self.db, win=True, game=game)
             msg += update_rating(losers_names, ts_losers, losers_new, self.db, win=False, game=game) 
@@ -300,25 +307,19 @@ class War3Cog(BaseCog):
                     diff2 = _t1_2_rating - _t2_2_rating
                 else:
                     diff2 = _t2_2_rating - _t1_2_rating 
-                
-                if diff1 <= diff2:
-                    # If difference1 is smallest, choose first team1
-                    team1 = _t1_1
-                else:
-                    # Otherwise choose second team1
-                    team1 = _t1_2
-            
+                # Choose team1 based on smallest rating difference
+                team1 = min([(_t1_1, diff1), (_t1_2, diff2)], key=lambda n: n[1])[0]
             else:              
                 team1 = combs[int(middle)]   
         elif n_players == 1:
-            # This shouldn't happen 
+            # This shouldn't happen, but somehow it did happen once.
             raise Exception
         else:
             # If teams are uneven, stack the biggest team with the worst players
             # Lazy implementation for now
             team1 = combs[0]
         
-        # Team2 is generated from set difference of all players and team1
+        # Team2 is determined from difference players-team1
         team2 = list(set(players_ratings) - set(team1))
 
         async def calc_team_rating(team: list) -> Tuple[float, str]:
