@@ -11,16 +11,62 @@ from functools import partial
 from youtube_dl import YoutubeDL
 import subprocess
 import threading
+from typing import Generator
 
 import discord
 import gtts
 import youtube_dl
 from discord import opus
 from discord.ext import commands
-from pytube import YouTube
+
 
 from cogs.base_cog import BaseCog
 from ext_module import ExtModule
+
+class SoundFolder:
+    """
+    Class holding directory listing and markdown formatting
+    of a specific folder/directory.
+    
+    Named SoundFolder over SoundDir to avoid name clashes with built-in func
+    dir() xd.
+    """
+
+    MAXLEN = 1800
+    BASEDIR = "sounds"
+    
+    def __init__(self, folder:str , header:str, lang: str="", color: str=None) -> None:
+        self.folder = folder
+        self.lang = lang
+        self.header = header
+        if color is not None and lang != "":
+            self.color = color
+        else:
+            self.color = ""
+
+    @property
+    def sound_list(self) -> list:    
+        return sorted([i for i in os.listdir(f"{self.BASEDIR}/{self.folder}")])
+    
+    def get_msg(self) -> Generator:
+        md_start = f"```{self.lang}\n"
+        msg = f"{md_start}{self.header}:\n"
+        for sound in self.sound_list:
+            _msg = f"{self.color}{sound}\n"
+            if len(msg + _msg)>1800:
+                msg += "```"
+                yield msg
+                msg = "```\n"
+                msg += _msg
+            else:
+                msg += _msg
+        else:
+            msg += "```"
+            yield msg
+            
+        
+            
+
 
 
 class SoundboardCog(BaseCog):
@@ -43,8 +89,14 @@ class SoundboardCog(BaseCog):
         
         Raises Exception if the folder contains no .mp3 files.
         """
+        sub_dirs = ["tts", "ytdl", "general"]
+        dirs = {}
+        for dir_ in sub_dirs:
+            dirs[dir_] = sorted([i[:-4].lower()
+                             for i in os.listdir(f"{self.folder}/{dir_}") if '.mp3' in i])
+        print(dirs)
         sound_list = sorted([i[:-4].lower()
-                             for i in os.listdir(self.folder) if '.mp3' in i])
+                             for i in os.listdir(self.folder) if i.endswith(".mp3")])
 
         if not sound_list:
             raise Exception("No mp3 files in the given folder")
