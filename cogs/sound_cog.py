@@ -1,15 +1,27 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
-import os
 import asyncio
+import os
 import random
-from discord import opus
-import gtts
-from pathlib import Path
-import youtube_dl
-from cogs.base_cog import BaseCog
 from collections import deque
+from pathlib import Path
+import itertools
+import sys
+import traceback
+from async_timeout import timeout
+from functools import partial
+from youtube_dl import YoutubeDL
+import subprocess
+import threading
+
+import discord
+import gtts
+import youtube_dl
+from discord import opus
+from discord.ext import commands
+from pytube import YouTube
+
+from cogs.base_cog import BaseCog
+from ext_module import ExtModule
+
 
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
@@ -18,10 +30,9 @@ class SoundboardCog(BaseCog):
         super().__init__(bot, log_channel_id)
         self.is_playing = False
         self.folder = folder
-        self.queue = deque([], maxlen=10)
+        self.queue = deque()
         self.vc = None
         
-
     @property
     def sound_list(self) -> list:
         """
@@ -40,7 +51,6 @@ class SoundboardCog(BaseCog):
         return sound_list
 
     async def on_ready(self) -> None:
-        #self.send_log = ExtModule.get_send_log(self)
         opus.load_opus('libopus')
 
     @commands.command(name='play',
@@ -67,7 +77,7 @@ class SoundboardCog(BaseCog):
             try:  # user must be connected to a voice channel
                 voice_channel = ctx.author.voice.channel
             except AttributeError:
-                await ctx.send(content='To use this command you have to be connected to a voice channel!')
+                await ctx.send('To use this command you have to be connected to a voice channel!')
                 raise discord.DiscordException
         
         async def parse_sound_name(arg) -> str:
@@ -84,7 +94,9 @@ class SoundboardCog(BaseCog):
         
         arg = " ".join(args).lower()
         sound_name = await parse_sound_name(arg)
+        print(self.queue)
         self.queue.append(sound_name)
+        print(self.queue)
         
         if not self.is_playing:
             try:
@@ -97,12 +109,14 @@ class SoundboardCog(BaseCog):
                 # THIS IS AWFUL BUT IT WORKS. YIKES.
                 while(len(self.queue)) > 0:
                     _nxt = self.queue.popleft()
+                    np_msg = await ctx.send(f"```css\nPlaying: {_nxt}\n```")
                     await self.play_vc(ctx, _nxt)
                     while self.is_playing:
                         # Workaround for threading issues
                         # Without this while-loop, the vc instantly disconnects.
                         await asyncio.sleep(0.25)
                 else:
+                    await np_msg.delete()
                     for connection in self.bot.voice_clients:
                         if ctx.author.voice.channel == connection.channel:
                             await connection.disconnect()
@@ -149,13 +163,37 @@ class SoundboardCog(BaseCog):
          Args:
              ctx: The context of the command, which is mandatory in rewrite (commands.Context)
              """
-        self.is_playing = False
-        for connection in self.bot.voice_clients:
-            if ctx.author.voice.channel == connection.channel:
-                await connection.disconnect()
+        async def stop_playing() -> None:
+            for connection in self.bot.voice_clients:
+                if ctx.author.voice.channel == connection.channel:
+                    await connection.disconnect()
+            else:
+                self.is_playing = False
+                self.queue.clear()
+                self.vc = None
+
+        if len(self.queue) > 0:
+            def pred(m) -> bool:
+                return m.author == ctx.message.author and m.channel == ctx.message.channel
+            msg = ("Are you sure you want to stop sounds and clear the queue?\n"
+                   "Reply **Y** to stop and clear queue, **S** to skip this sound only, or **N** to abort")
+            await ctx.send(msg)
+            try:
+                reply = await self.bot.wait_for("message", check=pred, timeout=10.0)
+            except asyncio.TimeoutError:
+                await ctx.send("No reply from user. Aborting.")
+            else:
+                r = reply.content.lower()
+                if r in ["s", "skip"]:
+                    skip_cmd = self.bot.get_command("skip")
+                    await ctx.invoke(skip_cmd)
+                    await ctx.send("Skipping. Use the `!skip` command next time.")
+                elif r in ["y", "yes", "stop"]:
+                    await stop_playing()
+                else:
+                    await ctx.send("Doing nothing.")
         else:
-            self.vc = None
-    
+            await stop_playing()
     @commands.command(name='skip',
                       aliases=["next"])
     async def skip(self, ctx: commands.Context) -> None:
@@ -165,7 +203,6 @@ class SoundboardCog(BaseCog):
             await self.play_next(ctx)   
 
     async def play_next(self, ctx: commands.Context) -> None:
-        self.is_playing = False
         play_cmd = self.bot.get_command("play")
         next_sound = self.queue.popleft()
         if next_sound is not None:
@@ -189,7 +226,7 @@ class SoundboardCog(BaseCog):
             sound_string += f"{sound}\n"
         await ctx.send(f"```{sound_string}```")
 
-    ### UNUSED
+    ### UNUSED ###
     def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
         """This function is passed as the after parameter of FFmpegPCMAudio() as it does not take coroutines.
         Args:
@@ -216,11 +253,13 @@ class SoundboardCog(BaseCog):
     
     @commands.command(name="queue")
     async def display_queue(self, ctx:commands.Context):
-        _queue = ", ".join(self.queue)
-        if _queue is not "":
-            await ctx.send(f"Sound files currently queued up: **{_queue}**.")
+        #_queue = ", ".join(self.queue)
+        if len(self.queue)>0:
+            _queue = await self.format_output(self.queue, enum=True, formatting="glsl")
+            msg = f"Sound files currently queued up:\n{_queue}"
         else:
-            await ctx.send("No sound files in queue.")
+            msg = "No sound files in queue."
+        await ctx.send(msg)
     
     @commands.command(name="texttospeech",
                       aliases=["tts", "text-to-speech"])
@@ -290,27 +329,36 @@ class SoundboardCog(BaseCog):
             pass
 
     @commands.command(name="ytdl")
-    async def ytdl(self, ctx: commands.Context, *args) -> None:
-        if len(args)>0:
-            url = args[0]
-        ydl_opts = {
-                'outtmpl': 'sounds/%(title)s.%(ext)s',
-                'format': 'bestaudio',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3'}]
-                    }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(url=url, download=True, extra_info=ydl_opts)
+    async def download_track(self, ctx: commands.Context, url: str) -> None:
+        ytdl_opts = {
+            'outtmpl': 'sounds/%(title)s.%(ext)s',
+            'format': 'bestaudio',
+            "verbose": False
+                }
+        dl_msg = await ctx.send("```cs\n# Downloading video...\n```")
+        with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
+            result = ydl.extract_info(url=url, download=True, extra_info=ytdl_opts)
             res = ydl.prepare_filename(result)
-            *_path, ext = res.split(".")
-            # If filename contains ".", stich string back together
-            path = ".".join(_path)
-            _, _file = path.split("\\")
-
-        if ctx.message.author.voice.channel is not None:
-            cmd  = self.bot.get_command('play')
-            await ctx.invoke(cmd, _file)
-
+            directory, file_name = os.path.split(res)
+            _file, ext = os.path.splitext(file_name)
         
+        original = f"{directory}/{file_name}"
+        new = f"{directory}/{_file}.mp3"
+        cmd = f'ffmpeg -n -i "{original}" -acodec libmp3lame -ab 128k "{new}"'
+        
+        def convert():   
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+        
+        await dl_msg.delete()
+        msg = await ctx.send(f"```css\nConverting {_file} to mp3.\n```")
+        await self.bot.loop.run_in_executor(None, convert)
+        await msg.delete()
+        
+        try:
+            if ctx.message.author.voice.channel is not None:
+                cmd  = self.bot.get_command('play')
+                await ctx.invoke(cmd, _file)
+        except AttributeError:
+            pass
+
 
