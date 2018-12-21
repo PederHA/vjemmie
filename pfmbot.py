@@ -29,12 +29,12 @@ bot.add_cog(PFMCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
 #bot.add_cog(SerialSoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
-bot.add_cog(SoundBombCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
 bot.add_cog(TestingCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(FryingCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(WeatherCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(CodCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(War3Cog(bot=bot, log_channel_id=log_channel_id, replays_folder=None))
+#bot.add_cog(Music(bot))
 
 @bot.event
 async def on_ready():

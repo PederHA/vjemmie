@@ -9,6 +9,7 @@ class BaseCog:
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.bot = bot
         self.log_channel_id = log_channel_id
+        self.author_mention = "<@103890994440728576>"
     
     async def send_log(self, msg: str) -> None:
         try:
@@ -19,7 +20,7 @@ class BaseCog:
         except discord.HTTPException:
             print(f"Failed to send message to channel {self.log_channel_id}.")
 
-    async def format_output(self, items: Iterable, item_type: str=None, header: bool=False, enum: bool=False) -> str:
+    async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, header: bool=False, enum: bool=False) -> str:
         """
         Creates a multi-line codeblock in markdown formatting
         listing items in iterable `items` on separate lines.
@@ -43,15 +44,22 @@ class BaseCog:
             3. baz
             ```
         """
+        formats = ['asciidoc', 'autohotkey', 'bash', 
+                   'coffeescript', 'cpp', 'cs', 'css', 
+                   'diff', 'fix', 'glsl', 'ini', 'json', 
+                   'md', 'ml', 'prolog', 'py', 'tex', 
+                   'xl', 'xml']
 
-        output = "```"
+        if formatting not in formats:
+            formatting = ""
+
+        output = f"```{formatting}\n"
         if header and item_type is not None:
             output += f"Available {item_type}:\n\n"
+        idx = ""
         for i, item in enumerate(items, 1):
             if enum:
                 idx = f"{i}. "
-            else:
-                idx = ""
             output += f"{idx}{item}\n"
         else:
             output += "```"

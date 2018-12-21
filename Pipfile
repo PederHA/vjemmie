@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+praw = "*"
+fpl = "*"
+numpy = "*"
+youtube-dl = "*"
+gtts = "*"
+xmltodict = "*"
+requests = "*"
+opencv-python = "*"
+progressbar = "*"
+pillow = "*"
+geopy = "*"
+pynacl = "*"
+trueskill = "*"
+
+[dev-packages]
+pylint = "*"
+
+[requires]
+python_version = "3.7"
