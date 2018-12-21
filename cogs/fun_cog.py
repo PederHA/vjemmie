@@ -1,15 +1,17 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
+import asyncio
 import random
 import traceback
-import asyncio
-from utils.ext_utils import get_users_in_author_voice_channel
-from utils.argsparsing import parse_args
-from fpl import FPL
-from secrets import FPL_LEAGUE_ID, REALNAME_ID
 from pprint import pprint
+from secrets import FPL_LEAGUE_ID, REALNAME_ID
+
+import discord
+from discord.ext import commands
+from fpl import FPL
+
 from cogs.base_cog import BaseCog
+from ext_module import ExtModule
+from utils.argsparsing import parse_args
+
 
 class FunCog(BaseCog): 
     @commands.command(name='roll',
@@ -89,7 +91,7 @@ class FunCog(BaseCog):
             else:
                 await ctx.send(random_name[0:].capitalize())
         elif args == ("c",):
-            roll_list = await get_users_in_author_voice_channel(ctx)
+            roll_list = await self.get_users_in_voice(ctx)
             if roll_list is not None:
                 random_name = await roll_names(roll_list)
                 await ctx.send(random_name[0:].capitalize())
@@ -239,26 +241,57 @@ class FunCog(BaseCog):
             
             return output_msg
 
-    @commands.command(name="teams")
-    async def teams(self, ctx: commands.Context, team_size: int=None) -> None:
+    #@commands.command(name="teams")
+    #async def teams(self, ctx: commands.Context, team_size: int=None) -> None:
+    #    # Get list of usernames in message author's voice channel
+    #    users = get_users_in_author_voice_channel(ctx)
+    #
+    #    if team_size is None:
+    #        team_size = len(users) // 2
+    #    else:
+    #        # Cast to int to avoid float nums. Raises exception if not a number.
+    #        team_size = int(team_size)
+    #    
+    #    # Raise exception for 99% of user errors and send helpful reply
+    #    if len(users) <= 2 or team_size >= len(users):
+    #        await ctx.send("you dumb or what")
+    #        raise discord.DiscordException
+    #
+    #    team_1 = random.sample(users, team_size)
+    #    team_2 = [user for user in users if user not in team_1]
+    #    # Should use regular expressions or smth
+    #    team_1 = str(team_1).replace("[", "").replace("]", "").replace("'", "")
+    #    team_2 = str(team_2).replace("[", "").replace("]", "").replace("'", "")
+    #    await ctx.send(f"**Team 1:** {team_1}.\n**Team 2:** {team_2}")
 
-        # Get list of usernames in message author's voice channel
-        users = get_users_in_author_voice_channel(ctx)
-
-        if team_size is None:
-            team_size = len(users) // 2
-        else:
-            # Cast to int to avoid float nums. Raises exception if not a number.
-            team_size = int(team_size)
-        
-        # Raise exception for 99% of user errors and send helpful reply
-        if len(users) <= 2 or team_size >= len(users):
-            await ctx.send("you dumb or what")
-            raise discord.DiscordException
-        
-        team_1 = random.sample(users, team_size)
-        team_2 = [user for user in users if user not in team_1]
-        # Should use regular expressions or smth
-        team_1 = str(team_1).replace("[", "").replace("]", "").replace("'", "")
-        team_2 = str(team_2).replace("[", "").replace("]", "").replace("'", "")
-        await ctx.send(f"**Team 1:** {team_1}.\n**Team 2:** {team_2}")
+    #@commands.command(name="teams2")
+    #async def teams2(self, ctx: commands.Context, teams: int=2, team_size: int=None) -> None:
+    #
+    #    # Get list of usernames in message author's voice channel
+    #    users = get_users_in_author_voice_channel(ctx)
+    #
+    #    if team_size is None:
+    #        team_size = len(users) // 2
+    #    else:
+    #        # Cast to int to avoid float nums. Raises exception if not a number.
+    #        team_size = int(team_size)
+    #    
+    #    # Validate team_size and teams
+    #    if teams>=len(users):
+    #        msg = "Can't have more teams than players."
+    #    # Make sure at least 1 team can fill team_size, rest has 1
+    #    elif (len(users) / teams + team_size) > len(users):
+    #        msg = f"With a team size of {team_size}, unable to fill all teams with at least 1 player."
+    #    # Raise exception for 99% of user errors and send helpful reply
+    #    elif len(users) <= 2 or team_size >= len(users):
+    #        msg = "you dumb or what"
+    #    if msg != "":
+    #        raise Exception(msg)
+    #    
+    #    
+    #    team_1 = random.sample(users, team_size)
+    #    team_2 = [user for user in users if user not in team_1]
+    #    # Should use regular expressions or smth
+    #    team_1 = str(team_1).replace("[", "").replace("]", "").replace("'", "")
+    #    team_2 = str(team_2).replace("[", "").replace("]", "").replace("'", "")
+    #    await ctx.send(f"**Team 1:** {team_1}.\n**Team 2:** {team_2}")
