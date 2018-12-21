@@ -136,7 +136,6 @@ class PUBGCog(BaseCog):
         of squad members.
         """
 
-        enough_players = True
         bot_msg = ""
         default_squad = ("simon", "hugo", "travis", "steve")
 
@@ -194,7 +193,7 @@ class PUBGCog(BaseCog):
             "M249",
         ]
         GUNS = _CRATEGUNS_ALL[:4]
-        EQUIPMENT = _CRATEGUNS_ALL[4:]
+        EQUIPMENT = list(set(_CRATEGUNS_ALL) - set(GUNS))
 
         # Shuffle lists
         random.shuffle(squad)
@@ -205,16 +204,13 @@ class PUBGCog(BaseCog):
         squadsize = len(squad)
 
         gunsplit = numpy.array_split(GUNS, squadsize)
-        random.shuffle(gunsplit)
-
         armorsplit = numpy.array_split(EQUIPMENT, squadsize)
 
         # Reroll if one person gets 4 items in a 3-man squad.
         if squadsize == 3:
-            for n in range(squadsize):
-                while len(gunsplit[n]) == 2 and len(armorsplit[n]) == 2:
-                    random.shuffle(gunsplit)
-                    random.shuffle(armorsplit)
+            while any([True if len(list(guns)+list(armor))>=4 else False for guns, armor in zip(gunsplit, armorsplit)]):
+                random.shuffle(gunsplit)
+                random.shuffle(armorsplit)
 
         return gunsplit, armorsplit
 
@@ -227,8 +223,9 @@ class PUBGCog(BaseCog):
             # Sort squad numerically
             squad.sort() 
         msg = "```"
+        _spc = len(max(squad, key=len)) + 1
         for idx, player in enumerate(squad):
-            name_spc = " "*(12-len(player))
+            name_spc = " "*(_spc-len(player))
             gun = " ".join(gunsplit[idx])
             equipment = " ".join(armorsplit[idx])
             msg += f"{player.capitalize()}:{name_spc} {gun} {equipment}\n"
