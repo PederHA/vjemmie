@@ -50,17 +50,12 @@ class TestingCog(BaseCog):
             print(embed.footer.text)
     
     @commands.command(name="emojis")
-    async def emojis(self, ctx:commands.Context, *args) -> None:
-        if len(args)>1:
-            input_string = args[0]
-            input_string = input_string.upper()
-            
-            emoji = args[1]
+    async def emojis(self, ctx:commands.Context, emoji: str, *message) -> None:
+        message = list(message)
+        message.append("")
+        message.insert(0, "")
+        await ctx.send(emoji.join(message))
 
-            input_string = input_string.replace(" ", f" {emoji} ")
-            output_string = f"{emoji} {input_string} {emoji}"
-
-            await ctx.send(output_string)
 
     @commands.command(name="user")
     async def user(self, ctx, user_id: int) -> None:
