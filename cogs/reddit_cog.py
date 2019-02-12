@@ -8,6 +8,10 @@ import re
 import secrets
 import traceback
 from cogs.base_cog import BaseCog
+from typing import Iterable, Tuple
+import datetime
+from functools import partialmethod,  partial
+import pickle
 
 reddit = praw.Reddit(
     client_id=secrets.REDDIT_ID,
@@ -15,212 +19,185 @@ reddit = praw.Reddit(
     user_agent=secrets.REDDIT_USER_AGENT,
 )
 
-
 class RedditCog(BaseCog):
-    """
-    Reddit cog.
-    ====
-    Each subreddit is divided into its own command.
+    ALL_POST_LIMIT = 250
+    OTHER_POST_LIMIT = 100
+    IMAGE_EXTENSIONS = [".jpg", ".png", ".gif"]
+    IMAGE_HOSTS = ["imgur.com", "i.redd.it"]
+    TIME_FILTERS = ["all", "year", "month", "week", "day"]
+    SORTING_FILTERS = ["hot", "top"]
+    DEFAULT_SORTING = SORTING_FILTERS[1]
+    DEFAULT_TIME = TIME_FILTERS[3]
+    TOP_ALL = (SORTING_FILTERS[1], TIME_FILTERS[0])
 
-    For example:
-    ----
-    ``!spt`` or ``!emojipasta``
-
-    """
-
-    def __init__(self, bot: commands.Bot, log_channel_id: int = None):
+    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
         super().__init__(bot, log_channel_id)
-        self.ALL_POST_LIMIT = 250
-        self.OTHER_POST_LIMIT = 100
-        self.image_extensions = [".jpg", ".png", ".gif"]
-        self.image_hosts = ["imgur.com", "i.redd.it"]
-        self.time_filters = ["all", "year", "month", "week", "day"]
-        self.sorting_filters = ["hot", "top"]
-        self.top_all = (self.sorting_filters[1], self.time_filters[0])
-
-    @commands.command()
-    async def emojipasta(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "emojipasta"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "txt"
-        default_args = self.top_all
-        if args == ():
-            args = default_args
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command()
-    async def ipfb(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "indianpeoplefacebook"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command()
-    async def spt(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "scottishpeopletwitter"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command(
-        help='Valid args: "week, month, year"',
-        brief="Edgy memes",
-        aliases=["dm", "2edgy4me"],
-    )
-    async def dankmemes(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "dankmemes"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command(aliases=["dfm"])
-    async def deepfriedmemes(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "deepfriedmemes"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command()
-    async def copypasta(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "copypasta"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "txt"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command(aliases=["mmirl", "mmi"])
-    async def metal_me_irl(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "metal_me_irl"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command(aliases=["smooby"])
-    async def smoobypost(self, ctx: commands.Context, *args: str) -> None:
-        subreddit = "smoobypost"
-        postlimit = self.ALL_POST_LIMIT
-        sub_type = "img"
-
-        await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-
-    @commands.command()
-    async def reddit(self, ctx: commands.Context, *args: str) -> None:
-        if len(args) >= 1:
-            subreddit = args[0]
-            postlimit = self.ALL_POST_LIMIT
-            sub_type = "img"
-
-            await self.random_post(ctx, subreddit, postlimit, sub_type, args)
-        else:
-            await ctx.send("No subreddit provided. Usage: !reddit [subreddit]")
-
-    async def random_post(self, ctx: commands.Context, subreddit: str, postlimit: int, sub_type: str, args: tuple) -> None:
-        """
-        Calls 1 of 2 methods; ``img_subreddit()`` or ``txt_subreddit()``,
-        and sends return value to the channel the command was invoked in.
-
-        Arguments:
-            ctx: message object passed from the subreddit bot command. (ctx.message)
-            subreddit: Name of subreddit. (str)
-            postlimit (int): Number of posts to search through 1-postlimit. (int)
-            sub_type: Type of subreddit - txt or img. (str)
-            bot: The bot instance the cog is added to.
-            args: Tuple containing optional arguments for time filter and content filter (hot/top)
-        """
-
-        if len(args) > 1:
-            for sf in self.sorting_filters:
-                for arg in args:
-                    if sf == arg:
-                        sorting_filter = arg
-                        break
-        else:
-            sorting_filter = "hot"
-
-        if len(args) > 2:
-            for tf in self.time_filters:
-                for arg in args:
-                    if tf == arg:
-                        time_filter = arg
-                        break
-        else:
-            time_filter = "all"
-
+        self.subs = self.load_subs() # Load list of subs from disk
+        for sub_full, sub_short in self.subs:
+            self._add_sub(sub_full, sub_short)
+    
+    def load_subs(self) -> list:
+        with open("db/subreddits.pkl", "rb") as f:
+            return pickle.load(f)
+    
+    def dump_subs(self) -> None:
+        with open("db/subreddits.pkl", "wb") as f:
+            pickle.dump(self.subs, f)
+    
+    @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
+    async def add_sub(self, ctx: commands.Context, subreddit: str, sub_short: str="") -> None:
         try:
-            if sub_type == "txt":
-                post = await self.txt_subreddit(
-                    subreddit, postlimit, sorting_filter, time_filter
-                )
-            elif sub_type == "img":
-                post = await self.img_subreddit(
-                    subreddit, postlimit, sorting_filter, time_filter
-                )
-            await ctx.send(post)
-        
-        except:
-            error = traceback.format_exc()
-            await RedditCog.send_error(self, error)
-
-            if "Must be 2000 or fewer in length." in error:
-                await ctx.send("The reddit post exceeded Discord's character limit")
-            else:
-                await ctx.send("An unexpected error occured.")
-
-    async def txt_subreddit(self, subreddit: str, postlimit: int, sorting_filter: str, time_filter: str) -> str:
-        if sorting_filter == "top":
-            sub = reddit.subreddit(subreddit)
-            posts = sub.top(time_filter=time_filter, limit=postlimit)
-            random_post_number = random.randint(1, postlimit)
-
-        elif sorting_filter == "hot":
-            sub = reddit.subreddit(subreddit)
-            posts = sub.hot()
-            random_post_number = random.randint(1, 25)
-
-        try:
-            for i, post in enumerate(posts):
-                if i == random_post_number:
-                    if post.selftext != "":
-                        return post.selftext
-                    else:
-                        if (post.url[-4:] in self.image_extensions) or (
-                            post.url in self.image_hosts
-                        ):
-                            post = post.title + "\n" + post.url
-                            return post
-                        else:
-                            return post.title
+            self._add_sub(subreddit, sub_short)
+        except discord.DiscordException:
+            for sf, ss in self.subs: # full, short
+                if sf == subreddit:
+                    command = ss if ss else sf
                     break
-        except:
-            error = traceback.format_exc()
-            await RedditCog.send_error(self, error)
+            else:
+                raise Exception("Fatal exception")
+            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command **!{command}**")
+            raise
+        self.dump_subs() # After adding sub, save list of subs to disk
+        if not sub_short:
+            sub_short = subreddit
+        await ctx.send(f"Added subreddit **r/{subreddit}** with command named **!{sub_short}**")
+    
+    def _add_sub(self, sub_full: str, sub_short: str) -> None:
+        sub_info = (sub_full, sub_short) # Create tuple of args before any modifications
+        if not sub_short:
+            sub_short = sub_full
+        for command in self.bot.commands: # Check if subreddit is already added
+            if command.name == sub_full or command.name == sub_short:
+                raise discord.DiscordException("Command already exists")
+        base_command = self._r # The method that is used to create custom subreddit commands
+        _cmd = asyncio.coroutine(partial(base_command, subreddit=sub_full))
+        cmd = commands.command(name=sub_short)(_cmd) # Use partial coroutine to create command object
+        self.bot.add_command(cmd) # Add generated command to bot
+        if sub_info not in self.subs:
+            self.subs.append(sub_info) # Add subreddit to cog's list of subreddits
+    
+    async def _r(self, ctx: commands.Context, *, subreddit: str, sorting: str=None, time: str=None) -> None:
+        await self.get_from_reddit(ctx, subreddit, sorting, time)
+    
+    @commands.command(name="remove_sub")
+    async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
+        for sub_full, sub_short in self.subs:
+            if sub_short == subreddit or sub_full == subreddit:
+                self.subs.remove((sub_short, sub_full))
+                self.bot.remove_command(sub_short)
+                if not sub_full:
+                    sub_full = sub_short
+                await ctx.send(f"Removed subreddit **r/{sub_full}** with command named **!{sub_short}**")
+                break
+        self.dump_subs()
+    
+    @commands.command(name="subs", aliases=["subreddits"])
+    async def list_subs(self, ctx: commands.Context) -> None:
+        _out = []
+        for sub_full, sub_short in self.subs:
+            command = sub_short if sub_short else sub_full
+            s = f"r/{sub_full.ljust(30)} Command: !{command}"
+            _out.append(s)
+        out = await self.format_output(_out, item_type="subreddits", header=True)
+        await ctx.send(out)
 
-    async def img_subreddit(self, subreddit: str, postlimit: int, sorting_filter: str, time_filter: str) -> str:
-        if sorting_filter == "top":
-            sub = reddit.subreddit(subreddit)
-            posts = sub.top(time_filter=time_filter, limit=postlimit)
-            random_post_number = random.randint(1, postlimit)
+    @commands.command(name="change_reddit_time", aliases=["rtime", "reddit_time"])
+    async def change_time_filtering(self, ctx: commands.Context, time) -> None:
+        time = await self.check_time(ctx,time)
+        self.DEFAULT_TIME = time
+        await ctx.send(f"Reddit time filtering set to **{time}**.")
+    
+    @commands.command(name="toggle_hot", aliases=["hot"])
+    async def toggle_hot(self, ctx: commands.Context) -> None:
+        if self.DEFAULT_SORTING != "hot": # At this point I have given up not hardcoding these things
+            self.DEFAULT_SORTING = "hot"
+        else:
+            self.DEFAULT_SORTING = "top"
+        await ctx.send(f"Reddit content sorting set to **{self.DEFAULT_SORTING}**")
 
-        elif sorting_filter == "hot":
-            sub = reddit.subreddit(subreddit)
-            posts = sub.hot()
-            random_post_number = random.randint(1, 25)
-
+    @commands.command(name="change_sub_command")
+    async def change_sub_command(self, ctx: commands.Context, subreddit: str, command: str) -> None:
+        if not command.isnumeric():
+            command = command.lower()
+            for sub_full, sub_short in self.subs:
+                if sub_full == subreddit:
+                    self.subs.remove((sub_full, sub_short))
+                    self.subs.append((subreddit, command))
+                    self.dump_subs()
+                    await ctx.send(f"Command for subreddit **r/{subreddit}** changed to **!{command}**.\n"
+                                    "Changes take effect on next restart.")
+                    break
+        else:
+            await ctx.send("Invalid command name. Can only contain letters a-z.")
+        
+    @commands.command(name="reddit")
+    async def reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None) -> None:
         try:
-            for i, post in enumerate(posts):
-                if i == random_post_number:
-                    post = "**" + post.title + "**\n" + post.url
-                    return post
+            await self.get_from_reddit(ctx, subreddit, sorting, time)
         except:
-            error = traceback.format_exc()
-            await RedditCog.send_error(self, error)
-            return "An unexpected error occured."
+            await ctx.send("Something went wrong. Make sure subreddit name is spelled correctly.")
+    
+    async def check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
+        if filter_ is None:
+            filter_ = default_filter
+        else:
+            if filter_ not in valid_filters:
+                await self.send_error(ctx, f"{filtering_type} filters", valid_filters)
+        if filter_:
+            return filter_
 
-    async def send_error(self, error: str) -> None:
-        channel = self.bot.get_channel(340921036201525248)
-        await channel.send(error)
+    async def check_time(self, ctx, time) -> str:
+        return await self.check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
+    
+    async def check_sorting(self, ctx,  sorting: str) -> str:
+        return await self.check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
+
+    async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str, time: str, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
+        post_limits = {
+            self.TIME_FILTERS[0]: self.ALL_POST_LIMIT,
+            self.TIME_FILTERS[1]: self.ALL_POST_LIMIT,
+            self.TIME_FILTERS[2]: self.OTHER_POST_LIMIT,
+            self.TIME_FILTERS[3]: 25,
+            self.TIME_FILTERS[4]: 25,
+        }
+        
+        sorting = await self.check_sorting(ctx, sorting)
+        time = await self.check_time(ctx, time)
+        
+        if post_limit is None:
+            post_limit = post_limits.get(time, 25)
+        
+        sub = reddit.subreddit(subreddit) # Get subreddit
+        
+        # Get posts. sub.hot() & sub.top() returns a generator of posts.
+        if hot:
+            posts = sub.hot()
+        else:
+            posts = sub.top(time_filter=time, limit=post_limit)
+        
+        # Get random post from list of posts
+        post = random.choice(list(posts))
+        
+        # Format output
+        if is_text:
+            embed = None
+            if post.selftext != "":
+                out = post.selftext
+            else:
+                if post.url[-4:] in self.IMAGE_EXTENSIONS or post.url in self.IMAGE_HOSTS:
+                    post = post.title + "\n" + post.url
+                    out = post
+                else:
+                    out =  post.title
+        else:
+            embed = discord.Embed()
+            embed.set_image(url=post.url)
+            out = f"**{post.title}**"
+        await ctx.send(out, embed=embed)
+    
+    async def send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
+        """Sends error message to ctx.channel, then raises exception
+        """
+        items_str = ", ".join(valid_items)
+        await ctx.send(f"Invalid {item_type}. Valid {item_type}s are:\n{items_str}.")
+        raise discord.DiscordException(f"User provided invalid {item_type} argument.")  
