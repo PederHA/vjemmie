@@ -12,12 +12,18 @@ from typing import Iterable, Tuple
 import datetime
 from functools import partialmethod,  partial
 import pickle
+from collections import namedtuple
 
 reddit = praw.Reddit(
     client_id=secrets.REDDIT_ID,
     client_secret=secrets.REDDIT_SECRET,
     user_agent=secrets.REDDIT_USER_AGENT,
 )
+
+# UNUSED
+# TODO: Adding this soon xd
+RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases"])
+spt = RedditCommand(subreddit="scottishpeopletwitter", aliases=["spt", "scottish"])
 
 class RedditCog(BaseCog):
     ALL_POST_LIMIT = 250
@@ -76,7 +82,7 @@ class RedditCog(BaseCog):
         if sub_info not in self.subs:
             self.subs.append(sub_info) # Add subreddit to cog's list of subreddits
     
-    async def _r(self, ctx: commands.Context, *, subreddit: str, sorting: str=None, time: str=None) -> None:
+    async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None) -> None:
         await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     @commands.command(name="remove_sub")
@@ -91,8 +97,7 @@ class RedditCog(BaseCog):
                 break
         else:
             await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
-        
-    
+           
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
         _out = []
