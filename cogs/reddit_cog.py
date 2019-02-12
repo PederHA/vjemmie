@@ -60,7 +60,7 @@ class RedditCog(BaseCog):
         self.dump_subs() # After adding sub, save list of subs to disk
         if not sub_short:
             sub_short = subreddit
-        await ctx.send(f"Added subreddit **r/{subreddit}** with command named **!{sub_short}**")
+        await ctx.send(f"Added subreddit **r/{subreddit}** with command **!{sub_short}**")
     
     def _add_sub(self, sub_full: str, sub_short: str) -> None:
         sub_info = (sub_full, sub_short) # Create tuple of args before any modifications
@@ -83,13 +83,15 @@ class RedditCog(BaseCog):
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
         for sub_full, sub_short in self.subs:
             if sub_short == subreddit or sub_full == subreddit:
-                self.subs.remove((sub_short, sub_full))
+                self.subs.remove((sub_full, sub_short))
                 self.bot.remove_command(sub_short)
-                if not sub_full:
-                    sub_full = sub_short
-                await ctx.send(f"Removed subreddit **r/{sub_full}** with command named **!{sub_short}**")
+                self.dump_subs()
+                command = sub_short if sub_short else sub_full
+                await ctx.send(f"Removed subreddit **r/{sub_full}** with command **!{command}**")
                 break
-        self.dump_subs()
+        else:
+            await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
+        
     
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
