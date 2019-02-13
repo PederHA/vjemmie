@@ -22,8 +22,8 @@ reddit = praw.Reddit(
 
 # UNUSED
 # TODO: Adding this soon xd
-RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases"])
-spt = RedditCommand(subreddit="scottishpeopletwitter", aliases=["spt", "scottish"])
+
+RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 class RedditCog(BaseCog):
     ALL_POST_LIMIT = 250
@@ -38,10 +38,10 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
         super().__init__(bot, log_channel_id)
-        self.subs = self.load_subs() # Load list of subs from disk
-        for sub_full, sub_short in self.subs:
-            self._add_sub(sub_full, sub_short)
-    
+        self.subs = self.load_subs() # Load list of subs from disk 
+        for sub in self.subs:
+            self._add_sub(sub)
+
     def load_subs(self) -> list:
         with open("db/subreddits.pkl", "rb") as f:
             return pickle.load(f)
@@ -51,9 +51,10 @@ class RedditCog(BaseCog):
             pickle.dump(self.subs, f)
     
     @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
-    async def add_sub(self, ctx: commands.Context, subreddit: str, sub_short: str="") -> None:
+    async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         try:
-            self._add_sub(subreddit, sub_short)
+            aliases = aliases.split(" ") if aliases else []
+            self._add_sub(RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text))
         except discord.DiscordException:
             for sf, ss in self.subs: # full, short
                 if sf == subreddit:
@@ -64,26 +65,26 @@ class RedditCog(BaseCog):
             await ctx.send(f"Subreddit **r/{subreddit}** already exists with command **!{command}**")
             raise
         self.dump_subs() # After adding sub, save list of subs to disk
-        if not sub_short:
-            sub_short = subreddit
-        await ctx.send(f"Added subreddit **r/{subreddit}** with command **!{sub_short}**")
+        if not aliases:
+            alias = subreddit
+        else:
+            alias = aliases[0]
+        await ctx.send(f"Added subreddit **r/{subreddit}** with command **!{alias}**")
     
-    def _add_sub(self, sub_full: str, sub_short: str) -> None:
-        sub_info = (sub_full, sub_short) # Create tuple of args before any modifications
-        if not sub_short:
-            sub_short = sub_full
+    def _add_sub(self, sub: RedditCommand) -> None:
+        subreddit, aliases, is_text = sub
         for command in self.bot.commands: # Check if subreddit is already added
-            if command.name == sub_full or command.name == sub_short:
+            if command.name == subreddit:
                 raise discord.DiscordException("Command already exists")
         base_command = self._r # The method that is used to create custom subreddit commands
-        _cmd = asyncio.coroutine(partial(base_command, subreddit=sub_full))
-        cmd = commands.command(name=sub_short)(_cmd) # Use partial coroutine to create command object
+        _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
+        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd) # Use partial coroutine to create command object
         self.bot.add_command(cmd) # Add generated command to bot
-        if sub_info not in self.subs:
-            self.subs.append(sub_info) # Add subreddit to cog's list of subreddits
+        if sub not in self.subs:
+            self.subs.append(sub) # Add subreddit to cog's list of subreddits
     
-    async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None) -> None:
-        await self.get_from_reddit(ctx, subreddit, sorting, time)
+    async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
+        await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
     
     @commands.command(name="remove_sub")
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
@@ -101,9 +102,13 @@ class RedditCog(BaseCog):
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
         _out = []
-        for sub_full, sub_short in self.subs:
-            command = sub_short if sub_short else sub_full
-            s = f"r/{sub_full.ljust(30)} Command: !{command}"
+        for subreddit, aliases, is_text in self.subs:
+            command = "!"
+            if aliases:
+                command += ", !".join(aliases+[subreddit])
+            else:
+                command += subreddit
+            s = f"r/{subreddit.ljust(30)} Command(s): {command}"
             _out.append(s)
         out = await self.format_output(_out, item_type="subreddits", header=True)
         await ctx.send(out)
@@ -144,20 +149,20 @@ class RedditCog(BaseCog):
         except:
             await ctx.send("Something went wrong. Make sure subreddit name is spelled correctly.")
     
-    async def check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
+    async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
         if filter_ is None:
             filter_ = default_filter
         else:
             if filter_ not in valid_filters:
-                await self.send_error(ctx, f"{filtering_type} filters", valid_filters)
+                await self._send_error(ctx, f"{filtering_type} filters", valid_filters)
         if filter_:
             return filter_
 
     async def check_time(self, ctx, time) -> str:
-        return await self.check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
+        return await self._check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
     
     async def check_sorting(self, ctx,  sorting: str) -> str:
-        return await self.check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
+        return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
     async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str, time: str, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
         post_limits = {
@@ -167,7 +172,6 @@ class RedditCog(BaseCog):
             self.TIME_FILTERS[3]: 25,
             self.TIME_FILTERS[4]: 25,
         }
-        
         sorting = await self.check_sorting(ctx, sorting)
         time = await self.check_time(ctx, time)
         
@@ -176,17 +180,21 @@ class RedditCog(BaseCog):
         
         sub = reddit.subreddit(subreddit) # Get subreddit
         
-        # Get posts. sub.hot() & sub.top() returns a generator of posts.
+        # Get posts generator
         if hot:
             posts = sub.hot()
         else:
             posts = sub.top(time_filter=time, limit=post_limit)
         
         # Get random post from list of posts
-        post = random.choice(list(posts))
+        try:
+            post = random.choice(list(posts))
+        except:
+            await ctx.send("Could not retrieve posts from reddit. Try again later")
+            raise
         
         # Format output
-        if is_text:
+        if is_text: # If text-subreddit, prioritizes posting self-text
             embed = None
             if post.selftext != "":
                 out = post.selftext
@@ -202,9 +210,9 @@ class RedditCog(BaseCog):
             out = f"**{post.title}**"
         await ctx.send(out, embed=embed)
     
-    async def send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
+    async def _send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
         """Sends error message to ctx.channel, then raises exception
         """
         items_str = ", ".join(valid_items)
         await ctx.send(f"Invalid {item_type}. Valid {item_type}s are:\n{items_str}.")
-        raise discord.DiscordException(f"User provided invalid {item_type} argument.")  
+        raise discord.DiscordException(f"User provided invalid {item_type} argument.")
