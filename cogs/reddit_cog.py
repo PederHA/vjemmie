@@ -22,9 +22,6 @@ reddit = praw.Reddit(
     user_agent=secrets.REDDIT_USER_AGENT,
 )
 
-# UNUSED
-# TODO: Adding this soon xd
-
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 class RedditCog(BaseCog):
@@ -59,22 +56,21 @@ class RedditCog(BaseCog):
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         try:
             aliases = aliases.split(" ") if aliases else []
-            self._add_sub(RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text))
+            new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
+            self._add_sub(new_command)
         except discord.DiscordException:
-            for sf, ss in self.subs: # full, short
-                if sf == subreddit:
-                    command = ss if ss else sf
+            for cmd in self.subs: # full, short
+                if cmd.subreddit == subreddit:
+                    commands_ = self.get_commands(cmd)
                     break
             else:
                 raise Exception("Fatal exception")
-            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command **!{command}**")
+            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command(s) **{commands_}**")
             raise
-        self.dump_subs() # After adding sub, save list of subs to disk
-        if not aliases:
-            alias = subreddit
         else:
-            alias = aliases[0]
-        await ctx.send(f"Added subreddit **r/{subreddit}** with command **!{alias}**")
+            self.dump_subs() # After adding sub, save list of subs to disk
+            commands_ = self.get_commands(new_command)
+            await ctx.send(f"Added subreddit **r/{subreddit}** with command **{commands_}**")
     
     def _add_sub(self, sub: RedditCommand) -> None:
         subreddit, aliases, is_text = sub
@@ -93,27 +89,28 @@ class RedditCog(BaseCog):
     
     @commands.command(name="remove_sub")
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
-        for sub_full, sub_short in self.subs:
-            if sub_short == subreddit or sub_full == subreddit:
-                self.subs.remove((sub_full, sub_short))
-                self.bot.remove_command(sub_short)
+        for cmd in self.subs:
+            if cmd.subreddit == subreddit:
+                self.subs.remove(cmd)
+                self.bot.remove_command(cmd.subreddit)
                 self.dump_subs()
-                command = sub_short if sub_short else sub_full
-                await ctx.send(f"Removed subreddit **r/{sub_full}** with command **!{command}**")
+                commands_ = self.get_commands(cmd)
+                await ctx.send(f"Removed subreddit **r/{subreddit}** with command(s) **{commands_}**")
                 break
         else:
             await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
-           
+    
+    def get_commands(self, cmd: RedditCommand) -> str:
+        subreddit, aliases, _ = cmd
+        command = self.bot.command_prefix
+        return command + f", {command}".join(aliases+[subreddit]) if aliases else command + subreddit
+    
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
         _out = []
-        for subreddit, aliases, is_text in self.subs:
-            command = "!"
-            if aliases:
-                command += ", !".join(aliases+[subreddit])
-            else:
-                command += subreddit
-            s = f"r/{subreddit.ljust(30)} Command(s): {command}"
+        for cmd in self.subs:
+            commands_ = self.get_commands(cmd)
+            s = f"r/{cmd.subreddit.ljust(30)} Command(s): {commands_}"
             _out.append(s)
         out = await self.format_output(_out, item_type="subreddits", header=True)
         await ctx.send(out)
