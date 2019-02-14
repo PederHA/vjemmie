@@ -1,6 +1,14 @@
 import discord
 from discord.ext import commands
 from typing import Iterable
+from datetime import datetime
+
+
+md_formats = ['asciidoc', 'autohotkey', 'bash', 
+            'coffeescript', 'cpp', 'cs', 'css', 
+            'diff', 'fix', 'glsl', 'ini', 'json', 
+            'md', 'ml', 'prolog', 'py', 'tex', 
+            'xl', 'xml']
 
 class BaseCog:
     """
@@ -11,10 +19,11 @@ class BaseCog:
         self.log_channel_id = log_channel_id
         self.author_mention = "<@103890994440728576>"
     
-    async def send_log(self, msg: str) -> None:
+    async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
         try:
             channel = self.bot.get_channel(self.log_channel_id)
-            await channel.send(msg)
+            user_msg = f"{ctx.author.name}: {ctx.message.content}" if ctx else None
+            await channel.send(f"{str(datetime.now())}: {msg}\n{user_msg}")
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.")
         except discord.HTTPException:
@@ -34,7 +43,6 @@ class BaseCog:
         Returns:
             output (str): Markdown formatted code block listing items in iterable, 1 per line.
 
-
         Example:
             >>>format_output(["foo", "bar", "baz"], "generic items", header=True)
             ```Available generic items:
@@ -43,14 +51,10 @@ class BaseCog:
             2. bar
             3. baz
             ```
+        
+        TODO: Split messages longer than 1800 chars
         """
-        formats = ['asciidoc', 'autohotkey', 'bash', 
-                   'coffeescript', 'cpp', 'cs', 'css', 
-                   'diff', 'fix', 'glsl', 'ini', 'json', 
-                   'md', 'ml', 'prolog', 'py', 'tex', 
-                   'xl', 'xml']
-
-        if formatting not in formats:
+        if formatting not in md_formats:
             formatting = ""
 
         output = f"```{formatting}\n"
@@ -65,6 +69,10 @@ class BaseCog:
             output += "```"
         return output
 
+    async def make_codeblock(self, content:str, md_format: str=None) -> str:
+        md_format = md_format if md_format in md_formats else ""
+        return f"```{md_format}\n{content}\n```"
+    
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> list:
         """
         Returns list of discord users in voice channel of ctx.message.author.
