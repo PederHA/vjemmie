@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from typing import Iterable
 from datetime import datetime
+import traceback
 
 
 md_formats = ['asciidoc', 'autohotkey', 'bash', 
@@ -18,16 +19,7 @@ class BaseCog:
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.author_mention = "<@103890994440728576>"
-    
-    async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
-        try:
-            channel = self.bot.get_channel(self.log_channel_id)
-            user_msg = f"{ctx.author.name}: {ctx.message.content}" if ctx else None
-            await channel.send(f"{str(datetime.now())}: {msg}\n{user_msg}")
-        except discord.Forbidden:
-            print(f"Insufficient permissions for channel {self.log_channel_id}.")
-        except discord.HTTPException:
-            print(f"Failed to send message to channel {self.log_channel_id}.")
+        self._add_error_handlers()
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, header: bool=False, enum: bool=False) -> str:
         """
@@ -88,5 +80,53 @@ class BaseCog:
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
     
-    async def insufficient_rights_error(self, ctx, error) -> None:
-        await ctx.send("Insufficient rights to perform command!")
+    async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
+        """
+        This method should be renamed, or I'll need to make a separate `send_error_log` method.
+        Either way, that's not something that I will do right away.
+        """
+        try:
+            channel = self.bot.get_channel(self.log_channel_id)
+            user_msg = f"{ctx.author.name}: {ctx.message.content}" if ctx else None
+            await channel.send(f"{str(datetime.now())}\n{msg}\n\nMessage that caused error: {user_msg}")
+        except discord.Forbidden:
+            print(f"Insufficient permissions for channel {self.log_channel_id}.")
+        except discord.HTTPException:
+            print(f"Failed to send message to channel {self.log_channel_id}.")
+
+    def _add_error_handlers(self) -> None:
+        for _attr in dir(self):
+            try:
+                # If subclasses call super().__init__ before instantiating its own instance variables,
+                # getattr may raise exceptions. try/except retard-proofs it for myself.
+                bot_command = getattr(self, _attr) 
+            except:
+                pass
+            else:
+                if isinstance(bot_command, discord.ext.commands.core.Command):
+                    if not hasattr(bot_command, "on_error"):
+                        bot_command.on_error = self._error_handler     
+    
+    async def _error_handler(self, ctx, error, *bugged_params) -> None:
+        if bugged_params: # Sometimes two instances of self is passed in, totaling 4 args instead of 3
+            ctx = error
+            error = bugged_params[0]
+        error_msg = error.args[0]
+        if "The check functions" in error_msg:
+            await ctx.send("Insufficient rights to perform command!")
+        else:
+            await self.unknown_error(ctx)
+
+    async def unknown_error(self, ctx, error=None, with_traceback=True):
+        if error:
+            with_traceback = False
+        if with_traceback:
+            error_msg = traceback.format_exc()
+        else:
+            if isinstance(error, discord.ext.commands.errors.CommandInvokeError):
+                error_msg = str(error.args)
+            else:
+                error_msg = str(error)
+        await ctx.send("An unknown error occured")
+        await self.send_log(error_msg, ctx)
+
