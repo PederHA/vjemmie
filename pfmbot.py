@@ -10,16 +10,13 @@ from discord.ext.commands import Bot
 
 
 from cogs import *
-from events_module import EventsModule
-from ext_module import ExtModule
 from utils.config import GENERAL_DB_PATH
 from cogs.db_cog import DatabaseHandler
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
-sound_folder = "sounds"
 log_channel_id = 340921036201525248
 
-bot.add_cog(SoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
+bot.add_cog(SoundboardCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(AdminCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(UserCog(bot=bot, log_channel_id=log_channel_id))
 bot.add_cog(PUBGCog(bot=bot, log_channel_id=log_channel_id))
@@ -44,7 +41,7 @@ async def on_ready():
 async def on_message(message):
     if PFMSecrets.offensive_word(message):
         db = DatabaseHandler(GENERAL_DB_PATH)
-        await db.whosaidit(message)
+        db.whosaidit(message)
         await message.add_reaction(':cmonpfm:427842995748995082')
 
 bot.run(secrets.BOT_TOKEN)

@@ -1,12 +1,18 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
 import random
+from typing import Tuple
+
+import discord
 import numpy
-from events_module import EventsModule
+from discord.ext import commands
+
 from bot_resources import GUILDS, NON_PUBG_PLAYERS
-from utils.ext_utils import is_int
 from cogs.base_cog import BaseCog
+from cogs.db_cog import DatabaseHandler
+from events_module import contains_rad
+from ext_module import ExtModule
+from utils.config import GENERAL_DB_PATH
+from utils.ext_utils import is_int
+
 
 class PUBGCog(BaseCog):
     """PUBG Bot Commands
@@ -137,7 +143,7 @@ class PUBGCog(BaseCog):
         """
 
         bot_msg = ""
-        default_squad = ("simon", "hugo", "travis", "steve")
+        default_squad = ("Simon", "Hugo", "Travis", "Steve")
 
         if args == ():
             squad = default_squad
@@ -163,25 +169,26 @@ class PUBGCog(BaseCog):
             squad = args
         
         if bot_msg:
-            enough_players = False # If any `bot_msg` is specified, command will exit.
             await ctx.send(bot_msg)
             raise Exception(f"Exception in !crate: {bot_msg}")
 
+        # Limit names to one word
+        squad = [name.split(" ")[0] for name in squad]
 
-        # Create a list from the `*args`` tuple to make it mutable.
-        squad = list(squad)
-
-        if EventsModule.contains_rad(squad):
+        if contains_rad(squad):
             await ctx.message.add_reaction(":8xscope:417396529452810241")
 
         # Determines size of squad and distributes guns accordingly.
         # Returns size of squad and gun list containing n=squadsize lists.
         gunsplit, armorsplit = await self.roll_guns(squad)
+        #db = DatabaseHandler(GENERAL_DB_PATH)
+        #for idx, player in enumerate(squad):
+        #    db.crate_rolls(player, [gun for gun in gunsplit[idx]], [armor for armor in armorsplit[idx]])
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
 
         await ctx.send(output)
 
-    async def roll_guns(self, squad):
+    async def roll_guns(self, squad: list) -> Tuple[list, list]:
         _CRATEGUNS_ALL = [
             "AWM",
             "AUG",
@@ -216,42 +223,33 @@ class PUBGCog(BaseCog):
 
     async def generate_crate_text(self, squad: list, gunsplit: list, armorsplit: list) -> str:
         """
-        Create output message for !crate command.
-        """
-               
+        Creates output message for !crate command.
+        """              
         if squad[0].isdigit(): 
             # Sort squad numerically
             squad.sort() 
         msg = "```"
         _spc = len(max(squad, key=len)) + 1
         for idx, player in enumerate(squad):
+            if player.islower():
+                player = player.capitalize()
             name_spc = " "*(_spc-len(player))
             gun = " ".join(gunsplit[idx])
             equipment = " ".join(armorsplit[idx])
-            msg += f"{player.capitalize()}:{name_spc} {gun} {equipment}\n"
+            msg += f"{player}:{name_spc} {gun} {equipment}\n"
         msg += "```"
         return msg
 
-    async def get_squad_from_channel(self, ctx):
+    async def get_squad_from_channel(self, ctx) -> list:
         """
-        Instead of using a non-PUBG player blacklist
-        it is possible to use `member.activity`. 
-        However, since not everyone has game activity
-        enabled, this would prove to be unreliable.
+        Get members from voice channel. Ignores users in blacklist.
         """
-
         squad_list = []
         try:
             for member in ctx.message.author.voice.channel.members:
                 if not member.voice.self_deaf:
                     if member.id not in NON_PUBG_PLAYERS:
-                        if member.nick != None:
-                            squad_list.append(member.nick)
-                        else:
-                            squad_list.append(member.name)
+                        squad_list.append(member.name)
         except AttributeError:
-            pass # This error will be handled by `crate` method.
-        
+            pass # This error will be handled by `crate` method. 
         return squad_list
-    
-        
