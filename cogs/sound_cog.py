@@ -1,44 +1,43 @@
 import asyncio
+import itertools
 import os
 import random
-from collections import deque
-from pathlib import Path
-import itertools
-import sys
-import traceback
-from async_timeout import timeout
-from functools import partial
-from youtube_dl import YoutubeDL
 import subprocess
+import sys
 import threading
-from typing import Generator
+import traceback
+from collections import deque
+from queue import Queue
+from functools import partial
+from pathlib import Path
+from typing import Iterator, Tuple
 
 import discord
 import gtts
 import youtube_dl
+from async_timeout import timeout
 from discord import opus
 from discord.ext import commands
-
+from youtube_dl import YoutubeDL
 
 from cogs.base_cog import BaseCog
 from ext_module import ExtModule
+from utils.config import SOUND_DIR
+
 
 class SoundFolder:
     """
     Class holding directory listing and markdown formatting
     of a specific folder/directory.
-    
-    Named SoundFolder over SoundDir to avoid name clashes with built-in func
-    dir() xd.
     """
 
     MAXLEN = 1800
-    BASEDIR = "sounds"
+    BASE_DIR = SOUND_DIR
     
-    def __init__(self, folder:str , header:str, lang: str="", color: str=None) -> None:
+    def __init__(self, folder:str="", header:str=None, lang: str="", color: str=None) -> None:
         self.folder = folder
-        self.lang = lang
         self.header = header
+        self.lang = lang
         if color is not None and lang != "":
             self.color = color
         else:
@@ -46,16 +45,23 @@ class SoundFolder:
 
     @property
     def sound_list(self) -> list:    
-        return sorted([i for i in os.listdir(f"{self.BASEDIR}/{self.folder}")])
+        return sorted([i[:-4].lower() for i in os.listdir(f"{self.BASE_DIR}/{self.folder}") if i.endswith(".mp3")])
     
-    def get_msg(self) -> Generator:
+    def get_msg(self) -> Iterator[str]:
         md_start = f"```{self.lang}\n"
-        msg = f"{md_start}{self.header}:\n"
+        if self.header is not None:
+            head = f"{self.header}:"
+        else:
+            head = ""
+        msg = f"{md_start}{head}\n\n"
         for sound in self.sound_list:
+            # 1 line per sound file
             _msg = f"{self.color}{sound}\n"
-            if len(msg + _msg)>1800:
+            if len(msg + _msg)>self.MAXLEN:
+                # Append "```" and yield msg if adding line exceeds char limit
                 msg += "```"
                 yield msg
+                # Begin new message
                 msg = "```\n"
                 msg += _msg
             else:
@@ -63,22 +69,21 @@ class SoundFolder:
         else:
             msg += "```"
             yield msg
-            
-        
-            
-
 
 
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int, folder=None) -> None:
+    def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         super().__init__(bot, log_channel_id)
         self.is_playing = False
-        self.folder = folder
+        self.folder = SOUND_DIR
+        #self.queue = Queue()
         self.queue = deque()
         self.vc = None
-        
+        self.sub_dirs = [SoundFolder(), # Base sound dir with uncategorized sounds
+                         SoundFolder("tts", "TTS", "css"), 
+                         SoundFolder("ytdl", "YouTube", "fix")]
     @property
     def sound_list(self) -> list:
         """
@@ -89,18 +94,11 @@ class SoundboardCog(BaseCog):
         
         Raises Exception if the folder contains no .mp3 files.
         """
-        sub_dirs = ["tts", "ytdl", "general"]
-        dirs = {}
-        for dir_ in sub_dirs:
-            dirs[dir_] = sorted([i[:-4].lower()
-                             for i in os.listdir(f"{self.folder}/{dir_}") if '.mp3' in i])
-        print(dirs)
-        sound_list = sorted([i[:-4].lower()
-                             for i in os.listdir(self.folder) if i.endswith(".mp3")])
 
-        if not sound_list:
+        s = list(itertools.chain(*[sf.sound_list for sf in self.sub_dirs]))
+        if not s:
             raise Exception("No mp3 files in the given folder")
-        return sound_list
+        return s
 
     async def on_ready(self) -> None:
         opus.load_opus('libopus')
@@ -133,54 +131,70 @@ class SoundboardCog(BaseCog):
                 raise discord.DiscordException
         
         async def parse_sound_name(arg) -> str:
-            nonlocal ctx
             if arg in self.sound_list:
-                sound_name = arg
+                for sf in self.sub_dirs:
+                    for sound in sf.sound_list:
+                        if sound == arg:
+                            if sf.folder:
+                                folder = f"{sf.folder}/"
+                            else:
+                                folder = sf.folder # empty string
+                            return folder, sound
             else:
                 if len(args)>0:
-                    await ctx.send(f"Could not find sound with name {arg}")
-                    raise Exception(f"Could not find sound with name {arg}")
+                    err = f"Could not find sound with name {arg}"
+                    await ctx.send(err)
+                    raise Exception(err)
                 else:
                     sound_name = random.choice(self.sound_list)
-            return sound_name
+                    return await parse_sound_name(sound_name)
         
         arg = " ".join(args).lower()
-        sound_name = await parse_sound_name(arg)
-        print(self.queue)
-        self.queue.append(sound_name)
-        print(self.queue)
+        subdir, sound_name = await parse_sound_name(arg)
+        self.queue.append((subdir, sound_name))
         
-        if not self.is_playing:
+        queue_msg = f"**{sound_name}** added to queue."
+
+        if not self.vc or not self.vc.is_playing():
             try:
                 self.vc = await voice_channel.connect()
             except discord.ClientException:
                 def_msg = ('I am already playing in a voice channel.'
                             ' Please try again later or stop me with the stop command!')   
-                print("we are already connected!")   
+                await ctx.send(queue_msg) 
             else:
+                auth_vc = ctx.author.voice.channel
                 # THIS IS AWFUL BUT IT WORKS. YIKES.
                 while(len(self.queue)) > 0:
                     _nxt = self.queue.popleft()
-                    np_msg = await ctx.send(f"```css\nPlaying: {_nxt}\n```")
                     await self.play_vc(ctx, _nxt)
-                    while self.is_playing:
+                    while self.vc.is_playing():
                         # Workaround for threading issues
                         # Without this while-loop, the vc instantly disconnects.
                         await asyncio.sleep(0.25)
                 else:
-                    await np_msg.delete()
+                    #await np_msg.delete()
                     for connection in self.bot.voice_clients:
-                        if ctx.author.voice.channel == connection.channel:
+                        if auth_vc == connection.channel:
                             await connection.disconnect()
         else:
-            await ctx.send(f"**{sound_name}** added to queue.")
+            await ctx.send(queue_msg)
     
-    async def play_vc(self, ctx, sound_name) -> None:
+    async def play_vc(self, ctx, sound) -> None:
+        subdir, sound_name = sound
         self.is_playing = True
-        def after_playing() -> None:
-            self.is_playing = False
-        self.vc.play(discord.FFmpegPCMAudio(self.folder + '/' + sound_name + '.mp3'),
-                            after=lambda e: after_playing())
+        def after_playing(np_msg) -> None:
+            coro = np_msg.delete()
+            fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+            self.is_playing = False     
+        
+        try:
+            self.vc.play(discord.FFmpegPCMAudio(f"{self.folder}/{subdir}{sound_name}.mp3"),
+                                after=lambda e: after_playing(np_msg))
+        except:
+            pass
+        else:
+            np_msg = await ctx.send(f"```css\nPlaying: {sound_name}\n```")
         await self.send_log('Playing: ' + sound_name)
 
     @commands.command(name="progress")
@@ -258,25 +272,31 @@ class SoundboardCog(BaseCog):
         play_cmd = self.bot.get_command("play")
         next_sound = self.queue.popleft()
         if next_sound is not None:
-            await ctx.invoke(play_cmd, next_sound)
+            await self.play_vc(ctx, next_sound)
+            #await ctx.invoke(play_cmd, next_sound)
 
     @commands.command(name='soundlist',
                       aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
-    async def soundlist(self, ctx: commands.Context) -> None:
+    async def soundlist(self, ctx: commands.Context, filter_: str=None) -> None:
         """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
         Args:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
             """
-        
-        sounds_header = 'List of all sounds (command format !play [soundname]):'
-        sound_string = f"{sounds_header}\n"
+        flt = None
+        if filter_ is not None:
+            if filter_ in ["yt", "youtube", "ytdl"]:
+                flt = "ytdl"
+            elif filter_ in ["tts", "texttospeech"]:
+                flt = "tts"
+        if flt is None:
+            flt = ""
 
-        for sound in self.sound_list:
-            if len(sound_string) + 1 + len(sound) > 1800:
-                await ctx.send(f"```{sound_string}```\n")
-                sound_string = ""
-            sound_string += f"{sound}\n"
-        await ctx.send(f"```{sound_string}```")
+        for sf in self.sub_dirs:
+            if sf.folder == flt or filter_ is None:
+                for msg in sf.get_msg():
+                    await ctx.send(msg)
+                if filter_ is not None:
+                    break
 
     ### UNUSED ###
     def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
@@ -305,9 +325,8 @@ class SoundboardCog(BaseCog):
     
     @commands.command(name="queue")
     async def display_queue(self, ctx:commands.Context):
-        #_queue = ", ".join(self.queue)
         if len(self.queue)>0:
-            _queue = await self.format_output(self.queue, enum=True, formatting="glsl")
+            _queue = await self.format_output([s for _, s in self.queue], enum=True, formatting="glsl")
             msg = f"Sound files currently queued up:\n{_queue}"
         else:
             msg = "No sound files in queue."
@@ -382,11 +401,14 @@ class SoundboardCog(BaseCog):
 
     @commands.command(name="ytdl")
     async def download_track(self, ctx: commands.Context, url: str) -> None:
+        
         ytdl_opts = {
-            'outtmpl': 'sounds/%(title)s.%(ext)s',
-            'format': 'bestaudio',
-            "verbose": False
+            'outtmpl': 'sounds/ytdl/%(title)s.%(ext)s',
+            "verbose": True
                 }
+        if "youtube" in url:
+            # This is a YouTube-specific setting
+            ytdl_opts["format"] = "bestaudio"
         dl_msg = await ctx.send("```cs\n# Downloading video...\n```")
         with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
             result = ydl.extract_info(url=url, download=True, extra_info=ytdl_opts)
@@ -395,6 +417,7 @@ class SoundboardCog(BaseCog):
             _file, ext = os.path.splitext(file_name)
         
         original = f"{directory}/{file_name}"
+        _file = " ".join(filter(None, _file.split(" "))) # Prevent trailing space(s)
         new = f"{directory}/{_file}.mp3"
         cmd = f'ffmpeg -n -i "{original}" -acodec libmp3lame -ab 128k "{new}"'
         
@@ -402,8 +425,9 @@ class SoundboardCog(BaseCog):
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
         
         await dl_msg.delete()
-        msg = await ctx.send(f"```css\nConverting {_file} to mp3.\n```")
+        msg = await ctx.send(f"```fix\nConverting {_file} to mp3.\n```")
         await self.bot.loop.run_in_executor(None, convert)
+        os.remove(original)
         await msg.delete()
         
         try:
@@ -412,5 +436,3 @@ class SoundboardCog(BaseCog):
                 await ctx.invoke(cmd, _file)
         except AttributeError:
             pass
-
-
