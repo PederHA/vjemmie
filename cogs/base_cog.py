@@ -87,3 +87,6 @@ class BaseCog:
         else:
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
+    
+    async def insufficient_rights_error(self, ctx, error) -> None:
+        await ctx.send("Insufficient rights to perform command!")
