@@ -14,6 +14,7 @@ from functools import partialmethod,  partial
 import pickle
 from collections import namedtuple
 from itertools import cycle
+from cogs.admin_utils import is_admin
 
 
 reddit = praw.Reddit(
@@ -72,8 +73,8 @@ class RedditCog(BaseCog):
             commands_ = self.get_commands(new_command)
             await ctx.send(f"Added subreddit **r/{subreddit}** with command **{commands_}**")
     
-    def _add_sub(self, sub: RedditCommand) -> None:
-        subreddit, aliases, is_text = sub
+    def _add_sub(self, subreddit_command: RedditCommand) -> None:
+        subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
         for command in self.bot.commands: # Check if subreddit is already added
             if command.name == subreddit:
                 raise discord.DiscordException("Command already exists")
@@ -81,13 +82,14 @@ class RedditCog(BaseCog):
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd) # Use partial coroutine to create command object
         self.bot.add_command(cmd) # Add generated command to bot
-        if sub not in self.subs:
-            self.subs.append(sub) # Add subreddit to cog's list of subreddits
+        if subreddit_command not in self.subs:
+            self.subs.append(subreddit_command) # Add subreddit to cog's list of subreddits
     
     async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
     
     @commands.command(name="remove_sub")
+    @is_admin()
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
         for cmd in self.subs:
             if cmd.subreddit == subreddit:
@@ -99,9 +101,23 @@ class RedditCog(BaseCog):
                 break
         else:
             await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
+    # Is there a better way to re-use a catch-all method for errors?
+    remove_sub.on_error = BaseCog.insufficient_rights_error
     
     def get_commands(self, cmd: RedditCommand) -> str:
-        subreddit, aliases, _ = cmd
+        """
+        Generates string of commands associated with a RedditCommand instance.
+        Should only be used to generate string of commands for existing subreddits,
+        when, for example, iterating over `RedditCog.subs`.
+        
+        Returns:
+            str: Commands prefixed with the bot's command prefix, separated by commas
+        
+        Example:
+            >>> get_commands(RedditCommand(subreddit="dota2", aliases=["d2", "dota"]))
+            '!d2, !dota, !dota2'
+        """
+        subreddit, aliases, *_ = cmd
         command = self.bot.command_prefix
         return command + f", {command}".join(aliases+[subreddit]) if aliases else command + subreddit
     
@@ -145,8 +161,8 @@ class RedditCog(BaseCog):
 
         ----
         
-        Aliases `!hot` and `!top` allow for manual selection of content filtering, while
-        main command `!rsort` toggles between "hot" & "top"
+        Aliases `hot` and `top` allow for manual selection of content filtering, while
+        main command `rsort` toggles between "hot" & "top".
         
         Args:
             status (str, optional): Defaults to None. Optional user argument for 
@@ -188,6 +204,7 @@ class RedditCog(BaseCog):
             await ctx.send("Invalid alias name. Can only contain letters a-z.")
     
     @commands.command(name="remove_alias")
+    @is_admin()
     async def remove_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         for idx, subreddit_cmd in enumerate(self.subs):
             if subreddit == subreddit_cmd.subreddit:
@@ -199,15 +216,12 @@ class RedditCog(BaseCog):
                     self.subs.pop(idx)
                     self.subs.append(subreddit_cmd)
                     self.dump_subs()
-                    await ctx.send(f"removed alias **!{alias}** for subreddit **r/{subreddit}**")
+                    await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
                 break        
 
     @commands.command(name="reddit")
     async def reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None) -> None:
-        try:
-            await self.get_from_reddit(ctx, subreddit, sorting, time)
-        except:
-            await ctx.send("Something went wrong. Make sure subreddit name is spelled correctly.")
+        await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
         if filter_ is None:
@@ -249,9 +263,13 @@ class RedditCog(BaseCog):
         # Get random post from list of posts
         try:
             post = random.choice(list(posts))
-        except:
-            await ctx.send("Could not retrieve posts from reddit. Try again later")
-            raise
+        except BaseException as e:
+            # TODO: Add responses for different status codes
+            await ctx.send(
+                f"Could not retrieve posts from reddit. Error: {', '.join(e.args)}\n"
+                "Make sure subreddit name is spelled correctly or try again later."
+                )
+            await self.send_log(str(e), ctx)
         
         # Format output
         if is_text: # If text-subreddit, prioritizes posting self-text
