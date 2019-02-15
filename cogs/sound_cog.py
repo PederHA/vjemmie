@@ -75,7 +75,6 @@ class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
 
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
-        super().__init__(bot, log_channel_id)
         self.is_playing = False
         self.folder = SOUND_DIR
         #self.queue = Queue()
@@ -84,6 +83,8 @@ class SoundboardCog(BaseCog):
         self.sub_dirs = [SoundFolder(), # Base sound dir with uncategorized sounds
                          SoundFolder("tts", "TTS", "css"), 
                          SoundFolder("ytdl", "YouTube", "fix")]
+        super().__init__(bot, log_channel_id)
+    
     @property
     def sound_list(self) -> list:
         """
@@ -275,8 +276,8 @@ class SoundboardCog(BaseCog):
             await self.play_vc(ctx, next_sound)
             #await ctx.invoke(play_cmd, next_sound)
 
-    @commands.command(name='soundlist',
-                      aliases=['sounds'], description='Prints a list of all sounds on the soundboard.')
+    @commands.command(name="soundlist",
+                      aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context, filter_: str=None) -> None:
         """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
         Args:
