@@ -14,7 +14,7 @@ from functools import partialmethod,  partial
 import pickle
 from collections import namedtuple
 from itertools import cycle
-from cogs.admin_utils import is_admin
+from cogs.admin_utils import is_admin, is_not_blacklisted
 
 
 reddit = praw.Reddit(
@@ -52,7 +52,7 @@ class RedditCog(BaseCog):
     def dump_subs(self) -> None:
         with open("db/subreddits.pkl", "wb") as f:
             pickle.dump(self.subs, f)
-    
+
     @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         try:
@@ -60,18 +60,19 @@ class RedditCog(BaseCog):
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
             self._add_sub(new_command)
         except discord.DiscordException:
-            for cmd in self.subs: # full, short
+            for cmd in self.subs:
                 if cmd.subreddit == subreddit:
                     commands_ = self.get_commands(cmd)
                     break
             else:
-                raise Exception("Fatal exception")
-            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command(s) **{commands_}**")
-            raise
+                raise
+            s = "s" if "," in commands_ else ""
+            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
         else:
             self.dump_subs() # After adding sub, save list of subs to disk
             commands_ = self.get_commands(new_command)
-            await ctx.send(f"Added subreddit **r/{subreddit}** with command **{commands_}**")
+            s = "s" if "," in commands_ else "" # Duplicate code yikes
+            await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
     
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
         subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
@@ -101,9 +102,7 @@ class RedditCog(BaseCog):
                 break
         else:
             await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
-    # Is there a better way to re-use a catch-all method for errors?
-    remove_sub.on_error = BaseCog.insufficient_rights_error
-    
+  
     def get_commands(self, cmd: RedditCommand) -> str:
         """
         Generates string of commands associated with a RedditCommand instance.
