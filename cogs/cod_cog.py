@@ -1,13 +1,9 @@
 import discord
 from discord.ext import commands
 from bo4api import get_player
-import traceback
+from cogs.base_cog import BaseCog
 
-class CodCog:
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-
+class CodCog(BaseCog):
     @commands.command(name="cod")
     async def codstats(self, ctx: commands.Context, battletag: str, time_filter: str=None) -> None:
         if time_filter in ["weekly", "week"]:
@@ -15,8 +11,7 @@ class CodCog:
         elif time_filter is None or time_filter in ["lifetime", "all"]:
             weekly = False
         else:
-            await ctx.send(f'Invalid time argument "**{time_filter}**". Type `!cod <btag> week` for weekly stats.')
-            raise Exception
+            raise discord.DiscordException(f'Invalid time argument "**{time_filter}**". Type `!cod <btag> week` for weekly stats.')
         
         try:
             stats = get_player(battletag, weekly=weekly)
