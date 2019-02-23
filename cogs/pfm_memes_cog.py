@@ -10,10 +10,8 @@ class PFMCog(BaseCog):
     """
     PFM Memes Cog
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
-        super().__init__(bot, log_channel_id)
-        self.image_file_types = ["png", "jpeg", "jpg", "gif", "gifv"]
-        self.db = DatabaseHandler("memes/pfm_memes.db")
+    image_file_types = ["png", "jpeg", "jpg", "gif", "gifv"] # UNUSED LOL
+    db = DatabaseHandler("memes/pfm_memes.db")
 
     @commands.command(name="testdb")
     async def testdb(self, ctx: commands.Context, *args):
