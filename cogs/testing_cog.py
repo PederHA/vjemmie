@@ -4,6 +4,7 @@ from ext_module import ExtModule
 import requests
 import shutil
 from cogs.base_cog import BaseCog
+import unicodedata
 
 
 class TestingCog(BaseCog):
@@ -49,18 +50,54 @@ class TestingCog(BaseCog):
             print(dir(embed.footer))
             print(embed.footer.text)
     
+    
     @commands.command(name="emojis")
     async def emojis(self, ctx:commands.Context, emoji: str, *message) -> None:
-        message = list(message)
-        message.append("")
-        message.insert(0, "")
-        await ctx.send(emoji.join(message))
+        msg = list(message)
+        msg.append("")
+        msg.insert(0, "")
+        await ctx.send(emoji.join(msg))
 
 
-    @commands.command(name="user")
-    async def user(self, ctx, user_id: int) -> None:
-        #user = self.bot.get_user(user_id)
-        for member in self.bot.get_all_members():
-            if member.id == user_id:
-                user = member
+    @commands.command(name="sheriff")
+    async def sheriff(self, ctx: commands.Context, emoji: str) -> None:
+        out = """
+        \n⁯⁯⁯⁯ 
+⠀ ⠀ ⠀    🤠
+　   {e}{e}{e}
+    {e}   {e}　{e}
+    👇  {e}{e} 👇
+  　  {e}　{e}
+　   {e}　 {e}
+　   👢     👢
+    """.format(e=emoji)
+        try:
+            emoji_name = unicodedata.name(emoji)
+        except:
+            if ":" in emoji:
+                emoji_name = emoji.split(":", 3)[1]
+            else:
+                emoji_name = None
+        if emoji_name is not None:
+            out += f"\nI am the sheriff of {emoji_name.title()}"
+        await ctx.send(out)
     
+    @commands.command(name="add_sound")
+    async def get_attachment(self, ctx: commands.Context) -> None:
+        if hasattr(ctx.message, "attachments") and ctx.message.attachments:
+            directories = {
+                # Will expand
+                "mp3": "sounds"
+            }
+            attachment = ctx.message.attachments[0]
+            file_name, extension = attachment.filename.split(".")
+            directory = directories.get(extension)
+            if not directory:
+                raise discord.DiscordException("Invalid file format")
+            r = requests.get(attachment.url, stream=True)
+            with open(f"{directory}/{attachment.filename}", "wb") as f:
+                r.raw.decode_content = True
+                shutil.copyfileobj(r.raw, f)
+            await ctx.send(f"Saved file {attachment.filename}")
+        else:
+            raise discord.DiscordException("Message has no attachment!")
