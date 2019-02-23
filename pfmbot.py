@@ -12,6 +12,7 @@ from discord.ext.commands import Bot
 from cogs import *
 from utils.config import GENERAL_DB_PATH
 from cogs.db_cog import DatabaseHandler
+from cogs.admin_utils import load_blacklist, error_handler
 
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 log_channel_id = 340921036201525248
@@ -36,6 +37,14 @@ bot.add_cog(War3Cog(bot=bot, log_channel_id=log_channel_id, replays_folder=None)
 @bot.event
 async def on_ready():
     print("Client logged in")
+
+@bot.check_once
+def check_commands(ctx):
+    return ctx.message.author.id not in load_blacklist()
+
+#@bot.listen("on_command_error")
+#async def on_error(ctx, error):
+#    await error_handler(bot, ctx, error)
 
 @bot.listen()
 async def on_message(message):

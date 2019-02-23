@@ -2,21 +2,17 @@ from discord.ext import commands
 import discord
 from ext_module import ExtModule
 from ext_module import PmForbidden
+from cogs.admin_utils import load_blacklist, save_blacklist, is_admin
+from cogs.base_cog import BaseCog
+from typing import Union
+import asyncio
 
 
-class AdminCog:
+class AdminCog(BaseCog):
     """This cog contains commands that can be used by the bots admin(s).
     This will not contain commands, which ban and kick a user or let the bot behave as a server admin.
     """
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
-        """The constructor for the AdminCog class, it assigns the important variables used by the commands below
-        Args:
-            bot: The bot the commands will be added to (commands.Bot)
-            log_channel_id: The id of the log_channel (int)
-            """
-        self.bot = bot
-        self.log_channel_id = log_channel_id
-        self.send_log = None                  # will be assigned in the on_ready event
+
 
     async def on_resumed(self) -> None:
         """Is called when the bot made a successfull reconnect, after disconnecting
@@ -26,7 +22,7 @@ class AdminCog:
     async def on_ready(self) -> None:
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
         """
-        self.send_log = ExtModule.get_send_log(self)
+        #self.send_log = ExtModule.get_send_log(self)
         activity = discord.Game(name='Wakaliwood Productions')
         await self.bot.change_presence(activity=activity)
 
@@ -159,3 +155,77 @@ class AdminCog:
         activity = discord.Game(name=activity_name)
         await self.bot.change_presence(activity=activity)
         await self.send_log(f"Changed activity to: {activity_name}")
+
+    @commands.command(name="blacklist")
+    @is_admin()
+    async def add_to_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
+        if member: # Proceed if discord.commands.MemberConverter returns a member
+            blacklist = load_blacklist() # Get most recent version of blacklist
+            if member.id not in blacklist:
+                blacklist.append(member.id)
+                save_blacklist(blacklist) # Save new version of blacklist
+            if output:
+                await ctx.send(await self.make_codeblock(f"Added {member.name} to blacklist"))
+        else:
+            show_cmd = self.bot.get_command("show")
+            await ctx.invoke(show_cmd, "blacklist")
+
+    @commands.command(name="show")
+    async def show_xlist(self, ctx: commands.Context, list_name: str) -> None:
+        list_name = list_name.lower()
+        out_list = None
+        if list_name in ["black", "blacklist", "blvck"]:
+            out_list = load_blacklist()
+        # TODO: Add other lists (commands, cogs, etc.)
+        if out_list:
+            out_list = [self.bot.get_user(user_id).name for user_id in out_list]
+            out_msg = await self.format_output(out_list)
+        else:
+            out_msg = await self.make_codeblock("Blacklist is empty")
+        await ctx.send(out_msg)        
+    
+    @commands.command(name="unblacklist", aliases=["remove_blacklist", "rblacklist"])
+    @is_admin()
+    async def remove_from_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
+        if member: # Proceed if discord.commands.MemberConverter returns a member
+            blacklist = load_blacklist() # Get most recent version of blacklist
+            if member.id in blacklist:
+                blacklist.remove(member.id)
+                save_blacklist(blacklist) # Save new version of blacklist
+                out_msg = f"Removed {member.name} from blacklist"
+        else:
+            await ctx.send("Do you want to clear the entire blacklist?")
+            def pred(m) -> bool:
+                return m.author == ctx.message.author and m.channel == ctx.message.channel
+            try:
+                reply = await self.bot.wait_for("message", check=pred, timeout=10.0)
+            except asyncio.TimeoutError:
+                await ctx.send("No reply from user")
+            else:
+                r = reply.content.lower()
+                if r in ["y", "yes"]:
+                    save_blacklist([]) # Clear blacklist
+                    out_msg = "Cleared blacklist"
+                else:
+                    out_msg = "Blacklist unchanged"
+        if output:
+            await ctx.send(await self.make_codeblock(out_msg))
+
+    @commands.command(name="timeout")
+    @is_admin()
+    async def timeout(self, ctx: commands.Context, member: commands.MemberConverter, duration_min: Union[int, float]=30) -> None:
+        sleep_duration_sec = 60 * duration_min
+        blacklist_cmd = self.bot.get_command("blacklist")
+        unblacklist_cmd = self.bot.get_command("unblacklist")
+        await ctx.invoke(blacklist_cmd, member, output=False)
+        await ctx.send(f"Timing out {member.name} for {sleep_duration_sec} seconds.")
+        await asyncio.sleep(sleep_duration_sec)
+        await ctx.invoke(unblacklist_cmd, member, output=False)
+        await ctx.send(f"Timeout ended for {member.name}")
+
+    @commands.command(name="debug")
+    @is_admin()
+    async def load_debugger(self, ctx: commands.Context) -> None:
+        cmd = [x for x in self.bot.commands if x.name == "remove_sub"][0]
+        breakpoint()
+
