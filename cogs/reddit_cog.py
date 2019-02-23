@@ -1,21 +1,23 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
-import random
-import praw
 import asyncio
+import datetime
+import math
+import pickle
+import random
 import re
 import secrets
 import traceback
-from cogs.base_cog import BaseCog
-from typing import Iterable, Tuple
-import datetime
-from functools import partialmethod,  partial
-import pickle
 from collections import namedtuple
+from functools import partial, partialmethod
 from itertools import cycle
-from cogs.admin_utils import is_admin, is_not_blacklisted
+from typing import Iterable, Tuple
 
+import discord
+import praw
+from discord.ext import commands
+
+from cogs.admin_utils import is_admin, is_not_blacklisted
+from cogs.base_cog import BaseCog
+from ext_module import ExtModule
 
 reddit = praw.Reddit(
     client_id=secrets.REDDIT_ID,
@@ -33,7 +35,7 @@ class RedditCog(BaseCog):
     TIME_FILTERS = ["all", "year", "month", "week", "day"]
     SORTING_FILTERS = ["hot", "top"]
     DEFAULT_SORTING = SORTING_FILTERS[1]
-    DEFAULT_TIME = TIME_FILTERS[3]
+    DEFAULT_TIME = TIME_FILTERS[0]
     TOP_ALL = (SORTING_FILTERS[1], TIME_FILTERS[0])
 
     def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
@@ -127,7 +129,7 @@ class RedditCog(BaseCog):
             commands_ = self.get_commands(cmd)
             s = f"r/{cmd.subreddit.ljust(30)} Command(s): {commands_}"
             _out.append(s)
-        out = await self.format_output(_out, item_type="subreddits", header=True)
+        out = await self.format_output(_out, item_type="subreddits")
         await ctx.send(out)
 
     @commands.command(name="change_reddit_time", aliases=["rtime", "reddit_time"])
@@ -184,6 +186,16 @@ class RedditCog(BaseCog):
         else:
             msg = "Usage:\n\n+ !rsort switches between hot/top\n+ !hot & !top for manual selection"
         await ctx.send(await self.make_codeblock(msg, "diff"))
+
+    @commands.command(name="reddit_settings", aliases=["rsettings"])
+    async def reddit_settings(self, ctx: commands.Context) -> None:
+        content_sorting = self.DEFAULT_SORTING
+        time_sorting = self.DEFAULT_TIME
+        out = "Content: ".ljust(10) + content_sorting
+        if not content_sorting == "hot":
+            out += f"\nTime:".ljust(10) + time_sorting
+        out = await self.make_codeblock("Reddit settings:\n\n"+out)
+        await ctx.send(out)
     
     @commands.command(name="add_alias")
     async def change_sub_command(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
@@ -219,8 +231,12 @@ class RedditCog(BaseCog):
                 break        
 
     @commands.command(name="reddit")
-    async def reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None) -> None:
-        await self.get_from_reddit(ctx, subreddit, sorting, time)
+    async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
+        if not subreddit:
+            reddit_commands = self.bot.get_command("rcommands")
+            await ctx.invoke(reddit_commands)
+        else:
+            await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
         if filter_ is None:
@@ -269,23 +285,75 @@ class RedditCog(BaseCog):
                 "Make sure subreddit name is spelled correctly or try again later."
                 )
             await self.send_log(str(e), ctx)
-        
-        # Format output
-        if is_text: # If text-subreddit, prioritizes posting self-text
-            embed = None
-            if post.selftext != "":
-                out = post.selftext
-            else:
-                if post.url[-4:] in self.IMAGE_EXTENSIONS or post.url in self.IMAGE_HOSTS:
-                    post = post.title + "\n" + post.url
-                    out = post
+       
+        # Generate message that bot will post
+        #####################################
+        def is_image_content(url) -> bool:
+            return url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS)
+        # NOTE: Could reduce code duplication here but cba rn
+        embed_content = None
+        md_style = ""
+        opts = {}
+        # Prioritize selftext for text subreddits
+        if is_text:
+            # 1st Prio: Post selftext / title. 
+            if post.selftext:
+                # Emojipasta, copypasta, etc. submissions sometimes put the
+                # joke/content in the title
+                if len(post.selftext) > len(post.title):
+                    _out = post.selftext
                 else:
-                    out =  post.title
+                    _out = post.title
+            # 2nd prio: post.title + embedded image if post url is an image
+            else:
+                _out = post.title
+                if is_image_content(post.url):
+                    embed_content = post.url
+        # Prioritize image for image subreddits
         else:
-            embed = discord.Embed()
-            embed.set_image(url=post.url)
-            out = f"**{post.title}**"
-        await ctx.send(out, embed=embed)
+            # 1st prio: Post title + embedded image
+            if is_image_content(post.url):
+                _out = post.title
+                embed_content = post.url
+            # 2nd prio: Post title + post selftext
+            elif post.selftext:
+                _out = f"**{post.title}**\n{post.selftext}"
+            # 3rd Prio: Post title + post URL
+            else:
+                _out = f"**{post.title}**\n{post.url}"
+        
+        # Deal with text posts whose size exceeds Discord's max message length
+        LIMIT = 1800
+        n_chunks = math.ceil(len(_out)/LIMIT)  
+        if n_chunks > 1:    # split into chunks if text output exceeds 1800 chars
+            _temp = ""
+            chunks = []
+            for char in _out: # TODO: Change to enumerate(_out), check every 100 chars
+                if len(_temp) < LIMIT:
+                    _temp += char # This is probably very inefficient due to the use of += for every char
+                else:
+                    chunks.append(_temp)
+                    _temp = char
+            else:
+                chunks.append(_temp) 
+            for chunk in chunks:
+                await ctx.send(chunk)
+        else:
+            if embed_content:
+                md_style = "**"
+                embed = discord.Embed()
+                embed.set_image(url=embed_content)
+                opts = {"embed": embed}
+            out = f"{md_style}{_out}{md_style}"
+            await ctx.send(out, **opts)
+             
+    @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
+    async def reddit_commands(self, ctx: commands.Context) -> None:
+        _out = [
+            cmd for cmd in self.bot.commands
+            if cmd.cog_name == self.__class__.__name__
+        ]
+        await ctx.send(await self.format_output(_out, item_type="Reddit commands"))
     
     async def _send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
         """Sends error message to ctx.channel, then raises exception
