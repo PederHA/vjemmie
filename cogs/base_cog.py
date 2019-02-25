@@ -17,6 +17,7 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 EmbedField = namedtuple("EmbedField", "name value")
 
 class BaseCog:
+    IMAGE_CHANNEL_ID = 549649397420392567
     EmbedField = namedtuple("EmbedField", "name value")
     """
     Base Cog from which all other cogs are subclassed.
@@ -187,8 +188,16 @@ class BaseCog:
         await ctx.send(out_msg) # Display error to user
         await self.send_log(error_msg, ctx) # Send entire exception traceback to log channel
     
-    async def download_image(self, image_url) -> bytes: # TODO: FIX
+    async def download_from_url(self, url: str) -> bytes: # TODO: FIX
         async with aiohttp.ClientSession() as session:
-            r = await session.get(image_url)
+            r = await session.get(url)
             img = await r.read()
             return img
+
+    async def upload_image_to_discord(self, image_url: str) -> discord.Message:
+        channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
+        image = await self.download_from_url(image_url)
+        *_, file_name = image_url.split("/")
+        fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
+        msg = await channel.send(file=discord.File(image, file_name))
+        return msg
