@@ -1,9 +1,10 @@
 import discord
 from discord.ext import commands
-from typing import Iterable
+from typing import Iterable, Union
 from datetime import datetime
 import traceback
 from cogs.admin_utils import is_not_blacklisted
+from collections import namedtuple
 
 
 md_formats = ['asciidoc', 'autohotkey', 'bash', 
@@ -12,7 +13,10 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
             'md', 'ml', 'prolog', 'py', 'tex', 
             'xl', 'xml']
 
+EmbedField = namedtuple("EmbedField", "name value")
+
 class BaseCog:
+    EmbedField = namedtuple("EmbedField", "name value")
     """
     Base Cog from which all other cogs are subclassed.
     """
@@ -66,6 +70,44 @@ class BaseCog:
         md_format = md_format if md_format in md_formats else ""
         return f"```{md_format}\n{content}\n```"
     
+    async def get_embed_field(self, name, value) -> EmbedField:
+        return EmbedField(name, value)
+
+    async def get_discord_color(self, color: Union[str, int]) -> discord.Color:
+        if isinstance(color, str):
+            try:
+               color_func = getattr(discord.Color, color)
+            except:
+                raise discord.DiscordException(f"Could not interpret {color}")
+            else:
+                return color_func()
+        elif isinstance(color, int):
+            return discord.Color(int)
+        else:
+            raise discord.DiscordException("Could not obtain color")
+    
+    async def get_embed(self, 
+                        ctx, 
+                        *, 
+                        title: str=None,
+                        footer: bool=True, 
+                        fields: list=None, 
+                        content: str=None,
+                        image_url: str=None,
+                        color: Union[str, int]=None) -> discord.Embed:
+        embed = discord.Embed(title=title)
+        if footer:
+            embed.set_footer(text=f"● Requested by {ctx.message.author.name}", icon_url=ctx.message.author.avatar_url)
+        if fields:
+            for field in fields:
+                embed.add_field(name=field.name, value=field.value)
+        if image_url:
+            embed.set_image(url=image_url)
+        if color:
+            _color = await self.get_discord_color(color)
+            embed.color = _color
+        return embed
+    
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> list:
         """
         Returns list of discord users in voice channel of ctx.message.author.
@@ -81,7 +123,6 @@ class BaseCog:
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
 
-    
     
     async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
         """Sends log message to log channel.
