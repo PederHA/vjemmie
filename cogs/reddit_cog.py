@@ -46,7 +46,8 @@ class RedditCog(BaseCog):
         # Generators for changing reddit sorting.
         self.time_cycle = cycle(self.TIME_FILTERS) # Command: !rtime
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
-
+        
+    
     def load_subs(self) -> list:
         with open("db/subreddits.pkl", "rb") as f:
             return pickle.load(f)
@@ -57,6 +58,21 @@ class RedditCog(BaseCog):
 
     @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
+        """
+        Add <subreddit> [alias]
+        
+        ----
+        
+        Args:
+            ctx (commands.Context): [description]
+            subreddit (str): [description]
+            aliases (str, optional): Defaults to None. [description]
+            is_text (bool, optional): Defaults to False. [description]
+        
+        Returns:
+            None: [description]
+        """
+
         try:
             aliases = aliases.split(" ") if aliases else []
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
@@ -84,6 +100,7 @@ class RedditCog(BaseCog):
         base_command = self._r # The method that is used to create custom subreddit commands
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd) # Use partial coroutine to create command object
+        cmd.on_error = self._error_handler
         self.bot.add_command(cmd) # Add generated command to bot
         if subreddit_command not in self.subs:
             self.subs.append(subreddit_command) # Add subreddit to cog's list of subreddits
@@ -94,6 +111,13 @@ class RedditCog(BaseCog):
     @commands.command(name="remove_sub")
     @is_admin()
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
+        """Remove <subreddit>
+        
+        Args:
+            ctx (commands.Context): Context
+            subreddit (str): Name of subreddit to remove
+        """
+
         for cmd in self.subs:
             if cmd.subreddit == subreddit:
                 self.subs.remove(cmd)
@@ -158,7 +182,7 @@ class RedditCog(BaseCog):
     @commands.command(name="rsort", aliases=["hot", "top"])
     async def change_content_sorting(self, ctx: commands.Context, status: str=None) -> None:
         """
-        Toggles between "hot" and "top" content filtering on Reddit.
+        Toggle top/hot
 
         ----
         
@@ -276,24 +300,25 @@ class RedditCog(BaseCog):
             posts = sub.top(time_filter=time, limit=post_limit)
         
         # Get random post from list of posts
+        def get_random_post(posts):
+            posts = list(posts)
+            posts = []
+            if posts:
+                return random.choice(list(posts))
+            else:
+                raise AttributeError
+
         try:
-            post = random.choice(list(posts))
-        except BaseException as e:
-            # TODO: Add responses for different status codes
-            await ctx.send(
-                f"Could not retrieve posts from reddit. Error: {', '.join(e.args)}\n"
-                "Make sure subreddit name is spelled correctly or try again later."
-                )
-            await self.send_log(str(e), ctx)
-       
+            post = get_random_post(posts)
+        except:
+            raise discord.DiscordException("Could not retrieve posts at this time.")
+        
         # Generate message that bot will post
         #####################################
         def is_image_content(url) -> bool:
-            return url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS)
+            return False if not url else url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS)
         # NOTE: Could reduce code duplication here but cba rn
         embed_content = None
-        md_style = ""
-        opts = {}
         # Prioritize selftext for text subreddits
         if is_text:
             # 1st Prio: Post selftext / title. 
@@ -312,15 +337,14 @@ class RedditCog(BaseCog):
         # Prioritize image for image subreddits
         else:
             # 1st prio: Post title + embedded image
-            if is_image_content(post.url):
-                _out = post.title
-                embed_content = post.url
-            # 2nd prio: Post title + post selftext
-            elif post.selftext:
-                _out = f"**{post.title}**\n{post.selftext}"
-            # 3rd Prio: Post title + post URL
-            else:
-                _out = f"**{post.title}**\n{post.url}"
+            n = 0
+            while not is_image_content(post.url):
+                post = get_random_post(posts)
+                n += 1
+                if n > 50:
+                    raise discord.DiscordException("Could not find an image submission.")
+            _out = f"r/{subreddit}: {post.title}"
+            embed_content = post.url
         
         # Deal with text posts whose size exceeds Discord's max message length
         LIMIT = 1800
@@ -339,21 +363,22 @@ class RedditCog(BaseCog):
             for chunk in chunks:
                 await ctx.send(chunk)
         else:
-            if embed_content:
-                md_style = "**"
-                embed = discord.Embed()
-                embed.set_image(url=embed_content)
-                opts = {"embed": embed}
-            out = f"{md_style}{_out}{md_style}"
-            await ctx.send(out, **opts)
+            embed = await self.get_embed(ctx, title=_out, image_url=embed_content, color="red")
+            await ctx.send(embed=embed)
              
     @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
     async def reddit_commands(self, ctx: commands.Context) -> None:
-        _out = [
+        _reddit_commands = [
             cmd for cmd in self.bot.commands
             if cmd.cog_name == self.__class__.__name__
         ]
-        await ctx.send(await self.format_output(_out, item_type="Reddit commands"))
+        _out_str = ""
+        for command in _reddit_commands:
+            cmd_name = command.name.ljust(20," ")
+            _out_str += f"`{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+        field = self.EmbedField("Reddit commands", _out_str)
+        embed = await self.get_embed(ctx, fields=[field])
+        await ctx.send(embed=embed)
     
     async def _send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
         """Sends error message to ctx.channel, then raises exception
