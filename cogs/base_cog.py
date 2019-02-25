@@ -5,7 +5,8 @@ from datetime import datetime
 import traceback
 from cogs.admin_utils import is_not_blacklisted
 from collections import namedtuple
-
+import requests
+import aiohttp
 
 md_formats = ['asciidoc', 'autohotkey', 'bash', 
             'coffeescript', 'cpp', 'cs', 'css', 
@@ -186,4 +187,8 @@ class BaseCog:
         await ctx.send(out_msg) # Display error to user
         await self.send_log(error_msg, ctx) # Send entire exception traceback to log channel
     
-
+    async def download_image(self, image_url) -> bytes: # TODO: FIX
+        async with aiohttp.ClientSession() as session:
+            r = await session.get(image_url)
+            img = await r.read()
+            return img
