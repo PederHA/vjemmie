@@ -34,42 +34,14 @@ class SoundFolder:
     MAXLEN = 1800
     BASE_DIR = SOUND_DIR
     
-    def __init__(self, folder:str="", header:str=None, lang: str="", color: str=None) -> None:
+    def __init__(self, folder:str="", header:str=None, color: str=None) -> None:
         self.folder = folder
-        self.header = header
-        self.lang = lang
-        if color is not None and lang != "":
-            self.color = color
-        else:
-            self.color = ""
+        self.header = header if header else "General"
+        self.color = color
 
     @property
     def sound_list(self) -> list:    
         return sorted([i[:-4].lower() for i in os.listdir(f"{self.BASE_DIR}/{self.folder}") if i.endswith(".mp3")])
-    
-    def get_msg(self) -> Iterator[str]:
-        md_start = f"```{self.lang}\n"
-        if self.header is not None:
-            head = f"{self.header}:"
-        else:
-            head = ""
-        msg = f"{md_start}{head}\n\n"
-        for sound in self.sound_list:
-            # 1 line per sound file
-            _msg = f"{self.color}{sound}\n"
-            if len(msg + _msg)>self.MAXLEN:
-                # Append "```" and yield msg if adding line exceeds char limit
-                msg += "```"
-                yield msg
-                # Begin new message
-                msg = "```\n"
-                msg += _msg
-            else:
-                msg += _msg
-        else:
-            msg += "```"
-            yield msg
-
 
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
@@ -81,8 +53,8 @@ class SoundboardCog(BaseCog):
         self.queue = deque()
         self.vc = None
         self.sub_dirs = [SoundFolder(), # Base sound dir with uncategorized sounds
-                         SoundFolder("tts", "TTS", "css"), 
-                         SoundFolder("ytdl", "YouTube", "fix")]
+                         SoundFolder("tts", "TTS", "red"), 
+                         SoundFolder("ytdl", "YouTube", "blue")]
         super().__init__(bot, log_channel_id)
     
     @property
@@ -267,29 +239,80 @@ class SoundboardCog(BaseCog):
         if next_sound is not None:
             await self.play_vc(ctx, next_sound)
             #await ctx.invoke(play_cmd, next_sound)
-
+    
+    async def do_send(self, ctx, header: str, content: str, footer: bool) -> None:
+        if not header:
+            header = "general"
+        embed = await self.get_embed(ctx, fields=[self.EmbedField(header, content)], footer=footer, color="red")
+        await ctx.send(embed=embed)
+    
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
-    async def soundlist(self, ctx: commands.Context, filter_: str=None) -> None:
+    async def soundlist(self, ctx: commands.Context, category: str=None) -> None:
         """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
         Args:
             ctx: The context of the command, which is mandatory in rewrite (commands.Context)
             """
-        flt = None
-        if filter_ is not None:
-            if filter_ in ["yt", "youtube", "ytdl"]:
-                flt = "ytdl"
-            elif filter_ in ["tts", "texttospeech"]:
-                flt = "tts"
-        if flt is None:
-            flt = ""
+        
+        def get_category(category: str) -> str:
+            if category is not None:
+                if category in ["yt", "youtube", "ytdl"]:
+                    return "ytdl"
+                elif category in ["tts", "texttospeech"]:
+                    return "tts"
+            return None
 
+        if not category:
+            _categories = [sf.header for sf in self.sub_dirs]
+            categories = ", ".join(_categories)
+            await ctx.send(f"Cannot display all sounds at once. Specify a category from: {categories}")
+            
+            def pred(m) -> bool:
+                return m.author == ctx.message.author and m.channel == ctx.message.channel  
+            
+            try:
+                reply = await self.bot.wait_for("message", timeout=10.0, check=pred)
+            except asyncio.TimeoutError:
+                raise discord.DiscordException("No reply from user. Aborting.")
+            else:
+                filter_ = reply.content.lower()
+             
+        category = get_category(category)
+
+        if not category:
+            raise discord.DiscordException("Invalid sound category")
+        
         for sf in self.sub_dirs:
-            if sf.folder == flt or filter_ is None:
-                for msg in sf.get_msg():
-                    await ctx.send(msg)
-                if filter_ is not None:
-                    break
+            if sf.folder == category or category is None:
+                _out = ""
+                for sound in sf.sound_list:
+                    fmt_sound = f"\n{sound}"
+                    if len(_out + fmt_sound) < 1000:
+                        _out += fmt_sound
+                    else:
+                        await self.do_send(ctx, sf.header, _out, footer=False)
+                        _out = ""
+                else:
+                    if _out:
+                        await self.do_send(ctx, sf.header, _out, footer=True)
+
+    @commands.command(name="search")
+    async def search_sound(self, ctx: commands.Context, *search_query: str) -> None:
+        _out = ""
+        search_query = " ".join(search_query)
+        for sf in self.sub_dirs:
+            for sound in sf.sound_list:
+                if search_query in sound:
+                    fmt_sound = f"\n{sound}"
+                    if len(_out + fmt_sound) < 1000:
+                        _out += fmt_sound
+                    else:
+                        await self.do_send(ctx, sf.header, _out, footer=False)
+                        _out = ""
+            else:
+                if _out:
+                    await self.do_send(ctx, sf.header, _out, footer=True)
+
 
     ### UNUSED ###
     def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
