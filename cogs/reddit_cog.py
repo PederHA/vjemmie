@@ -278,6 +278,10 @@ class RedditCog(BaseCog):
         return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
     async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str, time: str, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
+        async def download_img_example():
+            embed_content = "http://i.imgur.com/Duoalru.jpg"
+            image = await self.download_image(embed_content)
+            await ctx.send(file=discord.File(image, "some_img.jpg"))
         post_limits = {
             self.TIME_FILTERS[0]: self.ALL_POST_LIMIT,
             self.TIME_FILTERS[1]: self.ALL_POST_LIMIT,
@@ -300,18 +304,14 @@ class RedditCog(BaseCog):
             posts = sub.top(time_filter=time, limit=post_limit)
         
         # Get random post from list of posts
-        def get_random_post(posts):
-            posts = list(posts)
-            posts = []
-            if posts:
-                return random.choice(list(posts))
-            else:
-                raise AttributeError
+        def get_random_post(posts, image: bool=True):
+            try:
+                post = random.choice(list(posts))
+            except:
+                raise discord.DiscordException("Could not retrieve posts at this time.")
+            return post
 
-        try:
-            post = get_random_post(posts)
-        except:
-            raise discord.DiscordException("Could not retrieve posts at this time.")
+        post = get_random_post(posts)
         
         # Generate message that bot will post
         #####################################
@@ -334,9 +334,8 @@ class RedditCog(BaseCog):
                 _out = post.title
                 if is_image_content(post.url):
                     embed_content = post.url
-        # Prioritize image for image subreddits
+        # Only post images for image subreddits
         else:
-            # 1st prio: Post title + embedded image
             n = 0
             while not is_image_content(post.url):
                 post = get_random_post(posts)
@@ -345,7 +344,7 @@ class RedditCog(BaseCog):
                     raise discord.DiscordException("Could not find an image submission.")
             _out = f"r/{subreddit}: {post.title}"
             embed_content = post.url
-        
+
         # Deal with text posts whose size exceeds Discord's max message length
         LIMIT = 1800
         n_chunks = math.ceil(len(_out)/LIMIT)  
