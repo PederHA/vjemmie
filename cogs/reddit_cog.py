@@ -46,6 +46,8 @@ class RedditCog(BaseCog):
         # Generators for changing reddit sorting.
         self.time_cycle = cycle(self.TIME_FILTERS) # Command: !rtime
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
+        # Avoid repeat reddit submissions in a single session
+        self.posts = set()
 
 
     def load_subs(self) -> list:
@@ -60,19 +62,13 @@ class RedditCog(BaseCog):
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         """
         Add <subreddit> [alias]
-        
-        ----
-        
+
         Args:
             ctx (commands.Context): [description]
-            subreddit (str): [description]
-            aliases (str, optional): Defaults to None. [description]
-            is_text (bool, optional): Defaults to False. [description]
-        
-        Returns:
-            None: [description]
+            subreddit (str): Name of subreddit to add
+            aliases (str, optional): Command aliases. Typically an abbreviaton.
+            is_text (bool, optional): Defaults to False. Makes command look for text posts if true.
         """
-
         try:
             aliases = aliases.split(" ") if aliases else []
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
@@ -93,6 +89,14 @@ class RedditCog(BaseCog):
             await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
 
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
+        """Creates a discord bot command from namedtuple `subreddit_command`.
+        
+        Args:
+            subreddit_command (RedditCommand): Subreddit to add.
+        
+        Raises:
+            discord.DiscordException: Raised if subreddit is already added.
+        """
         subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
         for command in self.bot.commands: # Check if subreddit is already added
             if command.name == subreddit:
@@ -106,6 +110,7 @@ class RedditCog(BaseCog):
             self.subs.append(subreddit_command) # Add subreddit to cog's list of subreddits
 
     async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
+        """Method used as a base for adding custom subreddit commands"""
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
     @commands.command(name="remove_sub")
@@ -129,8 +134,6 @@ class RedditCog(BaseCog):
         else:
             await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
 
-
-
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
         """
@@ -139,7 +142,6 @@ class RedditCog(BaseCog):
         Args:
             ctx (commands.Context): [description]
         """
-
         _out = []
         for cmd in self.subs:
             commands_ = self._get_commands(cmd)
@@ -157,9 +159,7 @@ class RedditCog(BaseCog):
             ctx (commands.Context): [description]
             opt (str, optional): Specify time filter manually or request current time
             settings.
-
         """
-
         out_msg = None # Hacky, but w/e
         if opt:
             if opt in ["s", "status", "show"]:
@@ -192,7 +192,6 @@ class RedditCog(BaseCog):
         Args:
             status (str, optional): Defaults to None. Optional user argument for 
             displaying current content sorting. 
-
         """
         if not status:
             if ctx.invoked_with == "hot":
@@ -307,11 +306,11 @@ class RedditCog(BaseCog):
             category (str, optional): Defaults to None. [description]
         """
 
-        default_subreddits = ["memes", "dankmemes", "comedyheaven"]
+        default_subreddits = ["dankmemes", "comedyheaven"]
         if category in ["normal", "standard", "default"] or not category:
             subreddits = default_subreddits
         elif category in ["edgy", "edge"]:
-            subreddits = ["dankmemes", "imgoingtohellforthis", "offensivememes"]
+            subreddits = ["imgoingtohellforthis", "offensivememes"]
         elif category in ["fried", "deepfried", "df"]:
             subreddits = ["deepfriedmemes", "nukedmemes"]
         else:
@@ -389,8 +388,6 @@ class RedditCog(BaseCog):
                 raise discord.DiscordException("Could not retrieve posts at this time.")
             return post
 
-        post = get_random_post(posts)
-
         # Generate message that bot will post
         #####################################
         def is_image_content(url) -> bool:
@@ -422,10 +419,19 @@ class RedditCog(BaseCog):
                 _out = f"r/{subreddit}: {post.title}"
                 embed_content = post.url
             return _out, embed_content
-
+        
+        post = get_random_post(posts)
+        n = 0
+        while post in self.posts:
+            post = get_random_post(posts)
+            n += 1
+            if n >= post_limit:
+                raise discord.DiscordException("Failed to retrieve reddit post")
         _out, embed_content = await get_post_contents(post, is_text)
 
         if embed_content and "imgur" in embed_content: # Discord has issues embedding imgur images
+            if not embed_content.endswith(".jpg"):
+                embed_content += ".jpg"
             try:
                 msg = await self.upload_image_to_discord(embed_content) # Rehost image on discord's CDN to fix this
             except:
@@ -451,6 +457,7 @@ class RedditCog(BaseCog):
         else:
             embed = await self.get_embed(ctx, title=_out, image_url=embed_content, color="red")
             await ctx.send(embed=embed)
+            self.posts.add(_out)
     
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
@@ -468,8 +475,6 @@ class RedditCog(BaseCog):
         subreddit, aliases, *_ = cmd
         command = self.bot.command_prefix
         return command + f", {command}".join(aliases+[subreddit]) if aliases else command + subreddit
-
-
 
     async def _send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
         """Sends error message to ctx.channel, then raises exception
