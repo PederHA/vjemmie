@@ -89,15 +89,18 @@ class TestingCog(BaseCog):
                 # Will expand
                 "mp3": "sounds"
             }
+            # Get attachment info
             attachment = ctx.message.attachments[0]
             file_name, extension = attachment.filename.split(".")
+            # Get directory for file type
             directory = directories.get(extension)
+            # Raise exception if file type is not recognized
             if not directory:
-                raise discord.DiscordException("Invalid file format")
-            r = requests.get(attachment.url, stream=True)
+                raise discord.DiscordException("Invalid file format")   
+            # Download & save file
+            sound_file = await self.download_from_url(attachment.url)
             with open(f"{directory}/{attachment.filename}", "wb") as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
+                f.write(sound_file)
             await ctx.send(f"Saved file {attachment.filename}")
         else:
             raise discord.DiscordException("Message has no attachment!")
