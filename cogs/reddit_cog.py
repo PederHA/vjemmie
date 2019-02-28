@@ -323,12 +323,12 @@ class RedditCog(BaseCog):
     
     @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
     async def reddit_commands(self, ctx: commands.Context) -> None:
-
+        """This command
+        """
         _reddit_commands = sorted(
             [  # Get all public commands for the Reddit Cog
                 cmd for cmd in self.bot.commands
                 if cmd.cog_name == self.__class__.__name__
-                and cmd.name != "redditcommands"
                 and not cmd.checks  # Ignore admin-only commands
             ],
             key=lambda cmd: cmd.name)
