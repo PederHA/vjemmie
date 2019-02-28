@@ -52,7 +52,7 @@ class SoundboardCog(BaseCog):
         #self.queue = Queue()
         self.queue = deque()
         self.vc = None
-        self.sub_dirs = [SoundFolder(), # Base sound dir with uncategorized sounds
+        self.sub_dirs = [SoundFolder(color="blurple"), # Base sound dir with uncategorized sounds
                          SoundFolder("tts", "TTS", "red"), 
                          SoundFolder("ytdl", "YouTube", "blue")]
         super().__init__(bot, log_channel_id)
@@ -240,10 +240,10 @@ class SoundboardCog(BaseCog):
             await self.play_vc(ctx, next_sound)
             #await ctx.invoke(play_cmd, next_sound)
     
-    async def do_send(self, ctx, header: str, content: str, footer: bool) -> None:
+    async def do_send(self, ctx, header: str, content: str, footer: bool, color: str=None) -> None:
         if not header:
             header = "general"
-        embed = await self.get_embed(ctx, fields=[self.EmbedField(header, content)], footer=footer, color="red")
+        embed = await self.get_embed(ctx, fields=[self.EmbedField(header, content)], footer=footer, color=color)
         await ctx.send(embed=embed)
     
     @commands.command(name="soundlist",
@@ -260,7 +260,13 @@ class SoundboardCog(BaseCog):
                     return "ytdl"
                 elif category in ["tts", "texttospeech"]:
                     return "tts"
-            return None
+                # Add this and raise exception if category is not recognized? 
+
+                # elif category in ["general", "uncategorized"]:
+                #     return ""
+                # else:
+                #     return None   
+            return ""
 
         if not category:
             _categories = [sf.header for sf in self.sub_dirs]
@@ -275,12 +281,12 @@ class SoundboardCog(BaseCog):
             except asyncio.TimeoutError:
                 raise discord.DiscordException("No reply from user. Aborting.")
             else:
-                filter_ = reply.content.lower()
+                category = reply.content.lower()
              
         category = get_category(category)
 
-        if not category:
-            raise discord.DiscordException("Invalid sound category")
+        #if not category:
+        #    raise discord.DiscordException("Invalid sound category")
         
         for sf in self.sub_dirs:
             if sf.folder == category or category is None:
@@ -290,11 +296,11 @@ class SoundboardCog(BaseCog):
                     if len(_out + fmt_sound) < 1000:
                         _out += fmt_sound
                     else:
-                        await self.do_send(ctx, sf.header, _out, footer=False)
+                        await self.do_send(ctx, sf.header, _out, footer=False, color=sf.color)
                         _out = ""
                 else:
                     if _out:
-                        await self.do_send(ctx, sf.header, _out, footer=True)
+                        await self.do_send(ctx, sf.header, _out, footer=True, color=sf.color)
 
     @commands.command(name="search")
     async def search_sound(self, ctx: commands.Context, *search_query: str) -> None:
@@ -426,7 +432,7 @@ class SoundboardCog(BaseCog):
                 directory, file_name = os.path.split(res)
                 _file, ext = os.path.splitext(file_name)
         except:
-            # Kind of ugly, but we need to delete message before re-raising exception
+            # Kind of ugly, but we need to delete message _before_ raising exception
             await dl_msg.delete()
             raise
         else:
