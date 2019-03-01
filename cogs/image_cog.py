@@ -26,13 +26,13 @@ class ImageCog(BaseCog):
     
     @commands.command(name="fuckup", aliases=["nasa"])
     async def nasa(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
-        await self._compose_image(ctx, "nasa.jpeg", (100, 100), (347, 403), user)
+        await self._compose_image(ctx, "nasa.jpg", (100, 100), (347, 403), user)
     
     @commands.command(name="northkorea", aliases=["nk"])
     async def northkorea(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """TODO: Apply proper perspective transformation"""
-        await self._compose_image(ctx, "northkorea1.jpeg", (295, 295), (712, 195), user)
+        await self._compose_image(ctx, "northkorea1.jpg", (295, 295), (712, 195), user)
     
     @commands.command(name="cancer", aliases=["cer"])
     async def cancer(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
-        await self._compose_image(ctx, "cancer.jpeg", (762, 740), (772, 680), user)
+        await self._compose_image(ctx, "cancer.jpg", (762, 740), (772, 680), user)
