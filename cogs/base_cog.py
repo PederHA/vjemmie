@@ -8,10 +8,10 @@ from collections import namedtuple
 import requests
 import aiohttp
 
-md_formats = ['asciidoc', 'autohotkey', 'bash', 
-            'coffeescript', 'cpp', 'cs', 'css', 
-            'diff', 'fix', 'glsl', 'ini', 'json', 
-            'md', 'ml', 'prolog', 'py', 'tex', 
+md_formats = ['asciidoc', 'autohotkey', 'bash',
+            'coffeescript', 'cpp', 'cs', 'css',
+            'diff', 'fix', 'glsl', 'ini', 'json',
+            'md', 'ml', 'prolog', 'py', 'tex',
             'xl', 'xml']
 
 EmbedField = namedtuple("EmbedField", "name value")
@@ -71,14 +71,14 @@ class BaseCog:
     async def make_codeblock(self, content:str, md_format: str=None) -> str:
         md_format = md_format if md_format in md_formats else ""
         return f"```{md_format}\n{content}\n```"
-    
+
     async def get_embed_field(self, name, value) -> EmbedField:
         return EmbedField(name, value)
 
     async def get_discord_color(self, color: Union[str, int]) -> discord.Color:
         if isinstance(color, str):
             try:
-               color_func = getattr(discord.Color, color)
+                color_func = getattr(discord.Color, color)
             except:
                 raise discord.DiscordException(f"Could not interpret {color}")
             else:
@@ -87,19 +87,21 @@ class BaseCog:
             return discord.Color(int)
         else:
             raise discord.DiscordException("Could not obtain color")
-    
-    async def get_embed(self, 
-                        ctx, 
-                        *, 
+
+    async def get_embed(self,
+                        ctx,
+                        *,
                         title: str=None,
-                        footer: bool=True, 
-                        fields: list=None, 
+                        footer: bool=True,
+                        fields: list=None,
                         content: str=None,
                         image_url: str=None,
-                        color: Union[str, int]=None) -> discord.Embed:
-        embed = discord.Embed(title=title)
+                        color: Union[str, int]=None,
+                        timestamp: bool=True) -> discord.Embed:
+        opts = {"timestamp":datetime.now()} if timestamp else {}
+        embed = discord.Embed(title=title, **opts)
         if footer:
-            embed.set_footer(text=f"● Requested by {ctx.message.author.name}", icon_url=ctx.message.author.avatar_url)
+            embed.set_footer(text=f"Requested by {ctx.message.author.name}", icon_url=ctx.message.author.avatar_url)
         if fields:
             for field in fields:
                 embed.add_field(name=field.name, value=field.value)
@@ -109,7 +111,7 @@ class BaseCog:
             _color = await self.get_discord_color(color)
             embed.color = _color
         return embed
-    
+
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> list:
         """
         Returns list of discord users in voice channel of ctx.message.author.
@@ -125,7 +127,6 @@ class BaseCog:
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
 
-    
     async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
         """Sends log message to log channel.
 
@@ -145,22 +146,22 @@ class BaseCog:
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.")
         except discord.HTTPException:
-            print(f"Failed to send message to channel {self.log_channel_id}.")   
+            print(f"Failed to send message to channel {self.log_channel_id}.")
 
     def _add_error_handlers(self) -> None:
         for _attr in dir(self):
             try:
                 # If subclasses call super().__init__ before instantiating its own instance variables,
                 # getattr may raise exceptions. try/except retard-proofs it for myself.
-                bot_command = getattr(self, _attr) 
+                bot_command = getattr(self, _attr)
             except:
                 pass
             else:
                 if isinstance(bot_command, discord.ext.commands.core.Command):
-                    # add check 
+                    # add check
                     if not hasattr(bot_command, "on_error"):
-                        bot_command.on_error = self._error_handler     
-    
+                        bot_command.on_error = self._error_handler
+
     async def _error_handler(self, ctx, error, *bugged_params) -> None:
         if bugged_params: # Sometimes two instances of self is passed in, totaling 4 args instead of 3
             ctx = error
@@ -173,9 +174,9 @@ class BaseCog:
 
     async def _unknown_error(self, ctx):
         not_unknown = [
-            "Command raised an exception", 
+            "Command raised an exception",
             "MissingRequiredArgument",
-            "BadArgument"     
+            "BadArgument"
         ]
         ignore = []
         error_msg = traceback.format_exc()
@@ -187,7 +188,7 @@ class BaseCog:
             out_msg = "An unknown error occured"
         await ctx.send(out_msg) # Display error to user
         await self.send_log(error_msg, ctx) # Send entire exception traceback to log channel
-    
+
     async def download_from_url(self, url: str) -> bytes: # TODO: FIX
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
@@ -201,3 +202,21 @@ class BaseCog:
         fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
         msg = await channel.send(file=discord.File(image, file_name))
         return msg
+
+    async def while_func_condition(self,
+                                   func_condition,
+                                   #condition,
+                                   if_true: bool,
+                                   coro,
+                                   limit: int, 
+                                   *args,
+                                   **kwargs) -> None:
+        raises = kwargs.get("raises", "Unknown error")
+        n = 0
+        rtn = await coro(*args)
+        while func_condition(rtn) == if_true:
+            rtn = await coro(*args)
+            n += 1
+            if n > limit:
+                raise discord.DiscordException(raises)
+        return rtn
