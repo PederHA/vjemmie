@@ -13,7 +13,8 @@ from cogs.frying_cog import FryingCog
 from cogs.weather_cog import WeatherCog
 from cogs.cod_cog import CodCog
 from cogs.war3_cog import War3Cog
+from cogs.image_cog import ImageCog
 
 __all__ = ["AdminCog", "FunCog", "PFMCog", "PUBGCog", "RedditCog", "SoundboardCog", "UserCog",
            "WPCog", "YTCog", "TestingCog", "FryingCog", "WeatherCog", "CodCog",
-           "War3Cog"]
+           "War3Cog", "ImageCog"]
