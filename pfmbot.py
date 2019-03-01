@@ -14,25 +14,12 @@ from utils.config import GENERAL_DB_PATH
 from cogs.db_cog import DatabaseHandler
 from cogs.admin_utils import load_blacklist, error_handler
 
+# Bot setup
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 log_channel_id = 340921036201525248
-
-bot.add_cog(SoundboardCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(AdminCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(UserCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(PUBGCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(YTCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(WPCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(PFMCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(RedditCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(FunCog(bot=bot, log_channel_id=log_channel_id))
-#bot.add_cog(SerialSoundboardCog(bot=bot, folder=sound_folder, log_channel_id=log_channel_id))
-bot.add_cog(TestingCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(FryingCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(WeatherCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(CodCog(bot=bot, log_channel_id=log_channel_id))
-bot.add_cog(War3Cog(bot=bot, log_channel_id=log_channel_id, replays_folder=None))
-#bot.add_cog(Music(bot))
+for k, v in dict(locals()).items():
+    if k.endswith("Cog"):
+        bot.add_cog(v(bot=bot, log_channel_id=log_channel_id))
 
 @bot.event
 async def on_ready():
@@ -52,5 +39,18 @@ async def on_message(message):
         db = DatabaseHandler(GENERAL_DB_PATH)
         db.whosaidit(message)
         await message.add_reaction(':cmonpfm:427842995748995082')
+
+@bot.listen()
+async def on_message_delete(message):
+    if message.author.id != secrets.CLIENT_ID:
+        channel = bot.get_channel(log_channel_id)
+        await channel.send(f"Deleted message by {message.author.name}: {message.content}")
+
+@bot.listen()
+async def on_voice_state_update(member, before, after):
+    if member.id == 103890994440728576:
+        if not before.channel:
+            channel = bot.get_channel(340921036201525248)
+            await channel.send(f"Welcome to the voice channel {member.name}! :)")          
 
 bot.run(secrets.BOT_TOKEN)
