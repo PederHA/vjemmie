@@ -21,7 +21,7 @@ class PFMCog(BaseCog):
     async def nezgroul(self, ctx: commands.Context, *args):
         await self.db.get_memes("nezgroul", ctx, args)
 
-    @commands.command()
+    @commands.command(name="pfmmeme")
     async def pfm(self, ctx: commands.Context, *args):
         await self.db.get_memes("pfm", ctx, args)
 

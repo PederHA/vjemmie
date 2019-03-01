@@ -7,12 +7,12 @@ from urllib.parse import urlencode
 import urllib.request
 from cogs.base_cog import BaseCog
 
-class WPCog(BaseCog):
+class WoWProgressCog(BaseCog):
     """PUBG Bot Commands
     """
 
-    @commands.command(name="wowprogress",
-                      aliases=["wp", "wowp"],
+    @commands.command(name="wp",
+                      aliases=["wowp"],
                       description="Searches WoWprogress for a given guild name, and returns top result.")
     async def wowprogress(self, ctx: commands.Context, *args: str):
         try:

@@ -112,7 +112,7 @@ class AdminCog(BaseCog):
                 await self.send_log('Successfully send the message to guild ' + guild.name)
 
     @commands.command(name='adminhelp',
-                      aliases=['admin-help', 'admin_help', 'helpadmin'],
+                      aliases=['admin-help', 'helpadmin'],
                       description='Sends you the names, aliases and description of all commands per PM!')
     @ExtModule.is_admin()
     async def adminhelp(self, ctx: commands.Context) -> None:

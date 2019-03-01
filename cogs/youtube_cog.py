@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 import urllib.request
 from cogs.base_cog import BaseCog
 
-class YTCog(BaseCog):
+class YouTubeCog(BaseCog):
     """YouTube commands
     """
     

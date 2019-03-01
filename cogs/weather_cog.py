@@ -14,6 +14,7 @@ class WeatherCog(BaseCog):
     
     @commands.command()
     async def weather(self, ctx: commands.Context, loc: str) -> None:
+        """!weather <location>"""
         # Instantiate Nominatim geopy object
         geolocator = Nominatim(user_agent="VJEMMIE")
         

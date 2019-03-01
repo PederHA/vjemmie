@@ -16,7 +16,7 @@ from cogs.db_cog import DatabaseHandler
 
 
 class War3Cog(BaseCog):
-    def __init__(self, bot: commands.Bot, log_channel_id: int, replays_folder: str) -> None:
+    def __init__(self, bot: commands.Bot, log_channel_id: int, replays_folder: str=None) -> None:
         super().__init__(bot, log_channel_id)
         self.replays_folder = replays_folder
         self.db = DatabaseHandler("db/rating.db")
