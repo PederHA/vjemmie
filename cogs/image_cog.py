@@ -61,4 +61,15 @@ class ImageCog(BaseCog):
     @commands.command(name="guys", aliases=["guys_only_want_one_thing", "guyswant", "onething"])
     async def guys_only_want_one_thing(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         await self._composit_image(ctx, "guyswant.jpg", (400, 400), (121, 347), user)
+    
+    @commands.command(name="furry")
+    async def furry(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
+        await self._composit_image(ctx, "furry.png", (230, 230), (26, 199), user, template_overlay=True)
 
+    @commands.command(name="autism", aliases=["thirtyseven"])
+    async def autism(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
+        await self._composit_image(ctx, "autism.jpg", (303, 255), (0, 512), user)
+   
+    @commands.command(name="disabled")
+    async def disabled(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
+        await self._composit_image(ctx, "disabled.jpg", (320, 320), (736, 794), user)
