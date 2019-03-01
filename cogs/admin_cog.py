@@ -9,21 +9,10 @@ import asyncio
 
 
 class AdminCog(BaseCog):
-    """This cog contains commands that can be used by the bots admin(s).
-    This will not contain commands, which ban and kick a user or let the bot behave as a server admin.
-    """
-
-
-    async def on_resumed(self) -> None:
-        """Is called when the bot made a successfull reconnect, after disconnecting
-        """
-        await self.send_log("Restarted successfully")
-
     async def on_ready(self) -> None:
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
         """
-        #self.send_log = ExtModule.get_send_log(self)
-        activity = discord.Game(name='Wakaliwood Productions')
+        activity = discord.Game(name='!help')
         await self.bot.change_presence(activity=activity)
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
@@ -44,24 +33,19 @@ class AdminCog(BaseCog):
                       aliases=['list'],
                       description='Prints a list of all the servers'
                                   ' this bot is a member of to the admin log_channel')
-    @ExtModule.is_admin()
+    @is_admin()
     async def serverlist(self, ctx: commands.Context) -> None:
         """This function sends a list with all the servers this bot is a member of to the self.log_channel
         Args:
             ctx: The context of the command, which is mandatory in rewrite
         """
-        _guild_names = 'List of all guilds: '
-        for guild in self.bot.guilds:
-            if len(_guild_names) + len(guild.name) > 1800:  # not accurate, 200 literals buffer catch it
-                await self.send_log(_guild_names[:-2])
-                _guild_names = ''
-            else:
-                _guild_names = _guild_names + guild.name + '(' + str(guild.id) + ')' + ', '
-        await self.send_log(_guild_names[:-2])
+        guilds = "\n".join([guild.name for guild in self.bot.guilds])
+        embed = await self.get_embed(ctx, fields=[self.EmbedField("Guilds", guilds)])
+        await ctx.send(embed=embed)
 
     @commands.command(name='leave',
                       description='(ID) || The bot will attempt to leave the server with the given ID.')
-    @ExtModule.is_admin()
+    @is_admin()
     async def leave(self, ctx: commands.Context, guild_id: int=None) -> None:
         """This commands makes the bot leave the server with the given ID
         Args:
@@ -84,7 +68,7 @@ class AdminCog(BaseCog):
                       aliases=['send_to_all', 'send-to-all', 'broadcast'],
                       description='(textblock) || The bot will attempt to send the textblock to every server'
                                   ' he is a member of. Do NOT use for spamming purposes.')
-    @ExtModule.is_admin()
+    @is_admin()
     async def sendtoall(self, ctx: commands.Context, *args) -> None:
         """This command tries to send a message to all guilds this bot is a member of.
         Args:
@@ -114,7 +98,7 @@ class AdminCog(BaseCog):
     @commands.command(name='adminhelp',
                       aliases=['admin-help', 'helpadmin'],
                       description='Sends you the names, aliases and description of all commands per PM!')
-    @ExtModule.is_admin()
+    @is_admin()
     async def adminhelp(self, ctx: commands.Context) -> None:
         """This function sends a list of all the admin commands + aliases + description to the requester
                 Args:
@@ -141,7 +125,7 @@ class AdminCog(BaseCog):
     @commands.command(name='change_activity',
                       aliases=['change_game'],
                       description='Changes the activity in the activity feed of the bot')
-    @ExtModule.is_admin()
+    @is_admin()
     async def change_activity(self, ctx: commands.Context, *args) -> None:
         activity_name = ""
         first_word = True
