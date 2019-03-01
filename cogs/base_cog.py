@@ -28,6 +28,22 @@ class BaseCog:
         self.author_mention = "<@103890994440728576>"
         self._add_error_handlers()
         #self._add_checks()
+        self.add_help_command()
+    
+    @property
+    def cog_name(self) -> str:
+        cog_name = self.__class__.__name__
+        return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
+    
+    def add_help_command(self) -> None:
+        IGNORE = ["reddit", "youtube", "weather", "cod"]
+        command_name = self.cog_name.lower()
+        if command_name != "base" and command_name not in IGNORE:
+            cmd_coro = self._get_cog_commands
+            cmd = commands.command(name=command_name)(cmd_coro)
+            cmd.on_error = self._error_handler
+            #self.bot.add_command(cmd())
+            self.bot.add_command(cmd)
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
         """
@@ -220,3 +236,21 @@ class BaseCog:
             if n > limit:
                 raise discord.DiscordException(raises)
         return rtn
+
+    async def _get_cog_commands(self, ctx: commands.Context) -> None:
+        """This command
+        """
+        _commands = sorted(
+            [  # Get all public commands for the Reddit Cog
+                cmd for cmd in self.bot.commands
+                if cmd.cog_name == self.__class__.__name__
+                and not cmd.checks  # Ignore admin-only commands
+            ],
+            key=lambda cmd: cmd.name)
+        _out_str = ""
+        for command in _commands:
+            cmd_name = command.name.ljust(20,"\xa0")
+            _out_str += f"`{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+        field = self.EmbedField(f"{self.cog_name} commands", _out_str)
+        embed = await self.get_embed(ctx, fields=[field])
+        await ctx.send(embed=embed)
