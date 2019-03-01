@@ -30,7 +30,7 @@ RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"],
 class RedditCog(BaseCog):
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
-    IMAGE_EXTENSIONS = [".jpg", ".png", ".gif"]
+    IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif"]
     IMAGE_HOSTS = ["imgur.com", "i.redd.it"]
     TIME_FILTERS = ["all", "year", "month", "week", "day"]
     SORTING_FILTERS = ["hot", "top"]
@@ -296,7 +296,7 @@ class RedditCog(BaseCog):
             await ctx.invoke(reddit_commands)
         else:
             await self.get_from_reddit(ctx, subreddit, sorting, time)
-    
+
     @commands.command(name="meme")
     async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
         """Random meme. Optional categories: "edgy", "fried"
@@ -306,20 +306,27 @@ class RedditCog(BaseCog):
             category (str, optional): Defaults to None. [description]
         """
 
-        default_subreddits = ["dankmemes", "comedyheaven"]
-        if category in ["normal", "standard", "default"] or not category:
-            subreddits = default_subreddits
-        elif category in ["edgy", "edge"]:
-            subreddits = ["imgoingtohellforthis", "offensivememes"]
-        elif category in ["fried", "deepfried", "df"]:
-            subreddits = ["deepfriedmemes", "nukedmemes"]
+        default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
+        edgy_subs =  ["imgoingtohellforthis", "offensivememes"]
+        fried_subs = ["deepfriedmemes", "nukedmemes"]
+        
+        if category in ["help", "categories", "?"]:
+            default_field = self.EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
+            edgy_field = self.EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
+            fried_field = self.EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
+            embed = await self.get_embed(ctx, title="Memes", fields=[default_field, edgy_field, fried_field], color="red")
+            await ctx.send(embed=embed)
         else:
-            subreddits = default_subreddits
-            await ctx.send(f"Category {category} not recognized.")
-        #meme_subreddits = ["memes", "dankmemes", "deepfriedmemes", "comedyheaven"]
-        subreddit = random.choice(subreddits)
-        await self.get_from_reddit(ctx, subreddit)
-    
+            if category in ["edgy", "edge"]:
+                subreddits = edgy_subs
+            elif category in ["fried", "deepfried", "df"]:
+                subreddits = fried_subs
+            else:
+                subreddits = default_subreddits
+            
+            subreddit = random.choice(subreddits)
+            await self.get_from_reddit(ctx, subreddit)
+
     @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
     async def reddit_commands(self, ctx: commands.Context) -> None:
         """This command
@@ -338,7 +345,7 @@ class RedditCog(BaseCog):
         field = self.EmbedField("Reddit commands", _out_str)
         embed = await self.get_embed(ctx, fields=[field])
         await ctx.send(embed=embed)
-    
+
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
         if filter_ is None:
             filter_ = default_filter
@@ -354,11 +361,58 @@ class RedditCog(BaseCog):
     async def check_sorting(self, ctx,  sorting: str) -> str:
         return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
-    async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
-        async def download_img_example():
-            embed_content = "http://i.imgur.com/Duoalru.jpg"
-            image = await self.download_from_url(embed_content)
-            await ctx.send(file=discord.File(image, "some_img.jpg"))
+    def _is_image_content(self, url) -> bool:
+        #return False if not url else "." in url and (url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS))
+        return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
+
+    async def _get_random_post(self, posts: Iterable) -> praw.models.Submission:
+        try:
+            post = random.choice(list(posts))
+        except:
+            raise discord.DiscordException("Could not retrieve posts at this time.")
+        return post
+
+    async def _get_random_reddit_post(self, posts, post_limit: int) -> praw.models.Submission:
+        n = 0
+        # Get random post
+        post = await self._get_random_post(posts)
+        # Check if post has already been posted
+        while post in self.posts: # TODO for Python3.8: Assignment operator
+            post = await self._get_random_post(posts)
+            n += 1
+            if n >= post_limit:
+                raise discord.DiscordException("Could not find unique reddit post")
+        return post
+
+    async def get_reddit_post(self, subreddit: str, posts: Iterable, post_limit: int, is_text: bool) -> Tuple[str, str]:
+        post = await self._get_random_reddit_post(posts, post_limit)
+        image_url = None
+        # Prioritize selftext for text subreddits
+        if is_text:
+            # 1st Prio: Post selftext / title.
+            if post.selftext:
+                if len(post.selftext) > len(post.title):
+                    _out = post.selftext
+                else:
+                    _out = post.title
+            # 2nd prio: post.title + embedded image if post url is an image
+            else:
+                _out = post.title
+                if self._is_image_content(post.url):
+                    image_url = post.url
+        # Only post images for image subreddits
+        else:
+            n = 0
+            while not self._is_image_content(post.url):
+                post = await self._get_random_reddit_post(posts, post_limit)
+                n += 1
+                if n > 50:
+                    raise discord.DiscordException("Could not find an image submission.")
+            _out = f"r/{subreddit}: {post.title}"
+            image_url = post.url
+        return _out, image_url
+
+    async def _do_get_reddit_post(self, ctx, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None, is_text: bool=False) -> None:
         post_limits = {
             self.TIME_FILTERS[0]: self.ALL_POST_LIMIT,
             self.TIME_FILTERS[1]: self.ALL_POST_LIMIT,
@@ -366,85 +420,48 @@ class RedditCog(BaseCog):
             self.TIME_FILTERS[3]: 25,
             self.TIME_FILTERS[4]: 25,
         }
+        # Parse arguments to params sorting & time
         sorting = await self.check_sorting(ctx, sorting)
         time = await self.check_time(ctx, time)
 
         if post_limit is None:
             post_limit = post_limits.get(time, 25)
 
-        sub = reddit.subreddit(subreddit) # Get subreddit
+        # Get subreddit
+        sub = reddit.subreddit(subreddit)
 
         # Get posts generator
-        if hot:
+        if sorting == "hot":
             posts = sub.hot()
         else:
             posts = sub.top(time_filter=time, limit=post_limit)
 
-        # Get random post from list of posts
-        def get_random_post(posts, image: bool=True):
-            try:
-                post = random.choice(list(posts))
-            except:
-                raise discord.DiscordException("Could not retrieve posts at this time.")
-            return post
+        out_text, image_url = await self.get_reddit_post(subreddit, posts, post_limit, is_text)
+        return out_text, image_url
 
-        # Generate message that bot will post
-        #####################################
-        def is_image_content(url) -> bool:
-            return False if not url else "." in url and (url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS))
-
-        async def get_post_contents(post, is_text) -> Tuple[str, str]:
-            embed_content = None
-            # Prioritize selftext for text subreddits
-            if is_text:
-                # 1st Prio: Post selftext / title.
-                if post.selftext:
-                    if len(post.selftext) > len(post.title):
-                        _out = post.selftext
-                    else:
-                        _out = post.title
-                # 2nd prio: post.title + embedded image if post url is an image
-                else:
-                    _out = post.title
-                    if is_image_content(post.url):
-                        embed_content = post.url
-            # Only post images for image subreddits
-            else:
-                n = 0
-                while not is_image_content(post.url):
-                    post = get_random_post(posts)
-                    n += 1
-                    if n > 50:
-                        raise discord.DiscordException("Could not find an image submission.")
-                _out = f"r/{subreddit}: {post.title}"
-                embed_content = post.url
-            return _out, embed_content
-        
-        post = get_random_post(posts)
+    async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
+        out_text, image_url = await self._do_get_reddit_post(ctx, subreddit, sorting, time, post_limit, is_text)
         n = 0
-        while post in self.posts:
-            post = get_random_post(posts)
-            n += 1
-            if n >= post_limit:
-                raise discord.DiscordException("Failed to retrieve reddit post")
-        _out, embed_content = await get_post_contents(post, is_text)
-
-        if embed_content and "imgur" in embed_content: # Discord has issues embedding imgur images
-            if not embed_content.endswith(".jpg"):
-                embed_content += ".jpg"
+        while image_url and "imgur" in image_url:
+            out_text, image_url = await self._do_get_reddit_post(ctx, subreddit, sorting, time, post_limit, is_text)
             try:
-                msg = await self.upload_image_to_discord(embed_content) # Rehost image on discord's CDN to fix this
+                msg = await self.upload_image_to_discord(image_url) # Rehost image on discord's CDN to fix this
             except:
-                raise discord.DiscordException("Failed to retrieve reddit post")
-            embed_content = msg.attachments[0].url
+                n += 1
+                pass
+                #raise discord.DiscordException("Failed to retrieve reddit post")
+            else:
+                image_url = msg.attachments[0].url
+            if n > 50:
+                raise discord.DiscordException("Could not retrieve reddit submission")
 
         # Deal with text posts whose size exceeds Discord's max message length
         LIMIT = 1800
-        n_chunks = math.ceil(len(_out)/LIMIT)
+        n_chunks = math.ceil(len(out_text)/LIMIT)
         if n_chunks > 1:    # split into chunks if text output exceeds 1800 chars
             _temp = ""
             chunks = []
-            for char in _out: # TODO: Change to enumerate(_out), check every 100 chars
+            for char in out_text: # TODO: Change to enumerate(out_text), check every 100 chars
                 if len(_temp) < LIMIT:
                     _temp += char # This is probably very inefficient due to the use of += for every char
                 else:
@@ -455,10 +472,10 @@ class RedditCog(BaseCog):
             for chunk in chunks:
                 await ctx.send(chunk)
         else:
-            embed = await self.get_embed(ctx, title=_out, image_url=embed_content, color="red")
+            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color="red")
             await ctx.send(embed=embed)
-            self.posts.add(_out)
-    
+            self.posts.add(out_text)
+
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
         Generates string of commands associated with a RedditCommand instance.
