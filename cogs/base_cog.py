@@ -241,7 +241,7 @@ class BaseCog:
         """This command
         """
         _commands = sorted(
-            [  # Get all public commands for the Reddit Cog
+            [  # Get all public commands for the cog
                 cmd for cmd in self.bot.commands
                 if cmd.cog_name == self.__class__.__name__
                 and not cmd.checks  # Ignore admin-only commands
@@ -250,7 +250,8 @@ class BaseCog:
         _out_str = ""
         for command in _commands:
             cmd_name = command.name.ljust(20,"\xa0")
-            _out_str += f"`{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+            #cmd_name = command.signature.ljust(35,"\xa0") # Considering using this instead
+            _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         field = self.EmbedField(f"{self.cog_name} commands", _out_str)
         embed = await self.get_embed(ctx, fields=[field])
         await ctx.send(embed=embed)
