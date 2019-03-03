@@ -115,13 +115,21 @@ class RedditCog(BaseCog):
         for command in self.bot.commands: # Check if subreddit is already added
             if command.name == subreddit:
                 raise discord.DiscordException("Command already exists")
-        base_command = self._r # The method that is used to create custom subreddit commands
+        
+        # Method used as basis for subreddit command
+        base_command = self._r
+        # Wrap partial method in asyncio.coroutine to make it a coroutine
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
-        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd) # Use partial coroutine to create command object
+        # Pass coroutine into commands.command to get a Discord command object
+        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
+        # Set command's error handler method
         cmd.on_error = self._error_handler
-        self.bot.add_command(cmd) # Add generated command to bot
+        
+         # Add generated command to bot
+        self.bot.add_command(cmd)
+        # Add subreddit to cog's list of subreddits
         if subreddit_command not in self.subs:
-            self.subs.append(subreddit_command) # Add subreddit to cog's list of subreddits
+            self.subs.append(subreddit_command) 
 
     async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
         """Method used as a base for adding custom subreddit commands"""
