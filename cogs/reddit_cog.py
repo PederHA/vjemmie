@@ -118,7 +118,7 @@ class RedditCog(BaseCog):
         
         # Method used as basis for subreddit command
         base_command = self._r
-        # Wrap partial method in asyncio.coroutine to make it a coroutine
+        # Pass partial method into asyncio.coroutine to make it a coroutine
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
         # Pass coroutine into commands.command to get a Discord command object
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
