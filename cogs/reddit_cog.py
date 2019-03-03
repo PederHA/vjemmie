@@ -60,15 +60,24 @@ class RedditCog(BaseCog):
 
     @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
+        """Add <subreddit> [alias]
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`
+            Name of subreddit to add
+        aliases : `str`, optional
+            Alias(es) to add. String is split on every space,
+            and each resulting string is treated as an alias.
+        is_text : `bool`, optional
+            Makes the underlying reddit method look for text posts 
+            when looking for posts on `subreddit`. 
+            (the default is False, which denotes that the
+            subreddit is an image subreddit)
         """
-        Add <subreddit> [alias]
 
-        Args:
-            ctx (commands.Context): [description]
-            subreddit (str): Name of subreddit to add
-            aliases (str, optional): Command aliases. Typically an abbreviaton.
-            is_text (bool, optional): Defaults to False. Makes command look for text posts if true.
-        """
         try:
             aliases = aliases.split(" ") if aliases else []
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
@@ -91,12 +100,17 @@ class RedditCog(BaseCog):
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
         """Creates a discord bot command from namedtuple `subreddit_command`.
         
-        Args:
-            subreddit_command (RedditCommand): Subreddit to add.
+        Parameters
+        ----------
+        subreddit_command : `RedditCommand`
+            Name, aliases, is_text of subreddit to add.
         
-        Raises:
-            discord.DiscordException: Raised if subreddit is already added.
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if subreddit is already added to bot.
         """
+
         subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
         for command in self.bot.commands: # Check if subreddit is already added
             if command.name == subreddit:
@@ -118,11 +132,13 @@ class RedditCog(BaseCog):
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
         """ADMIN ONLY: Remove <subreddit>
         
-        Args:
-            ctx (commands.Context): Context
-            subreddit (str): Name of subreddit to remove
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`
+            Name of subreddit to remove
         """
-
         for cmd in self.subs:
             if cmd.subreddit == subreddit:
                 self.subs.remove(cmd)
@@ -136,11 +152,12 @@ class RedditCog(BaseCog):
 
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
-        """
-        Available subreddits
-
-        Args:
-            ctx (commands.Context): [description]
+        """Shows available subreddits
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
         """
         _out = []
         for cmd in self.subs:
@@ -152,13 +169,15 @@ class RedditCog(BaseCog):
 
     @commands.command(name="rtime", aliases=["change_reddit_time", "reddit_time"])
     async def change_time_filtering(self, ctx: commands.Context, opt: str=None) -> None:
-        """
-        All/Year/Month/Week/Day
-
-        Args:
-            ctx (commands.Context): [description]
-            opt (str, optional): Specify time filter manually or request current time
-            settings.
+        """All/Year/Month/Week/Day
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            [description]
+        opt : `str`, optional
+            Specify time filter manually or request current 
+            time settings.
         """
         out_msg = None # Hacky, but w/e
         if opt:
@@ -183,15 +202,18 @@ class RedditCog(BaseCog):
 
     @commands.command(name="rsort", aliases=["hot", "top"])
     async def change_content_sorting(self, ctx: commands.Context, status: str=None) -> None:
-        """
-        Toggle top/hot
+        """Toggle top/hot
+
+        Aliases `!hot` and `!top` allow for manual selection of content filtering,
+        while main command `!rsort` toggles between "hot" & "top".
         
-        Aliases `hot` and `top` allow for manual selection of content filtering, while
-        main command `rsort` toggles between "hot" & "top".
-        
-        Args:
-            status (str, optional): Defaults to None. Optional user argument for 
-            displaying current content sorting. 
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        status : `str`, optional
+            Optional user argument for displaying 
+            current content sorting. 
         """
         if not status:
             if ctx.invoked_with == "hot":
@@ -213,10 +235,12 @@ class RedditCog(BaseCog):
 
     @commands.command(name="rsettings", aliases=["reddit_settings"])
     async def reddit_settings(self, ctx: commands.Context) -> None:
-        """Display Reddit settings
+        """Displays current Reddit settings
         
-        Args:
-            ctx (commands.Context): [description]
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
         """
         content_sorting = self.DEFAULT_SORTING
         time_sorting = self.DEFAULT_TIME
@@ -235,12 +259,15 @@ class RedditCog(BaseCog):
     async def change_sub_command(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """Add alias for <subreddit>
         
-        Args:
-            ctx (commands.Context): [description]
-            subreddit (str): Subreddit to add alias for
-            alias (str): Alias to add
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`
+            Name of subreddit to add alias for
+        alias : `str`
+            Name of alias
         """
-
         if not alias.isnumeric():
             alias = alias.lower()
             for idx, subreddit_cmd in enumerate(self.subs):
@@ -261,12 +288,15 @@ class RedditCog(BaseCog):
     async def remove_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """ADMIN ONLY: Remove alias for subreddit
         
-        Args:
-            ctx (commands.Context): [description]
-            subreddit (str): Subreddit to remove alias for
-            alias (str): Alias to remove from subreddit
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`
+            Name of subreddit to remove alias from
+        alias : `str`
+            Name of alias to remove
         """
-
         for idx, subreddit_cmd in enumerate(self.subs):
             if subreddit == subreddit_cmd.subreddit:
                 try:
@@ -283,14 +313,21 @@ class RedditCog(BaseCog):
     @commands.command(name="reddit")
     async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
         """Get a random post from <subreddit> (<sorting>) (<time>)
-        
-        Args:
-            ctx (commands.Context): [description]
-            subreddit (str, optional): Defaults to None. Subreddit to get posts from
-            sorting (str, optional): Defaults to None. Sorting filter (top/hot)
-            time (str, optional): Defaults to None. Time filter (all/year/month/week/day)
-        """
 
+        If no argument to parameter `subreddit` is passed in, the bot invokes
+        the help command for the Reddit Cog instead.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`, optional
+            Name of subreddit to fetch posts from. Defaults to None.
+        sorting : `str`, optional
+            Content sorting to filter posts by. Defaults to None.
+        time : `str`, optional
+            Time sorting to filter posts by. Defaults to None.
+        """
         if not subreddit:
             reddit_commands = self.bot.get_command("rcommands")
             await ctx.invoke(reddit_commands)
@@ -299,11 +336,15 @@ class RedditCog(BaseCog):
 
     @commands.command(name="meme")
     async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
-        """Random meme. Optional categories: "edgy", "fried"
+        """Random meme. Optional categories: "edgy", "fried".
         
-        Args:
-            ctx (commands.Context): [description]
-            category (str, optional): Defaults to None. [description]
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        category : `str`, optional
+            Name of category of subreddits to look for memes in.
+            Defaults to None.
         """
 
         default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
@@ -311,6 +352,7 @@ class RedditCog(BaseCog):
         fried_subs = ["deepfriedmemes", "nukedmemes"]
         
         if category in ["help", "categories", "?"]:
+            # Posts an embed with a field for each category and their subreddits.
             default_field = self.EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
             edgy_field = self.EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
             fried_field = self.EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
@@ -330,6 +372,16 @@ class RedditCog(BaseCog):
     @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
     async def reddit_commands(self, ctx: commands.Context) -> None:
         """This command
+
+        This method was the basis for BaseCog._get_cog_commands().
+        In its current state, this method provides nothing unique
+        over the implementation found in BaseCog, and as such it
+        should be retired.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Dicord Context object.
         """
         _reddit_commands = sorted(
             [  # Get all public commands for the Reddit Cog
@@ -347,11 +399,38 @@ class RedditCog(BaseCog):
         await ctx.send(embed=embed)
 
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
+        """Small helper method for getting a valid sorting filter
+        for Praw and reducing code duplication in RedditCog.check_time()
+        and RedditCog.check_sorting()
+
+        NOTE: Yes, this is absolute trash.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        filtering_type : `str`
+            Human readable name of sorting filter. 
+        filter_ : `str`
+            Reddit sorting filter. Must be in one of
+            RedditCog.TIME_FILTERS or RedditCog.SORTING_FILTERS
+        default_filter : `str`
+            Default filter to be used if `filter_` is None.
+        valid_filters : Iterable
+            An iterable containing valid sorting filters for 
+            the given `filtering_type`.
+        
+        Returns
+        -------
+        str
+            A valid sorting filter for `filtering_type`.
+        """
+
         if filter_ is None:
             filter_ = default_filter
         else:
             if filter_ not in valid_filters:
-                await self._send_error(ctx, f"{filtering_type} filters", valid_filters) # Sends message and raises exception
+                raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
         if filter_:
             return filter_
 
@@ -366,13 +445,59 @@ class RedditCog(BaseCog):
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
 
     async def _get_random_post(self, posts: Iterable) -> praw.models.Submission:
+        """Gets a random post from a `praw` submission generator.
+
+        Raises an exception if generator is unable to yield any
+        Reddit submissions, which terminates command execution.
+        
+        Parameters
+        ----------
+        posts : `Iterable`
+            `praw` Reddit submission generator
+        
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if generator yields no submissions.
+        
+        Returns
+        -------
+        `praw.models.Submission`
+            A reddit post (submission)
+        """
+
         try:
             post = random.choice(list(posts))
         except:
             raise discord.DiscordException("Could not retrieve posts at this time.")
         return post
 
-    async def _get_random_reddit_post(self, posts, post_limit: int) -> praw.models.Submission:
+    async def _get_random_reddit_post(self, posts: Iterable, post_limit: int) -> praw.models.Submission:
+        """Attempts to get a random reddit post that has not
+        yet been posted in the current bot session. 
+        
+        A bot session is defined as the period of time from 
+        bot startup to invocation of this method.
+        
+        Parameters
+        ----------
+        posts : `Iterable`
+            A `praw` Reddit submission generator
+        post_limit : int
+            Number of attempts to look for a unique post before
+            raising exception and exiting.
+        
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if a unique Reddit post can not be found.
+        
+        Returns
+        -------
+        `praw.models.Submission`
+            A Reddit post unique to the current bot session.
+        """
+
         n = 0
         # Get random post
         post = await self._get_random_post(posts)
@@ -385,6 +510,38 @@ class RedditCog(BaseCog):
         return post
 
     async def get_reddit_post(self, subreddit: str, posts: Iterable, post_limit: int, is_text: bool) -> Tuple[str, str]:
+        """Attempts to get a Reddit post unique to the current bot session.
+        
+        Subsequently formats the post according to its attributes and whether
+        or not the given param:`subreddit` is a text-only subreddit as denoted by 
+        param:`is_text`.
+        
+        Parameters
+        ----------
+        subreddit : str
+            Name of subreddit
+        posts : Iterable
+            `praw` posts generator
+        post_limit : int
+            Number of posts to retrieve
+        is_text : bool
+            Whether or not the subreddit is a text subreddit.
+            If True, prioritizes posting post title and self-text
+            over an image URL.
+        
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if no image posts can be found that match the given
+            criterias.
+        
+        Returns
+        -------
+        Tuple[str, str]
+            A tuple containing a post title or self-text and a potential
+            accompanying image url
+        """
+
         post = await self._get_random_reddit_post(posts, post_limit)
         image_url = None
         # Prioritize selftext for text subreddits
