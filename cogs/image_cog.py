@@ -8,45 +8,62 @@ from itertools import zip_longest
 class ImageCog(BaseCog):
     """Various commands for creating dank memes featuring a user's avatar.
     """
-    async def _composite_images(self, 
-                             ctx: commands.Context, 
-                             template: str, 
-                             resize:Union[Tuple[int,int], list], 
-                             offset:Union[Tuple[int,int], list], 
+    async def _composite_images(self,
+                             ctx: commands.Context,
+                             template: str,
+                             resize:Union[Tuple[int,int], list],
+                             offset:Union[Tuple[int,int], list],
                              user: commands.UserConverter=None,
-                             text: Union[List[dict], dict]=None, 
+                             text: Union[List[dict], dict]=None,
                              template_overlay: bool=False) -> None:
         """Creates a composite image of a user's avatar and a given template.
-
-        Args:
-            ctx (commands.Context): Discord Context
-            template (str): File name of image to use as template
-            resize (Union[Tuple[int,int], list]): tuple (width, height) or list of tuples (w, h)
-            offset (Union[Tuple[int,int], list]): tuple (off_x, off_y) or list of tuples (off_x, off_y)
-            user (commands.UserConverter, optional): Discord User
-            text (dict, optional): Text overlay options. (check ImageCog._add_text for info) 
-            template_overlay (bool, optional): Puts overlay on top of user's avatar.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        template : `str`
+            File name of image to be used as template. 
+            Must be located in memes/templates/
+        resize : `Union[Tuple[int,int], list]`
+            tuple (width, height) or list of tuples (w, h). A list 
+            indicates that multiple instances of a user's avatar is 
+            to be added to the template image.
+        offset : `Union[Tuple[int,int], list]`
+            tuple (off_x, off_y) or list of tuples (off_x, off_y).
+            Same logic as `resize` with regards to lists.
+        user : `commands.UserConverter`, optional
+            A Discord user. If specified, this user's avatar is 
+            downloaded in place of the message author's.
+        text : `Union[List[dict], dict]`, optional
+            Dict should contain arguments corresponding to 
+            `ImageCog._add_text()` parameters. Passing in a list 
+            indicates multiple text overlays.
+        template_overlay : `bool`, optional
+            If True, the order of template and avatar is reversed, 
+            and the template is placed over the avatar.
         """
 
         if not user:
-            user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024 
+            user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024
         else:
             user_avatar_url = user.avatar_url
-        
+
         # Download user's avatar
         with open("memes/temp/temp.webp", "wb") as f:
             avatar_img = await self.download_from_url(user_avatar_url)
             f.write(avatar_img)
-        
+
         # Open user's avatar
         img = Image.open("memes/temp/temp.webp", "r")
-        
+
         # Open template
         background = Image.open(f"memes/templates/{template}", "r")
+
         # Convert template to RGBA
-        if background.mode == "RGB": 
-            background.putalpha(255)
-        
+        if background.mode == "RGB":
+            background.putalpha(255) # puts an alpha channel on the image
+
         # Add avatar to template
         if template_overlay:
             # Template is composited over user's avatar
@@ -54,7 +71,7 @@ class ImageCog(BaseCog):
             new.paste(img, offset)
             background = Image.alpha_composite(new, background)
         else:
-            # Paste user's avatar
+            # User's avatar is pasted on top of template
             if isinstance(offset, tuple): # Ensures backwards compatibility
                 img = img.resize(resize, resample=Image.BICUBIC)
                 background.paste(img, offset)
@@ -68,35 +85,67 @@ class ImageCog(BaseCog):
                 for off, rsz in zip_longest(offset, resize, fillvalue=fill_value):
                     img = img.resize(rsz, resample=Image.BICUBIC)
                     background.paste(img, off)
-        
+
+        # Add text
         if text:
             if isinstance(text, dict):
-                background = await self._add_text(ctx, background, text)
+                background = await self._add_text(ctx, background, **text)
             elif isinstance(text, list):
                 for txt in text:
-                    background = await self._add_text(ctx, background, txt)
-       
+                    background = await self._add_text(ctx, background, **txt)
+
         # Save and post
         background.save("memes/temp/out.png")
         await ctx.send(file=discord.File("memes/temp/out.png"))
-    
-    async def _add_text(self, ctx, background: Image.Image, text: dict) -> Image.Image:
-        """Adds text to background"""
-        # Get text options
-        font_name = text.get("font", "LiberationSans-Regular.ttf") # Default Helvetica Neue copy
-        font_size = text.get("size", 20)
-        text_offset = text.get("offset", (0, 0)) 
-        text_color = text.get("color", (255, 255, 255, 255)) # Default white
-        text_content = text.get("content", ctx.message.author.name)
+
+    async def _add_text(self,
+                        ctx: commands.Context,
+                        background: Image.Image,
+                        font: str = None,
+                        size: int = 20,
+                        offset: Tuple[int, int] = (0, 0),
+                        color: Tuple[int, int, int, int] = (255, 255, 255, 255),
+                        content: str = None) -> Image.Image:
+        """Adds text to an image by creating an alpha composite of a given
+        image and one or more generated lines of text.
         
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context object for retrieving message author name
+        background : `Image.Image`
+            Image to be modified
+        font : `str`, optional
+            Name of font file to use. Must be located in memes/fonts/.
+        size : `int`, optional
+            Font size in points
+        offset : `Tuple[int, int]`, optional
+            Offset of the text string placement in pixels. (0, 0) corresponds to top left in the image.
+        color : `Tuple[int, int, int, int]`, optional
+            The color of the text supplied in the format (red, green, blue, alpha)
+        content : `str`, optional
+            Text to be added to image. If None, ctx.message.author name is used in
+            place of a user-provided string.
+        
+        Returns
+        -------
+        `Image.Image`
+            A composite of image `background` and generated text
+        """
+
+        if not font:
+            font = "LiberationSans-Regular.ttf"
+        if not content:
+            content = ctx.message.author
+
         # Get new image
         _txt = Image.new("RGBA", background.size)
         # Get font
-        font = ImageFont.truetype(f"memes/fonts/{font_name}", font_size)
+        font = ImageFont.truetype(f"memes/fonts/{font}", size)
         # Get a drawing context
         d = ImageDraw.Draw(_txt)
-        d.text(text_offset, text_content, font=font, fill=text_color)
-        
+        d.text(offset, content, font=font, fill=color)
+
         # Return alpha composite of background and text
         return Image.alpha_composite(background, _txt)
 
@@ -104,12 +153,12 @@ class ImageCog(BaseCog):
     async def nasa(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "nasa.jpg", (100, 100), (347, 403), user)
-    
+
     @commands.command(name="northkorea", aliases=["nk"])
     async def northkorea(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/PiqzXNs.jpg"""
         await self._composite_images(ctx, "northkorea1.jpg", (295, 295), (712, 195), user)
-    
+
     @commands.command(name="cancer", aliases=["cer"])
     async def cancer(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/vDtktIq.jpg"""
@@ -124,12 +173,12 @@ class ImageCog(BaseCog):
     async def loud(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/y7y7MRt.jpg"""
         await self._composite_images(ctx, "loud.jpg", (190, 190), (556, 445), user)
-    
-    @commands.command(name="guys", aliases=["guys_only_want_one_thing", "guyswant", "onething"])
+
+    @commands.command(name="guys", aliases=["guyswant"])
     async def guys_only_want_one_thing(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/5oUe8VN.jpg"""
         await self._composite_images(ctx, "guyswant.jpg", (400, 400), (121, 347), user)
-    
+
     @commands.command(name="furry")
     async def furry(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/Jq3uu02.png"""
@@ -139,7 +188,7 @@ class ImageCog(BaseCog):
     async def autism(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "autism.jpg", (303, 255), (0, 512), user)
-   
+
     @commands.command(name="disabled")
     async def disabled(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/hZSghxu.jpg"""
@@ -160,7 +209,7 @@ class ImageCog(BaseCog):
         text2["offset"] = (96, 551)
         _txt = [text, text2]
         await self._composite_images(ctx, "autism2.jpg", [(73, 73), (73, 73)], [(15, 1), (15, 551), (123, 709)], user, text=_txt)
-    
+
     @commands.command(name="fatfuck")
     async def fatfuck(self, ctx: commands.Context, user: commands.UserConverter=None) -> None:
         """https://i.imgur.com/Vbkfu4u.jpg"""
