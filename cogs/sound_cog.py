@@ -156,7 +156,7 @@ class SoundboardCog(BaseCog):
         def after_playing(np_msg) -> None:
             coro = np_msg.delete()
             fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-            self.is_playing = False     
+            self.is_playing = False
         
         try:
             self.vc.play(discord.FFmpegPCMAudio(f"{self.folder}/{subdir}{sound_name}.mp3"),
@@ -261,35 +261,22 @@ class SoundboardCog(BaseCog):
                 elif category in ["tts", "texttospeech"]:
                     return "tts"
                 # Add this and raise exception if category is not recognized? 
-
                 # elif category in ["general", "uncategorized"]:
                 #     return ""
                 # else:
                 #     return None   
             return ""
-
+        
+        # Parse argument `category`
         if not category:
             _categories = [sf.header for sf in self.sub_dirs]
             categories = ", ".join(_categories)
-            await ctx.send(f"Cannot display all sounds at once. Specify a category from: {categories}")
-            
-            def pred(m) -> bool:
-                return m.author == ctx.message.author and m.channel == ctx.message.channel  
-            
-            try:
-                reply = await self.bot.wait_for("message", timeout=10.0, check=pred)
-            except asyncio.TimeoutError:
-                raise discord.DiscordException("No reply from user. Aborting.")
-            else:
-                category = reply.content.lower()
-             
-        category = get_category(category)
+            raise discord.DiscordException(f"Cannot display all sounds at once. Specify a category from: {categories}")
+        else:     
+            category = get_category(category)
 
-        #if not category:
-        #    raise discord.DiscordException("Invalid sound category")
-        
         for sf in self.sub_dirs:
-            if sf.folder == category or category is None:
+            if sf.folder == category or not category:
                 _out = ""
                 for sound in sf.sound_list:
                     fmt_sound = f"\n{sound}"
