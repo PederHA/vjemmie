@@ -17,6 +17,7 @@ from cogs.admin_utils import load_blacklist, error_handler
 # Bot setup
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 log_channel_id = 340921036201525248
+# Add cogs
 for k, v in dict(locals()).items():
     if k.endswith("Cog"):
         bot.add_cog(v(bot=bot, log_channel_id=log_channel_id))
@@ -29,22 +30,12 @@ async def on_ready():
 def check_commands(ctx):
     return ctx.message.author.id not in load_blacklist()
 
-#@bot.listen("on_command_error")
-#async def on_error(ctx, error):
-#    await error_handler(bot, ctx, error)
-
 @bot.listen()
 async def on_message(message):
     if PFMSecrets.offensive_word(message):
         db = DatabaseHandler(GENERAL_DB_PATH)
         db.whosaidit(message)
         await message.add_reaction(':cmonpfm:427842995748995082')
-
-@bot.listen()
-async def on_message_delete(message):
-    if message.author.id != secrets.CLIENT_ID:
-        channel = bot.get_channel(log_channel_id)
-        await channel.send(f"Deleted message by {message.author.name}: {message.content}")
 
 @bot.listen()
 async def on_voice_state_update(member, before, after):
