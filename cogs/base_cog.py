@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional, List
 from datetime import datetime, timedelta
 import traceback
 from cogs.admin_utils import is_not_blacklisted
@@ -92,6 +92,29 @@ class BaseCog:
         return EmbedField(name, value)
 
     async def get_discord_color(self, color: Union[str, int]) -> discord.Color:
+        """Returns a discord.Color object corresponding to a color specified
+        by name via string or as an integer value
+        
+        Parameters
+        ----------
+        color : Union[str, int]
+            Color specified as name of color:
+                >>> get_discord_color("red")
+            Or as an integer value:
+               >>> get_discord_color(0x4a998a)
+        
+        Raises
+        ------
+        discord.DiscordException
+            If discord.Color has no attribute with name `color`
+        discord.DiscordException
+            If type of argument `color` is neither `int` nor `str`
+        
+        Returns
+        -------
+        discord.Color
+            A discord.Color object initialized with the desired color
+        """
         if isinstance(color, str):
             try:
                 color_func = getattr(discord.Color, color)
@@ -105,15 +128,43 @@ class BaseCog:
             raise discord.DiscordException("Could not obtain color")
 
     async def get_embed(self,
-                        ctx,
+                        ctx: commands.Context,
                         *,
                         title: str=None,
                         footer: bool=True,
-                        fields: list=None,
-                        content: str=None,
+                        fields: Optional[List[EmbedField]]=None,
                         image_url: str=None,
-                        color: Union[str, int]=None,
+                        color: Optional[str, int]=None,
                         timestamp: bool=True) -> discord.Embed:
+        """Constructs a discord embed object.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context
+        title : `str`, optional
+            Title of embed. A single line of bolded text at the top of the embed.
+        footer : `bool`, optional
+            Display footer on embed in the format:
+            <user avatar> <"requested by `user`"> <timestamp>
+        fields : `list`, optional
+            List of EmbedField objects. Each EmbedField is added as a
+            new field to the embed via `embed.add_field`
+        image_url : `str`, optional
+            Image URL. TODO: Add more info
+        color : `Optional[str, int]`, optional
+            Color of embed. Can be specified as str or int.
+            See `BaseCog.get_discord_color` for info.
+        timestamp : `bool`, optional
+            Display timestamp on footer. Has no effect if 
+            param `footer=False`
+        
+        Returns
+        -------
+        discord.Embed
+            A Discord embed object that can be sent to a text channel
+        """
+
         opts = {"timestamp":datetime.now()} if timestamp else {}
         embed = discord.Embed(title=title, **opts)
         if footer:
