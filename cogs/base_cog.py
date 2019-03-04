@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
 from typing import Iterable, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
 from cogs.admin_utils import is_not_blacklisted
 from collections import namedtuple
 import requests
 import aiohttp
+from typing import Optional
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -36,13 +37,12 @@ class BaseCog:
         return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
     
     def add_help_command(self) -> None:
-        IGNORE = ["reddit", "youtube", "weather", "cod"]
+        IGNORE = ["reddit", "youtube", "weather", "cod", "admin"]
         command_name = self.cog_name.lower()
         if command_name != "base" and command_name not in IGNORE:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=command_name)(cmd_coro)
             cmd.on_error = self._error_handler
-            #self.bot.add_command(cmd())
             self.bot.add_command(cmd)
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
@@ -143,7 +143,7 @@ class BaseCog:
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
 
-    async def send_log(self, msg: str, ctx: commands.Context=None) -> None:
+    async def send_log(self, msg: str, ctx: Optional[commands.Context]=None) -> None:
         """Sends log message to log channel.
 
         If param `ctx` is not None, `send_log` assumes an error has occured,
@@ -178,7 +178,7 @@ class BaseCog:
                     if not hasattr(bot_command, "on_error"):
                         bot_command.on_error = self._error_handler
 
-    async def _error_handler(self, ctx, error, *bugged_params) -> None:
+    async def _error_handler(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         if bugged_params: # Sometimes two instances of self is passed in, totaling 4 args instead of 3
             ctx = error
             error = bugged_params[0]
@@ -188,7 +188,7 @@ class BaseCog:
         else:
             await self._unknown_error(ctx)
 
-    async def _unknown_error(self, ctx):
+    async def _unknown_error(self, ctx: commands.Context):
         not_unknown = [
             "Command raised an exception",
             "MissingRequiredArgument",
@@ -206,12 +206,34 @@ class BaseCog:
         await self.send_log(error_msg, ctx) # Send entire exception traceback to log channel
 
     async def download_from_url(self, url: str) -> bytes: # TODO: FIX
+        """Downloads the contents of URL `url` and returns a bytes object.
+        
+        Returns
+        -------
+        `bytes`
+            The downloaded content of the URL
+        """
+
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
             img = await r.read()
             return img
 
     async def upload_image_to_discord(self, image_url: str) -> discord.Message:
+        """Downloads an image file from url `image_url` and uploads it to a
+        predefined Discord text channel.
+        
+        Parameters
+        ----------
+        image_url : `str`
+            A direct URL to an image file.
+        
+        Returns
+        -------
+        `discord.Message`
+            The Discord message belonging to the uploaded image.
+        """
+
         channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
         image = await self.download_from_url(image_url)
         *_, file_name = image_url.split("/")
@@ -219,27 +241,28 @@ class BaseCog:
         msg = await channel.send(file=discord.File(image, file_name))
         return msg
 
-    async def while_func_condition(self,
-                                   func_condition,
-                                   #condition,
-                                   if_true: bool,
-                                   coro,
-                                   limit: int, 
-                                   *args,
-                                   **kwargs) -> None:
-        raises = kwargs.get("raises", "Unknown error")
-        n = 0
-        rtn = await coro(*args)
-        while func_condition(rtn) == if_true:
-            rtn = await coro(*args)
-            n += 1
-            if n > limit:
-                raise discord.DiscordException(raises)
-        return rtn
+    async def _get_cog_commands(self, ctx: commands.Context, simple: bool=True) -> None:
+        """Sends an embed listing all commands belonging the cog.
 
-    async def _get_cog_commands(self, ctx: commands.Context) -> None:
-        """This command
+        The method compiles a list of commands defined by the invoking cog,
+        after which the list elements are string-formatted and added to
+        an embed sent to the Discord channel `ctx.message.author.channel`.
+
+        NOTE
+        ----
+        This method should only be invoked through a bot command. 
+        Argument `ctx` is required to have the `message.author.channel`
+        attribute.
+
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        simple : `bool`, optional
+            Defines whether the command listing should display calling
+            signatures or not. (the default is True, which ommits signatures)
         """
+
         _commands = sorted(
             [  # Get all public commands for the cog
                 cmd for cmd in self.bot.commands
@@ -249,8 +272,10 @@ class BaseCog:
             key=lambda cmd: cmd.name)
         _out_str = ""
         for command in _commands:
-            cmd_name = command.name.ljust(20,"\xa0")
-            #cmd_name = command.signature.ljust(35,"\xa0") # Considering using this instead
+            if simple:
+                cmd_name = command.name.ljust(20,"\xa0")
+            else:
+                cmd_name = command.signature.ljust(35,"\xa0")
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         field = self.EmbedField(f"{self.cog_name} commands", _out_str)
         embed = await self.get_embed(ctx, fields=[field])
