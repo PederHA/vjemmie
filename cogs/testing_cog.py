@@ -6,7 +6,6 @@ import shutil
 from cogs.base_cog import BaseCog
 import unicodedata
 
-
 class TestingCog(BaseCog):
     """Testing Bot Commands
     """
@@ -82,25 +81,4 @@ class TestingCog(BaseCog):
             out += f"\nI am the sheriff of {emoji_name.title()}"
         await ctx.send(out)
     
-    @commands.command(name="add_sound")
-    async def get_attachment(self, ctx: commands.Context) -> None:
-        if hasattr(ctx.message, "attachments") and ctx.message.attachments:
-            directories = {
-                # Will expand
-                "mp3": "sounds"
-            }
-            # Get attachment info
-            attachment = ctx.message.attachments[0]
-            file_name, extension = attachment.filename.split(".")
-            # Get directory for file type
-            directory = directories.get(extension)
-            # Raise exception if file type is not recognized
-            if not directory:
-                raise discord.DiscordException("Invalid file format")   
-            # Download & save file
-            sound_file = await self.download_from_url(attachment.url)
-            with open(f"{directory}/{attachment.filename}", "wb") as f:
-                f.write(sound_file)
-            await ctx.send(f"Saved file {attachment.filename}")
-        else:
-            raise discord.DiscordException("Message has no attachment!")
+

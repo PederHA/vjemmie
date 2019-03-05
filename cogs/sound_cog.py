@@ -45,7 +45,7 @@ class SoundFolder:
 
 class SoundboardCog(BaseCog):
     """Cog for the soundboard feature"""
-
+    VALID_FILE_TYPES = ["mp3"]
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.is_playing = False
         self.folder = SOUND_DIR
@@ -477,24 +477,22 @@ class SoundboardCog(BaseCog):
         discord.DiscordException
             [description]
         """
-        VALID_FILETYPES = {
-                # Will expand
-                "mp3": "sounds"
-            }
-        if not hasattr(ctx.message, "attachments") and not url:
+        # Raise exception if message has no attachment and no URL was passed in
+        if not ctx.message.attachments and not url:
             raise discord.DiscordException("A file attachment or file URL is required!")
 
-        if hasattr(ctx.message, "attachments") and ctx.message.attachments:
-            # Get attachment info
+        # Use attachment URL if possible
+        if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
             url = attachment.url
 
-        directory, sound_file = await self._do_download_sound(url)
-        with open(f"{directory}/{attachment.filename}", "wb") as f:
+        # Download and save sound file
+        directory, file_name, extension, sound_file = await self._do_download_sound(url)
+        with open(f"{directory}/{file_name}.{extension}", "wb") as f:
             f.write(sound_file)
-        await ctx.send(f"Saved file {attachment.filename}")    
+        await ctx.send(f"Saved file {file_name}.{extension}")    
 
-    async def _do_download_sound(self, url: str) -> Tuple[str, bytes]:
+    async def _do_download_sound(self, url: str) -> Tuple[str, str, str, bytes]:
         """Attempts to download file from URL. 
         Fails if the filetype is not .mp3.
 
@@ -519,10 +517,14 @@ class SoundboardCog(BaseCog):
         
         Returns
         -------
-        `Tuple[str, bytes]`
-            Tuple consisting of str: name of download directory and 
-            downloaded bytes: file. See BaseCog.download_from_url()
-            for further info.
+        `Tuple[str, str, str, bytes]`
+            Tuple consisting of:
+                str: Target directory name
+                str: Sound file name
+                str: File extension
+                bytes: Downloaded sound file.
+                (See BaseCog.download_from_url() for further
+                documentation of downloaded bytes object)
         """
         VALID_FILETYPES = {
                 # Will expand
@@ -533,11 +535,13 @@ class SoundboardCog(BaseCog):
         
         # Get file extension
         try:
+            # TODO: This sucks. Find a cleaner way
             _, file_name, extension = url.rsplit(".", 2)
+            file_name = file_name.rsplit("/", 1)[1]
         except:
             # Fails if URL is not a direct link to a file
-            raise discord.DiscordException("Invalid URL. Must be a direct link to a file.\n"
-                                           "Example: http://example.com/**file.jpg**")
+            raise discord.DiscordException("Invalid URL. Must be a direct link to a file. "
+                                           "Example: http://example.com/file.mp3")
         
         # Check if file type is valid
         directory = VALID_FILETYPES.get(extension)
@@ -547,4 +551,28 @@ class SoundboardCog(BaseCog):
         
         # Attempt to download file
         sound_file = await self.download_from_url(url)
-        return directory, sound_file  
+        return directory, file_name, extension, sound_file
+
+    @commands.command(name="dl")
+    async def dl(self, ctx: commands.Context, url: str=None) -> None:
+        """Lazy download sound command.
+
+        Depending on arguments received, calls either !ytdl or 
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        url : str, optional
+            Optional HTTP(s) URL to sound file. 
+            Can not be None if message has no attachment.
+        """
+        if hasattr(ctx.message, "attachments") or url and any(filetype in url for filetype in self.VALID_FILE_TYPES):
+            cmd = self.bot.get_command("add_sound")
+            await ctx.invoke(cmd, url)
+        elif url:
+            cmd = self.bot.get_command("ytdl")
+            await ctx.invoke(cmd, url)
+        else:
+            raise discord.DiscordException("A URL or attached file is required!")
+        
