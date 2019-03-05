@@ -337,8 +337,8 @@ class RedditCog(BaseCog):
             Time sorting to filter posts by. Defaults to None.
         """
         if not subreddit:
-            reddit_commands = self.bot.get_command("rcommands")
-            await ctx.invoke(reddit_commands)
+            cmd = self.bot.get_command("help")
+            await ctx.invoke(cmd, "reddit")
         else:
             await self.get_from_reddit(ctx, subreddit, sorting, time)
 
@@ -376,35 +376,6 @@ class RedditCog(BaseCog):
             
             subreddit = random.choice(subreddits)
             await self.get_from_reddit(ctx, subreddit)
-
-    @commands.command(name="redditcommands", aliases=["rcommands", "reddit_commands"])
-    async def reddit_commands(self, ctx: commands.Context) -> None:
-        """This command
-
-        This method was the basis for BaseCog._get_cog_commands().
-        In its current state, this method provides nothing unique
-        over the implementation found in BaseCog, and as such it
-        should be retired.
-        
-        Parameters
-        ----------
-        ctx : `commands.Context`
-            Dicord Context object.
-        """
-        _reddit_commands = sorted(
-            [  # Get all public commands for the Reddit Cog
-                cmd for cmd in self.bot.commands
-                if cmd.cog_name == self.__class__.__name__
-                and not cmd.checks  # Ignore admin-only commands
-            ],
-            key=lambda cmd: cmd.name)
-        _out_str = ""
-        for command in _reddit_commands:
-            cmd_name = command.name.ljust(20,"\xa0")
-            _out_str += f"`{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
-        field = self.EmbedField("Reddit commands", _out_str)
-        embed = await self.get_embed(ctx, fields=[field])
-        await ctx.send(embed=embed)
 
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
         """Small helper method for getting a valid sorting filter
