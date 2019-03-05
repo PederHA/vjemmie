@@ -402,15 +402,25 @@ class SoundboardCog(BaseCog):
                 pass
 
     @commands.command(name="ytdl")
-    async def download_track(self, ctx: commands.Context, url: str) -> None:
+    async def download_track(self, ctx: commands.Context, url: str) -> None:    
+        """Downloads an online video and converts it to an .mp3 file
         
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        url : str
+            HTTP(s) URL of video
+        """
+
         ytdl_opts = {
             'outtmpl': 'sounds/ytdl/%(title)s.%(ext)s',
             "verbose": True
                 }
-        if "youtube" in url:
-            
+        if "youtube" in url:     
             ytdl_opts["format"] = "bestaudio"   # this is a YouTube-specific setting
+        
+        # Attempt to download video
         try:
             dl_msg = await ctx.send("```cs\n# Downloading video...\n```")
             with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
@@ -425,22 +435,116 @@ class SoundboardCog(BaseCog):
         else:
             await dl_msg.delete()
         
+        # Generate file name and ffmpeg command
         original = f"{directory}/{file_name}"
         _file = " ".join(filter(None, _file.split(" ")))    # Prevent trailing space(s)
         new = f"{directory}/{_file}.mp3"
         cmd = f'ffmpeg -n -i "{original}" -acodec libmp3lame -ab 128k "{new}"'
-        
+
         def convert():   
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
         
+        # Convert file to .mp3
         msg = await ctx.send(f"```fix\nConverting {_file} to mp3.\n```")
-        await self.bot.loop.run_in_executor(None, convert)
+        await self.bot.loop.run_in_executor(None, convert) # Non-blocking FFMPEG conversion (i think?)
         os.remove(original)
         await msg.delete()
         
+        # Play downloaded sound file in message author's channel afterwards
         try:
             if ctx.message.author.voice.channel is not None:
                 cmd  = self.bot.get_command('play')
                 await ctx.invoke(cmd, _file)
         except AttributeError:
             pass
+
+    @commands.command(name="add_sound")
+    async def add_sound(self, ctx: commands.Context, url: str=None) -> None:
+        """Downloads a sound file supplied as a Discord message attachment
+        or as an HTTP(s) URL.
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        url : str, optional
+            HTTP(s) URL of file. 
+            If message has no attachment, command will raise
+            exception if URL is None.
+        
+        Raises
+        ------
+        discord.DiscordException
+            [description]
+        """
+        VALID_FILETYPES = {
+                # Will expand
+                "mp3": "sounds"
+            }
+        if not hasattr(ctx.message, "attachments") and not url:
+            raise discord.DiscordException("A file attachment or file URL is required!")
+
+        if hasattr(ctx.message, "attachments") and ctx.message.attachments:
+            # Get attachment info
+            attachment = ctx.message.attachments[0]
+            url = attachment.url
+
+        directory, sound_file = await self._do_download_sound(url)
+        with open(f"{directory}/{attachment.filename}", "wb") as f:
+            f.write(sound_file)
+        await ctx.send(f"Saved file {attachment.filename}")    
+
+    async def _do_download_sound(self, url: str) -> Tuple[str, bytes]:
+        """Attempts to download file from URL. 
+        Fails if the filetype is not .mp3.
+
+        NOTE
+        ----
+        Although the code is written to accomodate additional 
+        file types, only .mp3 files are supported as of yet.
+        
+        Parameters
+        ----------
+        url : `str`
+            HTTP(s) URL of target file
+        
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if URL can not be parsed. Ideally this should be
+            raised if the URL is not a direct link to a file.
+        `discord.DiscordException`
+            Raised if file type of downloaded file is not found in
+            dict: VALID_FILETYPES
+        
+        Returns
+        -------
+        `Tuple[str, bytes]`
+            Tuple consisting of str: name of download directory and 
+            downloaded bytes: file. See BaseCog.download_from_url()
+            for further info.
+        """
+        VALID_FILETYPES = {
+                # Will expand
+                "mp3": "sounds"
+            }
+        # Generate formatted string of valid file types
+        file_types = ", ".join(VALID_FILETYPES.keys())
+        
+        # Get file extension
+        try:
+            _, file_name, extension = url.rsplit(".", 2)
+        except:
+            # Fails if URL is not a direct link to a file
+            raise discord.DiscordException("Invalid URL. Must be a direct link to a file.\n"
+                                           "Example: http://example.com/**file.jpg**")
+        
+        # Check if file type is valid
+        directory = VALID_FILETYPES.get(extension)
+        if not directory:
+            # Fails if file type is not defined in VALID_FILETYPES
+            raise discord.DiscordException(f"Invalid file type. Must be one of: **{file_types}**")
+        
+        # Attempt to download file
+        sound_file = await self.download_from_url(url)
+        return directory, sound_file  
