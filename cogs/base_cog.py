@@ -37,9 +37,9 @@ class BaseCog:
         return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
     
     def add_help_command(self) -> None:
-        IGNORE = ["reddit", "youtube", "weather", "cod", "admin"]
+        IGNORE = ["reddit", "youtube", "weather", "cod", "admin", "base"]
         command_name = self.cog_name.lower()
-        if command_name != "base" and command_name not in IGNORE:
+        if command_name not in IGNORE:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=command_name)(cmd_coro)
             cmd.on_error = self._error_handler
@@ -215,7 +215,6 @@ class BaseCog:
                 else:
                     if cause_of_error:
                         await ctx.send(cause_of_error)
-            #await channel.send(f"{msg}{cause_of_error}")
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.")
         except discord.HTTPException:
@@ -273,6 +272,18 @@ class BaseCog:
             await self._unknown_error(ctx, error_msg)
 
     async def _unknown_error(self, ctx: commands.Context, error_msg: str):
+        """Method called when raised exception is not recognized
+        by `BaseCog._error_handler()`
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        error_msg : str
+            Error message of exception FIXME: Word this better than a brain damaged chimpanzee
+        
+        """
+
         # List of error messages to ignore
         ignore = []
         if not any(x in error_msg for x in ignore):
