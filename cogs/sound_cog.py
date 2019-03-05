@@ -167,13 +167,6 @@ class SoundboardCog(BaseCog):
             np_msg = await ctx.send(f"```css\nPlaying: {sound_name}\n```")
         await self.send_log('Playing: ' + sound_name)
 
-    @commands.command(name="progress")
-    async def progress(self, ctx: commands.Command) -> None:
-        for k in dir(self.vc._player):
-            attr = getattr(self.vc._player, k)
-            print(k, attr, sep=": ")
-
-    
     @commands.command(name="rplay")
     async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *sound_name):
         """
@@ -305,6 +298,8 @@ class SoundboardCog(BaseCog):
             else:
                 if _out:
                     await self.do_send(ctx, sf.header, _out, footer=True)
+        if not _out:
+            await ctx.send("No results")
 
 
     ### UNUSED ###
