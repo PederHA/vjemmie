@@ -18,6 +18,8 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 EmbedField = namedtuple("EmbedField", "name value")
 
 class BaseCog:
+    IGNORE_HELP = ["Admin", "Base", "Cod", "Reddit", "Weather", "YouTube"]
+    #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
     EmbedField = namedtuple("EmbedField", "name value")
     """
@@ -37,13 +39,16 @@ class BaseCog:
         return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
     
     def add_help_command(self) -> None:
-        IGNORE = ["reddit", "youtube", "weather", "cod", "admin", "base"]
-        command_name = self.cog_name.lower()
-        if command_name not in IGNORE:
+        #command_name = self.cog_name.lower()
+        command_name = self.cog_name
+        if command_name != "base" and command_name not in self.IGNORE_HELP:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=command_name)(cmd_coro)
             cmd.on_error = self._error_handler
             self.bot.add_command(cmd)
+            #if command_name.lower() not in self.IGNORE_HELP:
+            #    cmd.name = command_name.lower()
+            #    self.bot.add_command(cmd)
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
         """
