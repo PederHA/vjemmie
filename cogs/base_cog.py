@@ -18,7 +18,7 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 EmbedField = namedtuple("EmbedField", "name value")
 
 class BaseCog:
-    IGNORE_HELP = ["Admin", "Base", "Cod", "Reddit", "Weather", "YouTube"]
+    IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube"]
     #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
     EmbedField = namedtuple("EmbedField", "name value")
