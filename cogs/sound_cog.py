@@ -567,7 +567,7 @@ class SoundboardCog(BaseCog):
             Optional HTTP(s) URL to sound file. 
             Can not be None if message has no attachment.
         """
-        if hasattr(ctx.message, "attachments") or url and any(filetype in url for filetype in self.VALID_FILE_TYPES):
+        if ctx.message.attachments or url and any(filetype in url for filetype in self.VALID_FILE_TYPES):
             cmd = self.bot.get_command("add_sound")
             await ctx.invoke(cmd, url)
         elif url:
