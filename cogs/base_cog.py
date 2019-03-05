@@ -132,9 +132,9 @@ class BaseCog:
                         *,
                         title: str=None,
                         footer: bool=True,
-                        fields: Optional[List[EmbedField]]=None,
+                        fields: Optional[list]=None,
                         image_url: str=None,
-                        color: Optional[str, int]=None,
+                        color: Union[str, int]=None,
                         timestamp: bool=True) -> discord.Embed:
         """Constructs a discord embed object.
         
@@ -209,7 +209,13 @@ class BaseCog:
         try:
             channel = self.bot.get_channel(self.log_channel_id)
             cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
-            await channel.send(f"{msg}{cause_of_error}")
+            if len(msg) > 1800:
+                for i in range(0, len(msg), 1800):
+                    await channel.send(msg[:i])
+                else:
+                    if cause_of_error:
+                        await ctx.send(cause_of_error)
+            #await channel.send(f"{msg}{cause_of_error}")
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.")
         except discord.HTTPException:
@@ -230,27 +236,47 @@ class BaseCog:
                         bot_command.on_error = self._error_handler
 
     async def _error_handler(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
-        if bugged_params: # Sometimes two instances of self is passed in, totaling 4 args instead of 3
+        """Handles exceptions raised by bot commands.
+
+        This method is added to every bot command by 
+        `BaseCog._add_error_handlers()` with the exception
+        of those commands that define their own error handlers.
+
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        error : Exception
+            Exception that was raised
+        """
+
+        # Sometimes two instances of the class instance is passed in, totaling 4 args instead of 3
+        # My hypothesis might be wrong here, and the extra arg actually has a purpose
+        # I have not investigated it properly
+        if bugged_params:
             ctx = error
             error = bugged_params[0]
-        error_msg = error.args[0]
+        
+        # Get error message
+        if hasattr(error, "original"):
+            # Result of raised exception
+            # `raise discord.DiscordException("error")`
+            error_msg = error.original.args[0]
+        else:
+            # Result of "real" exception
+            # `n = 1 / 0`
+            error_msg = error.args[0]
+        
         if "The check functions" in error_msg: # lack of user privileges
             await ctx.send("Insufficient rights to perform command!")
         else:
-            await self._unknown_error(ctx)
+            await self._unknown_error(ctx, error_msg)
 
-    async def _unknown_error(self, ctx: commands.Context):
-        not_unknown = [
-            "Command raised an exception",
-            "MissingRequiredArgument",
-            "BadArgument"
-        ]
+    async def _unknown_error(self, ctx: commands.Context, error_msg: str):
+        # List of error messages to ignore
         ignore = []
-        error_msg = traceback.format_exc()
-        last_exception_line = error_msg.splitlines()[-1]
-        if any(x in last_exception_line for x in not_unknown) and not any(x in last_exception_line for x in ignore):
-            *_, user_error = last_exception_line.split(":")
-            out_msg = f"**Error:** {user_error}"
+        if not any(x in error_msg for x in ignore):
+            out_msg = f"**Error:** {error_msg}"
         else:
             out_msg = "An unknown error occured"
         await ctx.send(out_msg) # Display error to user
@@ -264,7 +290,6 @@ class BaseCog:
         `bytes`
             The downloaded content of the URL
         """
-
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
             img = await r.read()
@@ -272,7 +297,7 @@ class BaseCog:
 
     async def upload_image_to_discord(self, image_url: str) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
-        predefined Discord text channel.
+        Discord text channel.
         
         Parameters
         ----------
