@@ -58,7 +58,7 @@ class RedditCog(BaseCog):
         with open("db/subreddits.pkl", "wb") as f:
             pickle.dump(self.subs, f)
 
-    @commands.command(name="add_sub", aliases=["add_r", "addr", "newr", "nr"])
+    @commands.command(name="add_sub")
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         """Add <subreddit> [alias]
         
@@ -122,8 +122,6 @@ class RedditCog(BaseCog):
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
         # Pass coroutine into commands.command to get a Discord command object
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
-        # Set command's error handler method
-        cmd.on_error = self._error_handler
         
          # Add generated command to bot
         self.bot.add_command(cmd)
@@ -395,13 +393,13 @@ class RedditCog(BaseCog):
             RedditCog.TIME_FILTERS or RedditCog.SORTING_FILTERS
         default_filter : `str`
             Default filter to be used if `filter_` is None.
-        valid_filters : Iterable
+        valid_filters : `Iterable`
             An iterable containing valid sorting filters for 
             the given `filtering_type`.
         
         Returns
         -------
-        str
+        `str`
             A valid sorting filter for `filtering_type`.
         """
 

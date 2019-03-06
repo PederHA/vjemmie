@@ -17,7 +17,7 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 
 EmbedField = namedtuple("EmbedField", "name value")
 
-class BaseCog:
+class BaseCog(commands.Cog):
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube"]
     #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
@@ -29,26 +29,19 @@ class BaseCog:
         self.bot = bot
         self.log_channel_id = log_channel_id
         self.author_mention = "<@103890994440728576>"
-        self._add_error_handlers()
-        #self._add_checks()
         self.add_help_command()
-    
+
     @property
     def cog_name(self) -> str:
         cog_name = self.__class__.__name__
         return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
-    
+
     def add_help_command(self) -> None:
-        #command_name = self.cog_name.lower()
         command_name = self.cog_name
         if command_name != "base" and command_name not in self.IGNORE_HELP:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=command_name)(cmd_coro)
-            cmd.on_error = self._error_handler
             self.bot.add_command(cmd)
-            #if command_name.lower() not in self.IGNORE_HELP:
-            #    cmd.name = command_name.lower()
-            #    self.bot.add_command(cmd)
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
         """
@@ -225,22 +218,8 @@ class BaseCog:
         except discord.HTTPException:
             print(f"Failed to send message to channel {self.log_channel_id}.")
 
-    def _add_error_handlers(self) -> None:
-        for _attr in dir(self):
-            try:
-                # If subclasses call super().__init__ before instantiating its own instance variables,
-                # getattr may raise exceptions. try/except retard-proofs it for myself.
-                bot_command = getattr(self, _attr)
-            except:
-                pass
-            else:
-                if isinstance(bot_command, discord.ext.commands.core.Command):
-                    # add check
-                    if not hasattr(bot_command, "on_error"):
-                        bot_command.on_error = self._error_handler
-
-    async def _error_handler(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
-        """Handles exceptions raised by bot commands.
+    async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
+        """Handles exceptions raised by commands defined in the cog.
 
         This method is added to every bot command by 
         `BaseCog._add_error_handlers()` with the exception
@@ -253,6 +232,7 @@ class BaseCog:
         error : Exception
             Exception that was raised
         """
+        # NOTE: The paragraph under might be incorrect after the new `cog_command_error()` method was added
 
         # Sometimes two instances of the class instance is passed in, totaling 4 args instead of 3
         # My hypothesis might be wrong here, and the extra arg actually has a purpose
@@ -260,7 +240,7 @@ class BaseCog:
         if bugged_params:
             ctx = error
             error = bugged_params[0]
-        
+
         # Get error message
         if hasattr(error, "original"):
             # Result of raised exception
@@ -270,7 +250,7 @@ class BaseCog:
             # Result of "real" exception
             # `n = 1 / 0`
             error_msg = error.args[0]
-        
+
         if "The check functions" in error_msg: # lack of user privileges
             await ctx.send("Insufficient rights to perform command!")
         else:
@@ -278,7 +258,7 @@ class BaseCog:
 
     async def _unknown_error(self, ctx: commands.Context, error_msg: str):
         """Method called when raised exception is not recognized
-        by `BaseCog._error_handler()`
+        by `BaseCog.cog_command_error()`
         
         Parameters
         ----------
@@ -354,13 +334,8 @@ class BaseCog:
             Defines whether the command listing should display calling
             signatures or not. (the default is True, which ommits signatures)
         """
-
         _commands = sorted(
-            [  # Get all public commands for the cog
-                cmd for cmd in self.bot.commands
-                if cmd.cog_name == self.__class__.__name__
-                and not cmd.checks  # Ignore admin-only commands
-            ],
+            [cmd for cmd in self.get_commands() if not cmd.checks],
             key=lambda cmd: cmd.name)
         _out_str = ""
         for command in _commands:
