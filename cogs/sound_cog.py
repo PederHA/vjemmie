@@ -41,9 +41,9 @@ class SoundFolder:
 
     @property
     def sound_list(self) -> list:    
-        return sorted([i[:-4].lower() for i in os.listdir(f"{self.BASE_DIR}/{self.folder}") if i.endswith(".mp3")])
+        return sorted([i[:-4] for i in os.listdir(f"{self.BASE_DIR}/{self.folder}") if i.endswith(".mp3")])
 
-class SoundboardCog(BaseCog):
+class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     VALID_FILE_TYPES = ["mp3"]
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
@@ -103,15 +103,15 @@ class SoundboardCog(BaseCog):
                 raise discord.DiscordException('To use this command you have to be connected to a voice channel!')
         
         async def parse_sound_name(arg) -> str:
-            if arg in self.sound_list:
-                for sf in self.sub_dirs:
-                    for sound in sf.sound_list:
-                        if sound == arg:
-                            if sf.folder:
-                                folder = f"{sf.folder}/"
-                            else:
-                                folder = sf.folder # empty string
-                            return folder, sound
+            #if arg in self.sound_list:
+            for sf in self.sub_dirs:
+                for sound_filename in sf.sound_list:
+                    if sound_filename.lower() == arg:
+                        if sf.folder:
+                            folder = f"{sf.folder}/"
+                        else:
+                            folder = sf.folder # empty string
+                        return folder, sound_filename
             else:
                 if len(args)>0:
                     raise discord.DiscordException(f"Could not find sound with name {arg}")
@@ -157,9 +157,9 @@ class SoundboardCog(BaseCog):
             coro = np_msg.delete()
             fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
             self.is_playing = False
-        
         try:
-            self.vc.play(discord.FFmpegPCMAudio(f"{self.folder}/{subdir}{sound_name}.mp3"),
+            filepath = f'{self.folder}/{subdir}{sound_name}.mp3'
+            self.vc.play(discord.FFmpegPCMAudio(filepath),
                                 after=lambda e: after_playing(np_msg))
         except:
             pass
@@ -288,7 +288,7 @@ class SoundboardCog(BaseCog):
         search_query = " ".join(search_query)
         for sf in self.sub_dirs:
             for sound in sf.sound_list:
-                if search_query in sound:
+                if search_query.lower() in sound.lower():
                     fmt_sound = f"\n{sound}"
                     if len(_out + fmt_sound) < 1000:
                         _out += fmt_sound
@@ -435,6 +435,8 @@ class SoundboardCog(BaseCog):
         _file = " ".join(filter(None, _file.split(" ")))    # Prevent trailing space(s)
         new = f"{directory}/{_file}.mp3"
         cmd = f'ffmpeg -n -i "{original}" -acodec libmp3lame -ab 128k "{new}"'
+        #cmd = f'ffmpeg -i "{original}" -acodec libmp3lame -ab 128k "{new}"'
+        #cmd = f'ffmpeg -i "{original}" -f mp3 -ab 192000 -vn "{new}"'
 
         def convert():   
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
