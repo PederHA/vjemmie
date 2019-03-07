@@ -96,9 +96,9 @@ class BaseCog(commands.Cog):
         Parameters
         ----------
         color : Union[str, int]
-            Color specified as name of color:
+            Color specified as string literal:
                 >>> get_discord_color("red")
-            Or as an integer value:
+            Or as hexadecimal integer literal:
                >>> get_discord_color(0x4a998a)
         
         Raises
