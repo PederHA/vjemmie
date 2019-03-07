@@ -291,7 +291,7 @@ class BaseCog(commands.Cog):
             img = await r.read()
             return img
 
-    async def upload_image_to_discord(self, image_url: str) -> discord.Message:
+    async def upload_image_to_discord(self, image_url: str, filepath: str=None) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
         
@@ -307,9 +307,14 @@ class BaseCog(commands.Cog):
         """
 
         channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
-        image = await self.download_from_url(image_url)
-        *_, file_name = image_url.split("/")
-        fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
+        if not filepath:
+            image = await self.download_from_url(image_url)
+            *_, file_name = image_url.split("/")
+            fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
+        else:
+            with open(filepath, "rb") as f:
+                image = f.read()
+            *_, file_name = filepath.split("/")
         msg = await channel.send(file=discord.File(image, file_name))
         return msg
 
