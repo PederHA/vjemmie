@@ -65,7 +65,7 @@ class ImageCog(BaseCog):
             background.putalpha(255) # puts an alpha channel on the image
 
         # Add avatar to template
-        background = self._do_paste(background, user_avatar, resize, offset, template_overlay)
+        background = await self._do_paste(background, user_avatar, resize, offset, template_overlay)
         
 
         # Add text
@@ -76,11 +76,17 @@ class ImageCog(BaseCog):
                 for txt in text:
                     background = await self._add_text(ctx, background, **txt)
 
-        # Save and post
-        background.save("memes/temp/out.png")
-        await ctx.send(file=discord.File("memes/temp/out.png"))
+        # Save image
+        file_name = "memes/temp/out.png"
+        background.save(file_name)
+        # Upload image to discord and get url
+        msg = await self.upload_image_to_discord(None, file_name)
+        image_url = msg.attachments[0].url
+        # Send embeded image
+        embed = await self.get_embed(ctx, image_url=image_url)
+        await ctx.send(embed=embed)
     
-    def _resize_paste(self, 
+    async def _resize_paste(self, 
                       background: Image.Image, 
                       overlay: Image.Image, 
                       resize: Tuple[int, int], 
@@ -107,7 +113,7 @@ class ImageCog(BaseCog):
         background.paste(overlay, offset)
         return background 
     
-    def _do_paste(self, 
+    async def _do_paste(self, 
                   background: Image.Image, 
                   user_avatar: Image.Image, 
                   resize: Union[tuple, list], 
@@ -115,10 +121,10 @@ class ImageCog(BaseCog):
                   template_overlay: bool) -> Image.Image:
         if isinstance(offset, tuple):
             if not template_overlay:
-                background = self._resize_paste(background, user_avatar, resize, offset)
+                background = await self._resize_paste(background, user_avatar, resize, offset)
             else:
                 new = Image.new("RGBA", background.size)
-                new = self._resize_paste(new, user_avatar, resize, offset)
+                new = await self._resize_paste(new, user_avatar, resize, offset)
                 background = Image.alpha_composite(new, background)                    
         elif isinstance(offset, list):
             if not isinstance(resize, list):
@@ -129,10 +135,10 @@ class ImageCog(BaseCog):
             # Paste user avatars
             for off, rsz in zip_longest(offset, resize, fillvalue=fill_value):
                 if not template_overlay:
-                    background = self._resize_paste(background, user_avatar, rsz, off)
+                    background = await self._resize_paste(background, user_avatar, rsz, off)
                 else:
                     new = Image.new("RGBA", background.size)
-                    new = self._resize_paste(new, user_avatar, rsz, off)
+                    new = await self._resize_paste(new, user_avatar, rsz, off)
                     background = Image.alpha_composite(new, background)
         return background   
 
@@ -252,3 +258,8 @@ class ImageCog(BaseCog):
     async def fatfuck(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
         """https://i.imgur.com/Vbkfu4u.jpg"""
         await self._composite_images(ctx, "fatfuck.jpg", (385, 385), (67, 0), user)
+
+    @commands.command(name="saxophone")
+    async def saxophone(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+        """https://i.imgur.com/2LQkErQ.png"""
+        await self._composite_images(ctx, "saxophone.png", (366, 358), [(0, 0), (0, 361)], user, template_overlay=True)
