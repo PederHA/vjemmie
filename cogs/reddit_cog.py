@@ -9,7 +9,7 @@ import traceback
 from collections import namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Optional
 
 import discord
 import praw
@@ -28,6 +28,7 @@ reddit = praw.Reddit(
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 class RedditCog(BaseCog):
+    NSFW_WHITELIST = ["imgoingtohellforthis"]
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif"]
@@ -354,7 +355,7 @@ class RedditCog(BaseCog):
         """
 
         default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
-        edgy_subs =  ["imgoingtohellforthis", "offensivememes"]
+        edgy_subs =  ["imgoingtohellforthis", "offensivememes", "edgymemes"]
         fried_subs = ["deepfriedmemes", "nukedmemes"]
         
         if category in ["help", "categories", "?"]:
@@ -421,34 +422,6 @@ class RedditCog(BaseCog):
         #return False if not url else "." in url and (url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS))
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
 
-    async def _get_random_post(self, posts: Iterable) -> praw.models.Submission:
-        """Gets a random post from a `praw` submission generator.
-
-        Raises an exception if generator is unable to yield any
-        Reddit submissions, which terminates command execution.
-        
-        Parameters
-        ----------
-        posts : `Iterable`
-            `praw` Reddit submission generator
-        
-        Raises
-        ------
-        `discord.DiscordException`
-            Raised if generator yields no submissions.
-        
-        Returns
-        -------
-        `praw.models.Submission`
-            A reddit post (submission)
-        """
-
-        try:
-            post = random.choice(list(posts))
-        except:
-            raise discord.DiscordException("Could not retrieve posts at this time.")
-        return post
-
     async def _get_random_reddit_post(self, posts: Iterable, post_limit: int) -> praw.models.Submission:
         """Attempts to get a random reddit post that has not
         yet been posted in the current bot session. 
@@ -476,17 +449,20 @@ class RedditCog(BaseCog):
         """
 
         n = 0
+        post = None
         # Get random post
-        post = await self._get_random_post(posts)
-        # Check if post has already been posted
-        while post in self.posts: # TODO for Python3.8: Assignment operator
-            post = await self._get_random_post(posts)
-            n += 1
+        while post in self.posts or post is None: # TODO for Python3.8: Assignment operator
+            post = random.choice(posts)
+            if post in self.posts:
+                n += 1
+                set.remove(post)
+                continue
+            else:
+                return post
             if n >= post_limit:
                 raise discord.DiscordException("Could not find unique reddit post")
-        return post
 
-    async def get_reddit_post(self, subreddit: str, posts: Iterable, post_limit: int, is_text: bool) -> Tuple[str, str]:
+    async def get_reddit_post(self, subreddit: str, posts: list, post_limit: int, is_text: bool) -> Tuple[str, Optional[str]]:
         """Attempts to get a Reddit post unique to the current bot session.
         
         Subsequently formats the post according to its attributes and whether
@@ -495,11 +471,11 @@ class RedditCog(BaseCog):
         
         Parameters
         ----------
-        subreddit : str
+        subreddit : `str`
             Name of subreddit
-        posts : Iterable
-            `praw` posts generator
-        post_limit : int
+        posts : `list`
+            List of Reddit posts
+        post_limit : `int`
             Number of posts to retrieve
         is_text : bool
             Whether or not the subreddit is a text subreddit.
@@ -514,9 +490,9 @@ class RedditCog(BaseCog):
         
         Returns
         -------
-        Tuple[str, str]
-            A tuple containing a post title or self-text and a potential
-            accompanying image url
+        `Tuple[str, Optional[str]]`
+            A tuple containing a post title or self-text and an optional
+            image url. In case of a "self" submission this will be None.
         """
 
         post = await self._get_random_reddit_post(posts, post_limit)
@@ -537,16 +513,18 @@ class RedditCog(BaseCog):
         # Only post images for image subreddits
         else:
             n = 0
+            limit = len(posts)
+            # Get new post if random post does not contain an image URL
             while not self._is_image_content(post.url):
                 post = await self._get_random_reddit_post(posts, post_limit)
                 n += 1
-                if n > 50:
+                if n >= limit:
                     raise discord.DiscordException("Could not find an image submission.")
             _out = f"r/{subreddit}: {post.title}"
             image_url = post.url
         return _out, image_url
 
-    async def _do_get_reddit_post(self, ctx, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None, is_text: bool=False) -> None:
+    async def _get_subreddit_posts(self, ctx, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None) -> list:
         post_limits = {
             self.TIME_FILTERS[0]: self.ALL_POST_LIMIT,
             self.TIME_FILTERS[1]: self.ALL_POST_LIMIT,
@@ -558,57 +536,55 @@ class RedditCog(BaseCog):
         sorting = await self.check_sorting(ctx, sorting)
         time = await self.check_time(ctx, time)
 
+        # Get post limit
         if post_limit is None:
             post_limit = post_limits.get(time, 25)
 
         # Get subreddit
         sub = reddit.subreddit(subreddit)
-
+        
+        # Check if NSFW subreddit
+        if sub.over18 and not ctx.channel.nsfw and subreddit.lower() not in self.NSFW_WHITELIST:
+            raise discord.DiscordException("Cannot post NSFW content in a non-NSFW channel!")
+        
         # Get posts generator
         if sorting == "hot":
             posts = sub.hot()
         else:
             posts = sub.top(time_filter=time, limit=post_limit)
-
-        out_text, image_url = await self.get_reddit_post(subreddit, posts, post_limit, is_text)
-        return out_text, image_url
+        return list(posts)
 
     async def get_from_reddit(self, ctx: commands.Context, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None, is_text: bool=False, hot: bool=False) -> None:
-        out_text, image_url = await self._do_get_reddit_post(ctx, subreddit, sorting, time, post_limit, is_text)
-        n = 0
-        while image_url and "imgur" in image_url:
-            out_text, image_url = await self._do_get_reddit_post(ctx, subreddit, sorting, time, post_limit, is_text)
-            try:
-                msg = await self.upload_image_to_discord(image_url) # Rehost image on discord's CDN to fix this
-            except:
-                n += 1
-                pass
-                #raise discord.DiscordException("Failed to retrieve reddit post")
-            else:
-                image_url = msg.attachments[0].url
-            if n > 50:
-                raise discord.DiscordException("Could not retrieve reddit submission")
+        # Get list of Reddit posts that fit given parameters
+        posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit)  
+        # Get a random post from list of posts
+        out_text, image_url = await self.get_reddit_post(subreddit, posts, post_limit, is_text)
 
-        # Deal with text posts whose size exceeds Discord's max message length
-        LIMIT = 1800
-        n_chunks = math.ceil(len(out_text)/LIMIT)
-        if n_chunks > 1:    # split into chunks if text output exceeds 1800 chars
-            _temp = ""
-            chunks = []
-            for char in out_text: # TODO: Change to enumerate(out_text), check every 100 chars
-                if len(_temp) < LIMIT:
-                    _temp += char # This is probably very inefficient due to the use of += for every char
-                else:
-                    chunks.append(_temp)
-                    _temp = char
-            else:
-                chunks.append(_temp)
-            for chunk in chunks:
-                await ctx.send(chunk)
-        else:
+        # Rehost image to discord CDN if image is hosted on imgur
+        if image_url and "imgur" in image_url:
+            msg = await self.upload_image_to_discord(image_url)
+            image_url = msg.attachments[0].url
+
+        
+        # Post embed with out_text as title and image_url as embedded image
+        if image_url:
             embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color="red")
             await ctx.send(embed=embed)
             self.posts.add(out_text)
+        # Break up text posts into 1800 char long chunks 
+        else:
+            LIMIT = 1800
+            n_chunks = math.ceil(len(out_text)/LIMIT)
+            chunks = []
+            prev_idx = 0
+            for chunk_idx in range(1800, n_chunks * 1801, 1800):
+                if not prev_idx:
+                    chunks.append(out_text[:chunk_idx])
+                    prev_idx = chunk_idx
+                else:
+                    chunks.append(out_text[prev_idx:chunk_idx])
+            for chunk in chunks:
+                await ctx.send(chunk)
 
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
