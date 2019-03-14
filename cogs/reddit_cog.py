@@ -6,6 +6,7 @@ import random
 import re
 import secrets
 import traceback
+import json
 from collections import namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
@@ -64,6 +65,16 @@ class RedditCog(BaseCog):
     def dump_subs(self) -> None:
         with open("db/subreddits.pkl", "wb") as f:
             pickle.dump(self.subs, f)
+        self._dump_subs_json()
+    
+    def _load_subs_json(self) -> list:
+        with open("db/subs.json", "r") as f:
+            _subs = json.load(f)
+            return [RedditCommand(subreddit, aliases, is_text) for subreddit, aliases, is_text in _subs]
+
+    def _dump_subs_json(self) -> None:
+        with open("db/subs.json", "w") as f:
+            json.dump(self.subs, f)
 
     @commands.command(name="add_sub")
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
@@ -284,20 +295,38 @@ class RedditCog(BaseCog):
         alias : `str`
             Name of alias
         """
-        if not alias.isnumeric():
+        # Only accept aliases with letters a-z
+        if alias.isalpha():
             alias = alias.lower()
+            # Iterate through subreddits
             for idx, subreddit_cmd in enumerate(self.subs):
                 if subreddit == subreddit_cmd.subreddit:
                     self.subs.pop(idx)
                     subreddit_cmd.aliases.append(alias)
                     self.subs.append(subreddit_cmd)
                     self.dump_subs()
+                    await self._reload_sub_commands()
                     await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
-                    #await ctx.send(f"Command for subreddit **r/{subreddit}** changed to **!{command}**.\n"
-                    #                "Changes take effect on next restart.")
                     break
         else:
             await ctx.send("Invalid alias name. Can only contain letters a-z.")
+
+    async def _reload_sub_commands(self):
+        """Reloads all subreddit commands.
+        """
+        # Need some sort of dict / set data type here for fast hash table lookups
+        
+        # Get list of subreddits
+        subs = self.load_subs()
+        # Get all bot commands
+        commands = self.bot.commands
+        
+        for sub in subs:
+            for cmd in commands:
+                if sub.subreddit == cmd.name:
+                    self.bot.remove_command(cmd.name)
+                    self._add_sub(sub) 
+                    break
 
     @commands.command(name="remove_alias")
     @is_admin()
