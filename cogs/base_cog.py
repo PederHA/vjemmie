@@ -375,9 +375,14 @@ class BaseCog(commands.Cog):
         else:
             channel = ctx.message.channel
         
-        # Split string into chunks of <=1800 characters
-        LIMIT = self.CHAR_LIMIT # Makes list comprehension easier to read
-        chunks = [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
+        # Split string into chunks
+        chunks = await self._split_string_to_chunks(text)
+
+        # Send chunked messages
         for chunk in chunks:
             await channel.send(chunk)
 
+    async def _split_string_to_chunks(self, text: str) -> List[str]:
+        """Splits a string into (default: 1800) char long chunks."""
+        LIMIT = self.CHAR_LIMIT # Makes list comprehension easier to read
+        return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
