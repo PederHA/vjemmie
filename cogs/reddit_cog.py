@@ -591,7 +591,7 @@ class RedditCog(BaseCog):
             msg = await self.upload_image_to_discord(image_url)
             image_url = msg.attachments[0].url
 
-        # Embed image if selected post has an associated image URL
+        # Embed image if image URL is not None
         if image_url:
             embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color="red")
             await ctx.send(embed=embed)
@@ -599,10 +599,7 @@ class RedditCog(BaseCog):
         # Send plain text otherwise
         else:
             # Break up text posts into 1800 char long chunks
-            LIMIT = 1800
-            chunks = [out_text[i:i+LIMIT] for i in range(0, len(out_text), LIMIT)]
-            for chunk in chunks:
-                await ctx.send(chunk)
+            await self.send_text_message(ctx, out_text)
 
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
