@@ -444,9 +444,9 @@ class RedditCog(BaseCog):
 
 
 
-    async def _get_random_reddit_post(self, posts: list, post_limit: int) -> praw.models.Submission:
-        """Attempts to get a random reddit post that has not
-        yet been posted in the current bot session. 
+    async def _get_random_reddit_post(self, posts: list) -> praw.models.Submission:
+        """Attempts to select a random reddit post that has not
+        yet been posted in the current bot session from list of posts.
         
         A bot session is defined as the period of time from 
         bot startup to invocation of this method.
@@ -455,10 +455,7 @@ class RedditCog(BaseCog):
         ----------
         posts : `set`
             A `praw` Reddit submission generator
-        post_limit : int
-            Number of attempts to look for a unique post before
-            raising exception and exiting.
-        
+    
         Raises
         ------
         `discord.DiscordException`
@@ -469,21 +466,18 @@ class RedditCog(BaseCog):
         `praw.models.Submission`
             A Reddit post unique to the current bot session.
         """
-
-        n = 0
-        post = None
         # Get random post
-        while post in self.posts or post is None: # TODO for Python3.8: Assignment operator
+        posts = list(set(posts) - self.posts)
+        # Try to select random post
+        try:
             post = random.choice(list(posts))
-            if post in self.posts:
-                n += 1
-                posts.remove(post)
-            else:
-                return post
-            if n >= post_limit:
-                raise discord.DiscordException("Could not find unique reddit post")
+        except IndexError:
+            # Raise exception if list is empty
+            raise discord.DiscordException("Could not find unique reddit post")
+        else:
+            return post
 
-    async def get_reddit_post(self, subreddit: str, posts: list, post_limit: int, is_text: bool) -> Tuple[str, Optional[str]]:
+    async def _format_reddit_post(self, post: praw.models.Submission, subreddit: str, is_text: bool) -> Tuple[str, Optional[str]]:
         """Attempts to get a Reddit post unique to the current bot session.
         
         Subsequently formats the post according to its attributes and whether
@@ -516,7 +510,7 @@ class RedditCog(BaseCog):
             image url. In case of a "self" submission this will be None.
         """
 
-        post = await self._get_random_reddit_post(posts, post_limit)
+
         image_url = None
         # Prioritize selftext for text subreddits
         if is_text:
@@ -531,22 +525,23 @@ class RedditCog(BaseCog):
                 _out = post.title
                 if self._is_image_content(post.url):
                     image_url = post.url
+        
         # Only post images for image subreddits
         else:
-            n = 0
-            limit = len(posts)
-            # Get new post if random post does not contain an image URL
-            while not self._is_image_content(post.url):
-                post = await self._get_random_reddit_post(posts, post_limit)
-                n += 1
-                if n >= limit:
-                    raise discord.DiscordException("Could not find an image submission.")
             _out = f"r/{subreddit}: {post.title}"
             image_url = post.url
+        
+        # Add post to cog instance's posts
         self.posts.add(post)
         return _out, image_url
 
-    async def _get_subreddit_posts(self, ctx, subreddit: str, sorting: str=None, time: str=None, post_limit: int=None) -> set:
+    async def _get_subreddit_posts(self,
+                                   ctx,
+                                   subreddit: str,
+                                   sorting: str = None,
+                                   time: str = None,
+                                   post_limit: int = None,
+                                   allow_nsfw: bool = False) -> set:
         # Get subreddit
         sub = reddit.subreddit(subreddit)
 
@@ -579,12 +574,19 @@ class RedditCog(BaseCog):
             post_limit = self.POST_LIMITS.get(time, 25)
 
         # Get list of Reddit posts from a given subreddit
-        posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit)
+        posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
 
         # Select a random post from list of posts
-        out_text, image_url = await self.get_reddit_post(subreddit, posts, post_limit, is_text)
+        while True:
+            post = await self._get_random_reddit_post(posts)
+            if is_text or self._is_image_content(post.url):
+                break
+        
+        # Obtain title and image URL or selftext and None if is_text==True
+        out_text, image_url = await self._format_reddit_post(post, subreddit, is_text)
 
-        # Rehost image to discord CDN if image is hosted on imgur
+        # Rehost image to discord CDN if image is hosted on Imgur
+        # Discord has trouble embedding Imgur images 
         if image_url and "imgur" in image_url:
             msg = await self.upload_image_to_discord(image_url)
             image_url = msg.attachments[0].url
