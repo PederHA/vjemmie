@@ -18,13 +18,16 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 EmbedField = namedtuple("EmbedField", "name value")
 
 class BaseCog(commands.Cog):
+    """
+    Base Cog from which all other cogs are subclassed.
+    """
+    
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube"]
     #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
     EmbedField = namedtuple("EmbedField", "name value")
-    """
-    Base Cog from which all other cogs are subclassed.
-    """
+    CHAR_LIMIT = 1800
+
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.bot = bot
         self.log_channel_id = log_channel_id
@@ -205,16 +208,13 @@ class BaseCog(commands.Cog):
             that caused an error
         """
         try:
-            channel = self.bot.get_channel(self.log_channel_id)
             cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
-            if len(msg) > 1800:
-                for i in range(0, len(msg), 1800):
-                    await channel.send(msg[:i])
-                else:
-                    if cause_of_error:
-                        await ctx.send(cause_of_error)
+            if cause_of_error:
+                await ctx.send(cause_of_error)
+            else:
+                await self.send_text_message(ctx, msg, channel_id=self.log_channel_id)
         except discord.Forbidden:
-            print(f"Insufficient permissions for channel {self.log_channel_id}.")
+            print(f"Insufficient permissions for channel {self.log_channel_id}.") 
         except discord.HTTPException:
             print(f"Failed to send message to channel {self.log_channel_id}.")
 
@@ -318,7 +318,7 @@ class BaseCog(commands.Cog):
         msg = await channel.send(file=discord.File(image, file_name))
         return msg
 
-    async def _get_cog_commands(self, ctx: commands.Context, simple: bool=True) -> None:
+    async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple") -> None:
         """Sends an embed listing all commands belonging the cog.
 
         The method compiles a list of commands defined by the invoking cog,
@@ -339,6 +339,7 @@ class BaseCog(commands.Cog):
             Defines whether the command listing should display calling
             signatures or not. (the default is True, which ommits signatures)
         """
+        simple = True if output_style == "simple" else False
         _commands = sorted(
             [cmd for cmd in self.get_commands() if not cmd.checks],
             key=lambda cmd: cmd.name)
@@ -352,3 +353,31 @@ class BaseCog(commands.Cog):
         field = self.EmbedField(f"{self.cog_name} commands", _out_str)
         embed = await self.get_embed(ctx, fields=[field])
         await ctx.send(embed=embed)
+
+    async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
+        """
+        Posts an arbitrarily long string as a message to a channel.
+
+        Message is split into multiple parts if string exceeds 1800 characters.
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context
+        text : str
+            String to post to channel
+        channel_id : Optional[int], optional
+            Optional channel ID if target channel is not part of the context.
+        """
+        # Obtain channel
+        if channel_id:
+            channel = self.bot.get_channel(channel_id)
+        else:
+            channel = ctx.message.channel
+        
+        # Split string into chunks of <=1800 characters
+        LIMIT = self.CHAR_LIMIT # Makes list comprehension easier to read
+        chunks = [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
+        for chunk in chunks:
+            await channel.send(chunk)
+
