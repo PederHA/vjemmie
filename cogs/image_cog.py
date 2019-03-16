@@ -43,9 +43,9 @@ class ImageCog(BaseCog):
             If True, the order of template and avatar is reversed, 
             and the template is placed over the avatar.
         """
-
+        # Use message author's avatar if no user is specified
         if not user:
-            user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024
+            user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024 suffix since a lower res image danker anyway
         else:
             user_avatar_url = user.avatar_url
 
@@ -66,7 +66,6 @@ class ImageCog(BaseCog):
 
         # Add avatar to template
         background = await self._do_paste(background, user_avatar, resize, offset, template_overlay)
-        
 
         # Add text
         if text:
@@ -92,6 +91,12 @@ class ImageCog(BaseCog):
                       resize: Tuple[int, int], 
                       offset: Tuple[int, int]) -> Image.Image:
         """Resizes an image `overlay` and pastes it to `background`
+
+        NOTE
+        ----
+        Generally, type of arguments to parameters `resize` and `offset`
+        should be identical to avoid unintended results. However, there are
+        protections in place if types do not match.
         
         Parameters
         ----------
@@ -119,13 +124,19 @@ class ImageCog(BaseCog):
                   resize: Union[tuple, list], 
                   offset: Union[tuple, list],
                   template_overlay: bool) -> Image.Image:
+        # Paste a single copy of user's avatar if argument offset is a single (x, y) offset tuple
         if isinstance(offset, tuple):
+            # Choose first list index item if resize is type list
+            if isinstance(resize, list):
+                resize = resize[0]
             if not template_overlay:
                 background = await self._resize_paste(background, user_avatar, resize, offset)
             else:
                 new = Image.new("RGBA", background.size)
                 new = await self._resize_paste(new, user_avatar, resize, offset)
                 background = Image.alpha_composite(new, background)                    
+        
+        # Paste multiple copies of user's avatar if argument offset is a list of (x, y) offset tuples
         elif isinstance(offset, list):
             if not isinstance(resize, list):
                 # Create list of tuples of size n=len(offset) if resize is not type(list)
@@ -263,3 +274,8 @@ class ImageCog(BaseCog):
     async def saxophone(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
         """https://i.imgur.com/2LQkErQ.png"""
         await self._composite_images(ctx, "saxophone.png", (366, 358), [(0, 0), (0, 361)], user, template_overlay=True)
+
+    @commands.command(name="fingercircle")
+    async def fingercircle(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+        """https://i.imgur.com/Vbkfu4u.jpg"""
+        await self._composite_images(ctx, "fingercircle.jpg", (251, 278), (317, 20), user)
