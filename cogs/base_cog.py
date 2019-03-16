@@ -25,13 +25,15 @@ class BaseCog(commands.Cog):
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube"]
     #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
+    LOG_CHANNEL_ID = 340921036201525248
+    AUTHOR_MENTION = "<@103890994440728576>"
     EmbedField = namedtuple("EmbedField", "name value")
     CHAR_LIMIT = 1800
+    EMBED_CHAR_LIMIT = 1000
 
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.bot = bot
         self.log_channel_id = log_channel_id
-        self.author_mention = "<@103890994440728576>"
         self.add_help_command()
 
     @property
@@ -210,9 +212,9 @@ class BaseCog(commands.Cog):
         try:
             cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
             if cause_of_error:
-                await ctx.send(cause_of_error)
+                await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
             else:
-                await self.send_text_message(ctx, msg, channel_id=self.log_channel_id)
+                await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.") 
         except discord.HTTPException:
@@ -386,3 +388,69 @@ class BaseCog(commands.Cog):
         """Splits a string into (default: 1800) char long chunks."""
         LIMIT = self.CHAR_LIMIT # Makes list comprehension easier to read
         return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
+
+    async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
+        if not limit or limit > 1024:
+            limit = self.CHAR_LIMIT
+        _out = []
+        temp = ""
+        for line in text.splitlines():
+            l = f"{line}\n"
+            if len(temp + l) > limit:
+                _out.append(temp)
+                temp = ""
+            temp += l
+        else:
+            _out.append(temp)
+        return _out
+
+    async def send_chunked_embed_message(self, 
+                                        ctx: commands.Context, 
+                                        header: str, 
+                                        text: str, 
+                                        limit: int=None,
+                                        *, 
+                                        return_embeds: bool=False) -> Optional[list]:
+        """Splits a string into <1024 char chunks and creates an
+        embed object from each chunk, which are then sent to 
+        ctx.channel.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context
+        header : `str`
+            Title of embed
+        text : `str`
+            Text included in embed field(s)
+        limit : `int`, optional
+            Character limit. Cannot exceed 1024.
+        return_embeds : `bool`, optional
+            If enabled, returns chunked message as embed objects
+            instead of sending them to ctx.channel.
+        """
+        # Split text by line
+        text_fields = await self._split_string_by_lines(text, limit)
+        
+        if len(text_fields) > 1:
+            embeds = [
+                # Include header but no footer on first message
+                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False) 
+                if idx == 0 else
+                # Include footer but no header on last message
+                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=True)
+                if text_fields[-1] == field else
+                # No footer or header on middle message(s)
+                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False)
+                for idx, field in enumerate(text_fields)]
+        else:
+            # Create normal embed with title and footer if text is not chunked
+            embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True)]
+        
+        # Return embed objects if desired
+        if return_embeds:
+            return embeds
+        
+        # Otherwise just send each embed as a message
+        for embed in embeds:
+            await ctx.send(embed=embed)
