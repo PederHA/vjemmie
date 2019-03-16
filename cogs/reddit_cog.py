@@ -49,32 +49,23 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
         super().__init__(bot, log_channel_id)
-        self.subs = self.load_subs() # Load list of subs from disk
-        for sub in self.subs:
+        self.subs = self.load_subs()
+        for sub in self.subs.values():
             self._add_sub(sub)
         # Generators for changing reddit sorting.
         self.time_cycle = cycle(self.TIME_FILTERS) # Command: !rtime
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
         # Avoid repeat reddit submissions in a single session
         self.posts = set()
-
-    def load_subs(self) -> list:
-        with open("db/subreddits.pkl", "rb") as f:
-            return pickle.load(f)
-
-    def dump_subs(self) -> None:
-        with open("db/subreddits.pkl", "wb") as f:
-            pickle.dump(self.subs, f)
-        self._dump_subs_json()
     
-    def _load_subs_json(self) -> list:
+    def load_subs(self) -> dict:
         with open("db/subs.json", "r") as f:
             _subs = json.load(f)
-            return [RedditCommand(subreddit, aliases, is_text) for subreddit, aliases, is_text in _subs]
+            return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
 
-    def _dump_subs_json(self) -> None:
+    def dump_subs(self) -> None:
         with open("db/subs.json", "w") as f:
-            json.dump(self.subs, f)
+            json.dump(self.subs, f, indent=4)
 
     @commands.command(name="add_sub")
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
@@ -101,14 +92,12 @@ class RedditCog(BaseCog):
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
             self._add_sub(new_command)
         except discord.DiscordException:
-            for cmd in self.subs:
-                if cmd.subreddit == subreddit:
-                    commands_ = self._get_commands(cmd)
-                    break
-            else:
+            cmd = self.subs.get(subreddit)
+            if not cmd:
                 raise
+            commands_ = self._get_commands(cmd)
             s = "s" if "," in commands_ else ""
-            await ctx.send(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
+            raise discord.DiscordException(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
         else:
             self.dump_subs() # After adding sub, save list of subs to disk
             commands_ = self._get_commands(new_command)
@@ -130,9 +119,6 @@ class RedditCog(BaseCog):
         """
 
         subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
-        for command in self.bot.commands: # Check if subreddit is already added
-            if command.name == subreddit:
-                raise discord.DiscordException("Command already exists")
 
         # Method used as basis for subreddit command
         base_command = self._r
@@ -143,9 +129,9 @@ class RedditCog(BaseCog):
 
         # Add generated command to bot
         self.bot.add_command(cmd)
-        # Add subreddit to cog's list of subreddits
-        if subreddit_command not in self.subs:
-            self.subs.append(subreddit_command)
+        
+        # Add subreddit to cog's subreddit dict
+        self.subs[subreddit] = subreddit_command
 
     async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
         """Method used as a base for adding custom subreddit commands"""
@@ -163,16 +149,20 @@ class RedditCog(BaseCog):
         subreddit : `str`
             Name of subreddit to remove
         """
-        for cmd in self.subs:
-            if cmd.subreddit == subreddit:
-                self.subs.remove(cmd)
-                self.bot.remove_command(cmd.subreddit)
-                self.dump_subs()
-                commands_ = self._get_commands(cmd)
-                await ctx.send(f"Removed subreddit **r/{subreddit}** with command(s) **{commands_}**")
-                break
-        else:
-            await ctx.send(f"Could not find command for subreddit with name **{subreddit}**")
+        cmd = self.subs.get(subreddit)
+        # Check if subreddit command exists
+        if not cmd:
+            raise discord.DiscordException(f"Could not find command for subreddit with name **{subreddit}**")
+        
+        # Remove sub from instance subreddit dict
+        self.subs.pop(subreddit)
+        # Remove associated command
+        self.bot.remove_command(cmd.subreddit)
+        # Save changes
+        self.dump_subs()
+        # Get commands associated with removed subreddit
+        commands_ = self._get_commands(cmd)
+        await ctx.send(f"Removed subreddit **r/{subreddit}** with command(s) **{commands_}**")
 
     @commands.command(name="subs", aliases=["subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
@@ -184,15 +174,13 @@ class RedditCog(BaseCog):
             Discord Context object
         """
         _out = []
-        for cmd in sorted(self.subs, key=lambda cmd: cmd.subreddit):
+        for cmd in sorted(self.subs.values(), key=lambda cmd: cmd.subreddit):
             commands_ = self._get_commands(cmd)
-            s = f"r/{cmd.subreddit.ljust(30)} Commands: {commands_}"
-            _out.append(s)
-        #out = "\n".join(_out)
-        #embed = await self.get_embed(ctx, fields=[self.EmbedField("Subreddits", out)])
-        #await ctx.send(embed=embed)
-        out = await self.format_output(_out, item_type="subreddits")
-        await ctx.send(out)
+            subreddit = cmd.subreddit.ljust(40, "\xa0")
+            s = f"r/{subreddit} Commands: {commands_}"
+            _out.append(s)  
+        out = "\n".join(_out)
+        await self.send_chunked_embed_message(ctx, "Subreddits", out, limit=1000)
 
     @commands.command(name="rtime", aliases=["change_reddit_time", "reddit_time"])
     async def change_time_filtering(self, ctx: commands.Context, opt: str=None) -> None:
@@ -295,37 +283,41 @@ class RedditCog(BaseCog):
         alias : `str`
             Name of alias
         """
+        alias = alias.lower()
+        subreddit = subreddit.lower()
+
         # Only accept aliases with letters a-z
-        if alias.isalpha():
-            alias = alias.lower()
-            # Iterate through subreddits
-            for idx, subreddit_cmd in enumerate(self.subs):
-                if subreddit == subreddit_cmd.subreddit:
-                    self.subs.pop(idx)
-                    subreddit_cmd.aliases.append(alias)
-                    self.subs.append(subreddit_cmd)
-                    self.dump_subs()
-                    await self._reload_sub_commands()
-                    await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
-                    break
-        else:
-            await ctx.send("Invalid alias name. Can only contain letters a-z.")
+        if not alias.isalpha():
+            raise discord.DiscordException("Invalid alias name. Can only contain letters a-z.")
+        
+        # Check if subreddit exists as a bot command
+        if not subreddit in self.subs:
+            raise discord.DiscordException(f"Subreddit {subreddit} is not added as a bot command!")
+
+        # Add new alias
+        self.subs[subreddit].aliases.append(alias)
+        # Save changes & reload subreddit commands
+        self.dump_subs()
+        await self._reload_sub_commands()
+        await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
+
+
 
     async def _reload_sub_commands(self):
         """Reloads all subreddit commands.
         """
         # Need some sort of dict / set data type here for fast hash table lookups
         
-        # Get list of subreddits
+        # Get bot subreddits
         subs = self.load_subs()
         # Get all bot commands
         commands = self.bot.commands
-        
-        for sub in subs:
+
+        for subreddit, sub_values in subs.items():
             for cmd in commands:
-                if sub.subreddit == cmd.name:
+                if subreddit == cmd.name:
                     self.bot.remove_command(cmd.name)
-                    self._add_sub(sub) 
+                    self._add_sub(sub_values) 
                     break
 
     @commands.command(name="remove_alias")
@@ -342,18 +334,20 @@ class RedditCog(BaseCog):
         alias : `str`
             Name of alias to remove
         """
-        for idx, subreddit_cmd in enumerate(self.subs):
-            if subreddit == subreddit_cmd.subreddit:
-                try:
-                    subreddit_cmd.aliases.remove(alias)
-                except:
-                    await ctx.send(f"No such alias **!{alias}** for subreddit **r/{subreddit}**")
-                else:
-                    self.subs.pop(idx)
-                    self.subs.append(subreddit_cmd)
-                    self.dump_subs()
-                    await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
-                break
+        subreddit = subreddit.lower()
+        alias = alias.lower()
+
+        if subreddit not in self.subs:
+            raise discord.DiscordException(f"Subreddit {subreddit} is not added as a bot command!")
+        
+        if alias not in self.subs[subreddit].aliases:
+            raise discord.DiscordException(f"No such alias **!{alias}** for subreddit **r/{subreddit}**")
+        
+        self.subs[subreddit].aliases.remove(alias)
+        self.dump_subs()
+        await self._reload_sub_commands()
+        await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
+
 
     @commands.command(name="reddit")
     async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
@@ -393,7 +387,7 @@ class RedditCog(BaseCog):
         """
 
         default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
-        edgy_subs =  ["imgoingtohellforthis", "offensivememes", "edgymemes", "dark_humor"]
+        edgy_subs =  ["imgoingtohellforthis", "dark_humor"]
         fried_subs = ["deepfriedmemes", "nukedmemes"]
 
         if category in ["help", "categories", "?"]:
