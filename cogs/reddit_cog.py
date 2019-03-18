@@ -121,11 +121,11 @@ class RedditCog(BaseCog):
         `discord.DiscordException`
             Raised if subreddit is already added to bot.
         """
-
-        subreddit, aliases, is_text, *_ = subreddit_command # *_ catches additional fields if they are added in the future, and prevents errors
+        # *_ catches additional fields if they are added in the future, and prevents errors
+        subreddit, aliases, is_text, *_ = subreddit_command 
 
         # Method used as basis for subreddit command
-        base_command = self._r
+        base_command = self._reddit_command_base
         # Pass partial method into asyncio.coroutine to make it a coroutine
         _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
         # Pass coroutine into commands.command to get a Discord command object
@@ -137,7 +137,7 @@ class RedditCog(BaseCog):
         # Add subreddit to cog's subreddit dict
         self.subs[subreddit] = subreddit_command
 
-    async def _r(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
+    async def _reddit_command_base(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
         """Method used as a base for adding custom subreddit commands"""
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
