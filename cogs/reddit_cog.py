@@ -133,9 +133,6 @@ class RedditCog(BaseCog):
 
         # Add generated command to bot
         self.bot.add_command(cmd)
-        
-        # Add subreddit to cog's subreddit dict
-        self.subs[subreddit] = subreddit_command
 
     async def _reddit_command_base(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
         """Method used as a base for adding custom subreddit commands"""
