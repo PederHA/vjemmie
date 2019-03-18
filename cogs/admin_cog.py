@@ -10,26 +10,37 @@ from datetime import datetime, timedelta
 
 
 class AdminCog(BaseCog):
-    async def on_ready(self) -> None:
+    @commands.Cog.listener()
+    async def on_ready(self, *, activity_name: Optional[str]=None) -> None:
         """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
         """
-        activity = discord.Game(name='!help')
-        await self.bot.change_presence(activity=activity)
 
+        activity_name = "!help" if not activity_name else activity_name
+        activity = discord.Game(activity_name)
+        await self.bot.change_presence(activity=activity)
+        print("Client logged in")
+    
+    @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Is called when the bot joins a new guild. Sends an informative message to the log_channel
         Args:
             guild: The guild which the bot joined on (discord.Guild)
             """
         await self.send_log('Joined guild: ' + guild.name)
-
+    
+    @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Is called when the bot leaves a guild. Sends an informative message to the log_channel
         Args:
             guild: The guild which was left by the bot (discord.Guild)
             """
         await self.send_log('Left guild: ' + guild.name)
-
+    
+    @commands.command(aliases=["change_activity"])
+    @is_admin()
+    async def ca(self, ctx, activity_name: Optional[str]=None) -> None:
+        await self.on_ready(activity_name=activity_name)
+    
     @commands.command(name='serverlist',
                       aliases=['list'],
                       description='Prints a list of all the servers'
@@ -95,51 +106,6 @@ class AdminCog(BaseCog):
                 await self.send_log('Failed to send message to ' + guild.name + ' with a connection error')
             else:
                 await self.send_log('Successfully send the message to guild ' + guild.name)
-
-    @commands.command(name='adminhelp',
-                      aliases=['admin-help', 'helpadmin'],
-                      description='Sends you the names, aliases and description of all commands per PM!')
-    @is_admin()
-    async def adminhelp(self, ctx: commands.Context) -> None:
-        """This function sends a list of all the admin commands + aliases + description to the requester
-                Args:
-                    ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-        """
-        _help_string = 'command name || (aliases): || arguments || help description\n'
-        for command in self.bot.commands:
-            if ExtModule.is_admin_predicate not in command.checks:
-                continue
-            _command_help = ExtModule._help(command)
-            if len(_help_string) + len(_command_help) > 1800:
-                try:
-                    await ctx.message.author.send('```\n' + _help_string + '\n```')
-                except discord.DiscordException:
-                    raise PmForbidden
-                _help_string = 'command name || (aliases): || help description\n\n' + _command_help
-            else:
-                _help_string = _help_string + '\n\n' + _command_help
-        try:
-            await ctx.author.send('```\n' + _help_string + '\n```')
-        except discord.DiscordException:
-            raise PmForbidden
-
-    @commands.command(name='change_activity',
-                      aliases=['change_game'],
-                      description='Changes the activity in the activity feed of the bot')
-    @is_admin()
-    async def change_activity(self, ctx: commands.Context, *args) -> None:
-        activity_name = ""
-        first_word = True
-        
-        for word in args:
-            if not first_word:
-                activity_name += " "
-            activity_name += word
-            first_word = False
-        
-        activity = discord.Game(name=activity_name)
-        await self.bot.change_presence(activity=activity)
-        await self.send_log(f"Changed activity to: {activity_name}")
 
     @commands.command(name="blacklist")
     @is_admin()
@@ -208,12 +174,6 @@ class AdminCog(BaseCog):
         await asyncio.sleep(sleep_duration_sec)
         await ctx.invoke(unblacklist_cmd, member, output=False)
         await ctx.send(f"Timeout ended for {member.name}")
-
-    @commands.command(name="debug")
-    @is_admin()
-    async def load_debugger(self, ctx: commands.Context) -> None:
-        cmd = [x for x in self.bot.commands if x.name == "remove_sub"][0]
-        breakpoint()
 
     @commands.command(name="delete_messages", aliases=["dlt"])
     @is_admin()
