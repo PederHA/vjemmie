@@ -12,10 +12,11 @@ from cogs.weather_cog import WeatherCog
 from cogs.war3_cog import War3Cog
 from cogs.image_cog import ImageCog
 from cogs.sound_cog import SoundCog
+from cogs.meme_cog import MemeCog
 
 
 __all__ = [
     "AdminCog", "FunCog", "PFMCog", "PUBGCog", "RedditCog", "SoundCog",
     "UserCog", "WoWProgressCog", "TestingCog", "FryingCog", "WeatherCog",
-    "War3Cog", "ImageCog"
+    "War3Cog", "ImageCog", "MemeCog"
 ]
