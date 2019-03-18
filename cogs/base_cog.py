@@ -405,12 +405,12 @@ class BaseCog(commands.Cog):
         return _out
 
     async def send_chunked_embed_message(self, 
-                                        ctx: commands.Context, 
-                                        header: str, 
-                                        text: str, 
-                                        limit: int=None,
-                                        *, 
-                                        return_embeds: bool=False) -> Optional[list]:
+                                         ctx: commands.Context, 
+                                         header: str, 
+                                         text: str, 
+                                         limit: int=None,
+                                         *, 
+                                         return_embeds: bool=False) -> Optional[list]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
         ctx.channel.
@@ -431,18 +431,19 @@ class BaseCog(commands.Cog):
         """
         # Split text by line
         text_fields = await self._split_string_by_lines(text, limit)
+
         
         if len(text_fields) > 1:
             embeds = [
                 # Include header but no footer on first message
                 await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False) 
-                if idx == 0 else
+                if text_fields[0] == field else
                 # Include footer but no header on last message
                 await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=True)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
                 await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False)
-                for idx, field in enumerate(text_fields)]
+                for field in text_fields]
         else:
             # Create normal embed with title and footer if text is not chunked
             embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True)]
@@ -454,3 +455,7 @@ class BaseCog(commands.Cog):
         # Otherwise just send each embed as a message
         for embed in embeds:
             await ctx.send(embed=embed)
+
+    async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> str:
+        with open(path, "r", encoding=encoding) as f:
+            return await self.send_text_message(ctx, f.read())
