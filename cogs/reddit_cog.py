@@ -29,7 +29,6 @@ reddit = praw.Reddit(
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 class RedditCog(BaseCog):
-    NSFW_WHITELIST = ["imgoingtohellforthis"]
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif"]
@@ -59,13 +58,18 @@ class RedditCog(BaseCog):
         self.posts = set()
     
     def load_subs(self) -> dict:
-        with open("db/subs.json", "r") as f:
+        with open("db/reddit/subs.json", "r") as f:
             _subs = json.load(f)
             return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
 
     def dump_subs(self) -> None:
-        with open("db/subs.json", "w") as f:
+        with open("db/reddit/subs.json", "w") as f:
             json.dump(self.subs, f, indent=4)
+
+    @property
+    def NSFW_WHITELIST(self):
+        with open("db/reddit/nsfw_whitelist.json", "r") as f:
+            return json.load(f)
 
     @commands.command(name="add_sub")
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
