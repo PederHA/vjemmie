@@ -211,10 +211,9 @@ class BaseCog(commands.Cog):
         """
         try:
             cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
+            await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID) 
             if cause_of_error:
-                await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
-            else:
-                await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
+                await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.log_channel_id}.") 
         except discord.HTTPException:
@@ -278,7 +277,10 @@ class BaseCog(commands.Cog):
         else:
             out_msg = "An unknown error occured"
         await ctx.send(out_msg) # Display error to user
-        await self.send_log(error_msg, ctx) # Send entire exception traceback to log channel
+        
+        # Get formatted traceback
+        traceback_msg = traceback.format_exc()
+        await self.send_log(traceback_msg, ctx) # Send entire exception traceback to log channel
 
     async def download_from_url(self, url: str) -> bytes: # TODO: FIX
         """Downloads the contents of URL `url` and returns a bytes object.
