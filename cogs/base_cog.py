@@ -30,7 +30,8 @@ class BaseCog(commands.Cog):
     EmbedField = namedtuple("EmbedField", "name value")
     CHAR_LIMIT = 1800
     EMBED_CHAR_LIMIT = 1000
-
+    EMBED_FILL_CHAR = "\xa0"
+    
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.bot = bot
         self.log_channel_id = log_channel_id
@@ -126,7 +127,7 @@ class BaseCog(commands.Cog):
             else:
                 return color_func()
         elif isinstance(color, int):
-            return discord.Color(int)
+            return discord.Color(color)
         else:
             raise discord.DiscordException("Could not obtain color")
 
