@@ -175,10 +175,10 @@ class RedditCog(BaseCog):
             Discord Context object
         """
         _out = []
+        longest_subreddit = max([len(cmd.subreddit) for cmd in self.subs.values()]) + 1
         for cmd in sorted(self.subs.values(), key=lambda cmd: cmd.subreddit):
             commands_ = self._get_commands(cmd)
-            subreddit = cmd.subreddit.ljust(40, "\xa0")
-            s = f"r/{subreddit} Commands: {commands_}"
+            s = f"`r/{cmd.subreddit.ljust(longest_subreddit, self.EMBED_FILL_CHAR)}:`\xa0`{commands_}`"
             _out.append(s)  
         out = "\n".join(_out)
         await self.send_chunked_embed_message(ctx, "Subreddits", out, limit=1000)
