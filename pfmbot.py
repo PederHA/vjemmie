@@ -22,19 +22,15 @@ for k, v in dict(locals()).items():
     if k.endswith("Cog"):
         bot.add_cog(v(bot=bot, log_channel_id=log_channel_id))
 
-@bot.event
-async def on_ready():
-    print("Client logged in")
-
 @bot.check_once
 def check_commands(ctx):
     return ctx.message.author.id not in load_blacklist()
 
 @bot.listen()
 async def on_message(message):
-    if PFMSecrets.offensive_word(message):
+    if PFMSecrets.offensive_word(message) and message.author.id != bot.user.id:
         db = DatabaseHandler(GENERAL_DB_PATH)
-        db.whosaidit(message)
+        db.log_gaming_moment(message)
         await message.add_reaction(':cmonpfm:427842995748995082')
 
 @bot.listen()
