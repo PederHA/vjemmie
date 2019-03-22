@@ -302,8 +302,6 @@ class RedditCog(BaseCog):
         await self._reload_sub_commands()
         await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
 
-
-
     async def _reload_sub_commands(self):
         """Reloads all subreddit commands.
         """
@@ -348,7 +346,6 @@ class RedditCog(BaseCog):
         self.dump_subs()
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
-
 
     @commands.command(name="reddit")
     async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
@@ -452,20 +449,24 @@ class RedditCog(BaseCog):
         return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
     def _is_image_content(self, url) -> bool:
-        #return False if not url else "." in url and (url[-4:] in self.IMAGE_EXTENSIONS or any(img_host in url for img_host in self.IMAGE_HOSTS))
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
 
-    def _is_nsfw(self, ctx: commands.Context, sub_or_post: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
-        if isinstance(sub_or_post, praw.models.Submission):
-            post = sub_or_post
-            return post.over_18 and not ctx.channel.nsfw and post.subreddit.display_name.lower() not in self.NSFW_WHITELIST
-        elif isinstance(sub_or_post, praw.models.Subreddit):
-            sub = sub_or_post
-            return sub.over18 and not ctx.channel.nsfw and sub.display_name.lower() not in self.NSFW_WHITELIST
+    def _is_nsfw(self, ctx: commands.Context, sub: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
+        """Determines if subreddit or reddit submission is appropriate for a channel."""
+        if isinstance(sub, praw.models.Submission):
+            subreddit = sub.subreddit.display_name.lower()
+            over_18 = sub.over_18
+        elif isinstance(sub, praw.models.Subreddit):
+            subreddit = sub.display_name.lower()
+            over_18 = sub.over18
         else:
             raise TypeError("Inappropriate argument type")
-
-
+        
+        # Always allow if channel is marked NSFW
+        if ctx.channel.nsfw:
+            return False
+        else:
+            return True if over_18 and subreddit not in self.NSFW_WHITELIST else False
 
 
     async def _get_random_reddit_post(self, posts: list) -> praw.models.Submission:
