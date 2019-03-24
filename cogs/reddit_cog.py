@@ -103,6 +103,7 @@ class RedditCog(BaseCog):
             s = "s" if "," in commands_ else ""
             raise discord.DiscordException(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
         else:
+            self.subs[subreddit] = new_command
             self.dump_subs() # After adding sub, save list of subs to disk
             commands_ = self._get_commands(new_command)
             s = "s" if "," in commands_ else "" # Duplicate code yikes
