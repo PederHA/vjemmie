@@ -234,12 +234,6 @@ class SoundCog(BaseCog):
             await self.play_vc(ctx, next_sound)
             #await ctx.invoke(play_cmd, next_sound)
     
-    async def do_send(self, ctx, header: str, content: str, footer: bool, color: str=None) -> None:
-        if not header:
-            header = "general"
-        embed = await self.get_embed(ctx, fields=[self.EmbedField(header, content)], footer=footer, color=color)
-        await ctx.send(embed=embed)
-    
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context, category: str=None) -> None:
@@ -290,21 +284,18 @@ class SoundCog(BaseCog):
 
     @commands.command(name="search")
     async def search_sound(self, ctx: commands.Context, *search_query: str) -> None:
-        _out = ""
         search_query = " ".join(search_query)
+        sent = False
         for sf in self.sub_dirs:
+            _out = ""
             for sound in sf.sound_list:
                 if search_query.lower() in sound.lower():
-                    fmt_sound = f"\n{sound}"
-                    if len(_out + fmt_sound) < 1000:
-                        _out += fmt_sound
-                    else:
-                        await self.do_send(ctx, sf.header, _out, footer=False)
-                        _out = ""
-            else:
-                if _out:
-                    await self.do_send(ctx, sf.header, _out, footer=True)
-        if not _out:
+                        _out += f"\n{sound}"
+            if _out:
+                await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
+                sent = True  
+
+        if not sent:
             await ctx.send("No results")
 
 
