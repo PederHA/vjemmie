@@ -243,11 +243,21 @@ class SoundCog(BaseCog):
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context, category: str=None) -> None:
-        """This function prints a list of all the sounds on the Soundboard to the channel/user where it was requested.
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-            """
+        """Lists all available sound files
         
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context
+        category : `str`, optional
+            Sound category. 
+            See SoundCog.sub_dirs for available categories.
+        
+        Raises
+        ------
+        discord.DiscordException
+            Raised if attempting to display all sound files at once.
+        """
         def get_category(category: str) -> str:
             if category is not None:
                 if category in ["yt", "youtube", "ytdl"]:
@@ -269,19 +279,14 @@ class SoundCog(BaseCog):
         else:     
             category = get_category(category)
 
+        # Send sound list
         for sf in self.sub_dirs:
             if sf.folder == category or not category:
                 _out = ""
                 for sound in sf.sound_list:
-                    fmt_sound = f"\n{sound}"
-                    if len(_out + fmt_sound) < 1000:
-                        _out += fmt_sound
-                    else:
-                        await self.do_send(ctx, sf.header, _out, footer=False, color=sf.color)
-                        _out = ""
-                else:
-                    if _out:
-                        await self.do_send(ctx, sf.header, _out, footer=True, color=sf.color)
+                    _out += f"{sound}\n"
+                await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
+                break
 
     @commands.command(name="search")
     async def search_sound(self, ctx: commands.Context, *search_query: str) -> None:
@@ -599,6 +604,7 @@ class SoundCog(BaseCog):
             already been combined previously. 
         """
 
+        # NOTE: ugly
         infile_1 = None
         infile_2 = None
         for folder in self.sub_dirs:
@@ -613,6 +619,7 @@ class SoundCog(BaseCog):
             raise AttributeError("Could not find file ")
         
         def convert(directory: str, filename: str, to_wav: bool) -> str:
+            """Attempts to convert a file from .mp3 to .wav or vice versa"""
             directory = f"{directory}/" if directory else ""
             in_ext = "mp3" if to_wav else "wav"
             out_ext = "wav" if to_wav else "mp3"
