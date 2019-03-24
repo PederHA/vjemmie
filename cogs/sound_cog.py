@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import traceback
+import wave
 from collections import deque
 from queue import Queue
 from functools import partial
@@ -350,7 +351,7 @@ class SoundCog(BaseCog):
         try:
             valid_langs = gtts.lang.tts_langs()
         except:
-            await self.send_log(f"**URGENT**: Update gTTS. <pip install -U gTTS> {self.author_mention}")
+            await self.send_log(f"**URGENT**: Update gTTS. <pip install -U gTTS> {self.AUTHOR_MENTION}")
             raise discord.DiscordException("Google Text-to-Speech needs to be updated. Try again later.")
         
         # User error and help arguments
@@ -572,4 +573,96 @@ class SoundCog(BaseCog):
             await ctx.invoke(cmd, url)
         else:
             raise discord.DiscordException("A URL or attached file is required!")
+    
+    @commands.command(name="join", aliases=["combine"])
+    async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
+        """Joins two sound files together
         
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord context
+        file_1 : str
+            Filename of first sound (DON'T INCLUDE EXTENSION)
+        file_2 : str
+            Filename of second sound
+        
+        Raises
+        ------
+        AttributeError
+            Raised if args to either file_1 or file_2 does
+            not match a sound currently added to the soundboard.
+        FileNotFoundError
+            Raised if a converted .wav file cannot be found
+        FileExistsError
+            Raised if attempting to combine two files that have
+            already been combined previously. 
+        """
+
+        infile_1 = None
+        infile_2 = None
+        for folder in self.sub_dirs:
+            for sound in folder.sound_list:
+                if file_1 == sound:
+                    infile_1 = (folder.folder, sound)
+                elif file_2 == sound:
+                    infile_2 = (folder.folder, sound)
+                if infile_1 and infile_2:
+                    break
+        if not infile_1 or not infile_2:
+            raise AttributeError("Could not find file ")
+        
+        def convert(directory: str, filename: str, to_wav: bool) -> str:
+            directory = f"{directory}/" if directory else ""
+            in_ext = "mp3" if to_wav else "wav"
+            out_ext = "wav" if to_wav else "mp3"
+            temp = "_temp_" if to_wav else ""
+            f = f"sounds/{directory}{filename}.{in_ext}"
+            new = f"sounds/{directory}{temp}{filename}.{out_ext}"
+            if to_wav:
+                cmd = f"ffmpeg -i {f} -acodec pcm_u8 -ar 44100 {new}"
+            else:
+                cmd = f'ffmpeg -n -i "{f}" -acodec libmp3lame -ab 128k "{new}"'
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+            return new
+
+        infile_1_name = await self.bot.loop.run_in_executor(None, convert, *infile_1, True)
+        infile_2_name = await self.bot.loop.run_in_executor(None, convert, *infile_2, True)
+
+        def combine_wavs(file_1: str, file_1_orig: str, file_2:str, file_2_orig: str) -> Tuple[str, str]:
+            if not Path(file_1).exists() and not Path(file_2).exists():
+                raise FileNotFoundError("Some nice error text goes here")
+
+            wav_data = []
+            for f in [file_1, file_2]:
+                with wave.open(f, "rb") as w:
+                    wav_data.append([w.getparams(), w.readframes(w.getnframes())])
+            combined_filename = f"{file_1_orig}_{file_2_orig}"
+            filepath_base = f"sounds/{file_1_orig}_{file_2_orig}"
+            filepath_wav = f"{filepath_base}.wav"
+            filepath_mp3 = f"{filepath_base}.mp3"
+
+            if Path(filepath_mp3).exists():
+                raise FileExistsError("File already exists")
+            with wave.open(filepath_wav, "wb") as wavfile:
+                wavfile.setparams(wav_data[0][0])
+                wavfile.writeframes(wav_data[0][1])
+                wavfile.writeframes(wav_data[1][1])
+            return combined_filename, filepath_wav
+        try:
+            combined_filename_wav, combined_filepath_wav = combine_wavs(infile_1_name, file_1, infile_2_name, file_2)
+            await self.bot.loop.run_in_executor(None, convert, "", combined_filename_wav, False)
+        except FileExistsError:
+            raise
+        except:
+            await ctx.send("Something went wrong.")
+        else:
+            await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{combined_filename_wav}**")
+        finally:
+            os.remove(infile_1_name)
+            os.remove(infile_2_name)
+            try:
+                os.remove(combined_filepath_wav)
+            except:
+                pass
+
