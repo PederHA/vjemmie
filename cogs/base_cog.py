@@ -412,7 +412,8 @@ class BaseCog(commands.Cog):
                                          header: str, 
                                          text: str, 
                                          limit: int=None,
-                                         *, 
+                                         *,
+                                         color: Union[str, int]=None,
                                          return_embeds: bool=False) -> Optional[list]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
@@ -429,27 +430,28 @@ class BaseCog(commands.Cog):
         limit : `int`, optional
             Character limit. Cannot exceed 1024.
         return_embeds : `bool`, optional
-            If enabled, returns chunked message as embed objects
-            instead of sending them to ctx.channel.
+            If enabled, returns chunked message as list of 
+            embed objects instead of sending them to ctx.channel.
         """
         # Split text by line
+        if not limit or limit > self.EMBED_CHAR_LIMIT:
+            limit = self.EMBED_CHAR_LIMIT
         text_fields = await self._split_string_by_lines(text, limit)
 
-        
         if len(text_fields) > 1:
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False) 
+                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False, timestamp=False, color=color) 
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=True)
+                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], color=color)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
-                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False)
+                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False, timestamp=False, color=color)
                 for field in text_fields]
         else:
             # Create normal embed with title and footer if text is not chunked
-            embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True)]
+            embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True, color=color)]
         
         # Return embed objects if desired
         if return_embeds:
