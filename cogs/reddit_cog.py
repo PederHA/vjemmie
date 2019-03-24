@@ -212,6 +212,8 @@ class RedditCog(BaseCog):
                         _next_time = next(self.time_cycle)
         else:
             time = next(self.time_cycle) # Pump generator if no opt argument
+            if time == self.DEFAULT_TIME:
+                time = next(self.time_cycle)
         if not out_msg:
             self.DEFAULT_TIME = time
             out_msg = f"Reddit time filtering set to **{time}**."
@@ -407,7 +409,7 @@ class RedditCog(BaseCog):
             subreddit = random.choice(subreddits)
             await self.get_from_reddit(ctx, subreddit)
 
-    async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: str, default_filter: str, valid_filters: Iterable) -> str:
+    async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
         """Small helper method for getting a valid sorting filter
         for Praw and reducing code duplication in RedditCog.check_time()
         and RedditCog.check_sorting()
@@ -420,7 +422,7 @@ class RedditCog(BaseCog):
             Discord Context object
         filtering_type : `str`
             Human readable name of sorting filter. 
-        filter_ : `str`
+        filter_ : `Optional[str]`
             Reddit sorting filter. Must be in one of
             RedditCog.TIME_FILTERS or RedditCog.SORTING_FILTERS
         default_filter : `str`
@@ -443,10 +445,10 @@ class RedditCog(BaseCog):
             else:
                 return filter_
     
-    async def check_time(self, ctx, time) -> str:
+    async def check_time(self, ctx, time: Optional[str]) -> str:
         return await self._check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
 
-    async def check_sorting(self, ctx,  sorting: str) -> str:
+    async def check_sorting(self, ctx,  sorting: Optional[str]) -> str:
         return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
     def _is_image_content(self, url) -> bool:
