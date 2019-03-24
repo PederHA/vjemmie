@@ -620,49 +620,63 @@ class SoundCog(BaseCog):
             f = f"sounds/{directory}{filename}.{in_ext}"
             new = f"sounds/{directory}{temp}{filename}.{out_ext}"
             if to_wav:
-                cmd = f"ffmpeg -i {f} -acodec pcm_u8 -ar 44100 {new}"
+                cmd = f'ffmpeg -i "{f}" -acodec pcm_u8 -ar 44100 "{new}"'
             else:
-                cmd = f'ffmpeg -n -i "{f}" -acodec libmp3lame -ab 128k "{new}"'
+                cmd = f'ffmpeg -i "{f}" -acodec libmp3lame -ab 128k "{new}"'
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
             return new
-
+        
+        # Convert mp3 files to wav so the wave module can interact with them
         infile_1_name = await self.bot.loop.run_in_executor(None, convert, *infile_1, True)
         infile_2_name = await self.bot.loop.run_in_executor(None, convert, *infile_2, True)
 
-        def combine_wavs(file_1: str, file_1_orig: str, file_2:str, file_2_orig: str) -> Tuple[str, str]:
+        def join_wavs(file_1: str, file_1_orig: str, file_2:str, file_2_orig: str) -> Tuple[str, str]:
             if not Path(file_1).exists() and not Path(file_2).exists():
                 raise FileNotFoundError("Some nice error text goes here")
 
+            # Get wave file data
             wav_data = []
             for f in [file_1, file_2]:
                 with wave.open(f, "rb") as w:
                     wav_data.append([w.getparams(), w.readframes(w.getnframes())])
-            combined_filename = f"{file_1_orig}_{file_2_orig}"
+            
+            # Filenames. NOTE: This is ugly as hell
+            joined_filename = f"{file_1_orig}_{file_2_orig}"
             filepath_base = f"sounds/{file_1_orig}_{file_2_orig}"
             filepath_wav = f"{filepath_base}.wav"
             filepath_mp3 = f"{filepath_base}.mp3"
 
+            # Check if a file with the same name already exists
             if Path(filepath_mp3).exists():
                 raise FileExistsError("File already exists")
+            
+            # Join wave files
             with wave.open(filepath_wav, "wb") as wavfile:
                 wavfile.setparams(wav_data[0][0])
                 wavfile.writeframes(wav_data[0][1])
                 wavfile.writeframes(wav_data[1][1])
-            return combined_filename, filepath_wav
+            
+            # Return filename and relative filepath
+            return joined_filename, filepath_wav
+        
+        # Combine wavs
         try:
-            combined_filename_wav, combined_filepath_wav = combine_wavs(infile_1_name, file_1, infile_2_name, file_2)
-            await self.bot.loop.run_in_executor(None, convert, "", combined_filename_wav, False)
+            joined_filename_wav, joined_filepath_wav = join_wavs(infile_1_name, file_1, infile_2_name, file_2)
         except FileExistsError:
             raise
-        except:
+        except Exception:
             await ctx.send("Something went wrong.")
-        else:
-            await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{combined_filename_wav}**")
+
         finally:
+            # Delete all temporary files afterwards
             os.remove(infile_1_name)
             os.remove(infile_2_name)
-            try:
-                os.remove(combined_filepath_wav)
-            except:
-                pass
-
+            
+        # Convert 
+        if joined_filename_wav:
+            await self.bot.loop.run_in_executor(None, convert, "", joined_filename_wav, False)
+            await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{joined_filename_wav}**")
+        
+        # Delete wav version of joined file
+        if Path(joined_filepath_wav).exists():
+            os.remove(joined_filepath_wav)
