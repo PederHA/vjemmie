@@ -11,7 +11,7 @@ from collections import deque
 from queue import Queue
 from functools import partial
 from pathlib import Path
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Optional
 
 import discord
 import gtts
@@ -47,6 +47,7 @@ class SoundFolder:
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     VALID_FILE_TYPES = ["mp3"]
+    YTDL_MAXSIZE = 10000000
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.is_playing = False
         self.folder = SOUND_DIR
@@ -252,25 +253,19 @@ class SoundCog(BaseCog):
         discord.DiscordException
             Raised if attempting to display all sound files at once.
         """
-        def get_category(category: str) -> str:
+        def get_category(category: str) -> Optional[str]:    
             if category is not None:
                 if category in ["yt", "youtube", "ytdl"]:
                     return "ytdl"
                 elif category in ["tts", "texttospeech"]:
                     return "tts"
-                # Add this and raise exception if category is not recognized? 
-                # elif category in ["general", "uncategorized"]:
-                #     return ""
-                # else:
-                #     return None   
-            return ""
         
         # Parse argument `category`
+        category = category.lower()
         if not category:
-            _categories = [sf.header for sf in self.sub_dirs]
-            categories = ", ".join(_categories)
+            categories = ", ".join([sf.header for sf in self.sub_dirs])
             raise discord.DiscordException(f"Cannot display all sounds at once. Specify a category from: {categories}")
-        else:     
+        else:  
             category = get_category(category)
 
         # Send sound list
@@ -416,10 +411,15 @@ class SoundCog(BaseCog):
         try:
             dl_msg = await ctx.send("```cs\n# Downloading video...\n```")
             with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
-                result = ydl.extract_info(url=url, download=True, extra_info=ytdl_opts)
-                res = ydl.prepare_filename(result)
-                directory, file_name = os.path.split(res)
-                _file, ext = os.path.splitext(file_name)
+                video_info = ydl.extract_info(url=url, download=False, extra_info=ytdl_opts)
+
+                if video_info["filesize"] > self.YTDL_MAXSIZE:
+                    raise discord.DiscordException("Stop downloading big files, dumb fuck.")
+                else:
+                    result = ydl.extract_info(url=url, download=False, extra_info=ytdl_opts)
+                    res = ydl.prepare_filename(result)
+                    directory, file_name = os.path.split(res)
+                    _file, ext = os.path.splitext(file_name)
         except:
             # Kind of ugly, but we need to delete message _before_ raising exception
             await dl_msg.delete()
