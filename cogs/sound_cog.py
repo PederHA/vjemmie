@@ -47,7 +47,8 @@ class SoundFolder:
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     VALID_FILE_TYPES = ["mp3"]
-    YTDL_MAXSIZE = 10000000
+    YTDL_MAXSIZE = 10000000 # 10 MB
+    
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.is_playing = False
         self.folder = SOUND_DIR
@@ -55,8 +56,8 @@ class SoundCog(BaseCog):
         self.queue = deque()
         self.vc = None
         self.sub_dirs = [SoundFolder(color="blurple"), # Base sound dir with uncategorized sounds
-                         SoundFolder("tts", "TTS", "red"), 
-                         SoundFolder("ytdl", "YouTube", "blue")]
+                         SoundFolder("tts", "TTS", color="red"), 
+                         SoundFolder("ytdl", "YouTube", color="blue")]
         super().__init__(bot, log_channel_id)
     
     @property
@@ -288,37 +289,10 @@ class SoundCog(BaseCog):
                         _out += f"\n{sound}"
             if _out:
                 await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
-                sent = True  
-
+                sent = True
         if not sent:
             await ctx.send("No results")
 
-
-    ### UNUSED ###
-    def disconnector(self, voice_client: discord.VoiceClient, ctx: commands.Context) -> None:
-        """This function is passed as the after parameter of FFmpegPCMAudio() as it does not take coroutines.
-        Args:
-            voice_client: The voice client that will be disconnected (discord.VoiceClient)
-            """
-        self.is_playing = False
-
-        coro = voice_client.disconnect()
-        fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-        try:
-            fut.result()
-        except asyncio.CancelledError:
-            pass
-        
-        if len(self.queue) > 0:   
-            next_sound = self.queue[0]
-            try:
-                play_cmd = self.bot.get_command("play")
-                self.bot.loop.run_until_complete(ctx.invoke(play_cmd, next_sound))
-            except discord.DiscordException:
-                pass
-            finally:
-                self.queue.popleft()
-    
     @commands.command(name="queue")
     async def display_queue(self, ctx:commands.Context):
         if len(self.queue)>0:
@@ -551,13 +525,14 @@ class SoundCog(BaseCog):
     async def dl(self, ctx: commands.Context, url: str=None) -> None:
         """Lazy download sound command.
 
-        Depending on arguments received, calls either !ytdl or 
+        Depending on arguments received, 
+        calls either `!ytdl` or `!add_sound`
         
         Parameters
         ----------
-        ctx : commands.Context
+        ctx : `commands.Context`
             Discord Context object
-        url : str, optional
+        url : `str`, optional
             Optional HTTP(s) URL to sound file. 
             Can not be None if message has no attachment.
         """
