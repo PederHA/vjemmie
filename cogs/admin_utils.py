@@ -18,7 +18,9 @@ def save_blacklist(blacklist: list) -> None:
 # Decorator check
 def is_admin():
     def predicate(ctx):
-        return ctx.message.author.id in admins
+        if hasattr(ctx.author, "guild_permissions"):
+            return ctx.author.guild_permissions.administrator
+        return False
     return commands.check(predicate)
 
 
