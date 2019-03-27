@@ -115,7 +115,7 @@ class ImageCog(BaseCog):
             Image background with Image overlay pasted on top of it
         """
         overlay = overlay.resize(resize, resample=Image.BICUBIC)
-        background.paste(overlay, offset)
+        background.paste(overlay, offset, overlay.convert("RGBA"))
         return background 
     
     async def _do_paste(self, 
