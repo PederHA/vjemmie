@@ -1,33 +1,31 @@
 import asyncio
-import itertools
+import glob
 import os
 import random
 import subprocess
-import sys
-import threading
-import traceback
 import wave
+import hashlib
 from collections import deque
-from queue import Queue
 from functools import partial
+from itertools import islice, chain
 from pathlib import Path
-from typing import Iterator, Tuple, Optional
+from queue import Queue
+from typing import Iterator, Optional, Tuple
 from urllib.parse import urlparse
-import glob
-from pathvalidate import sanitize_filename
 
 import discord
 import gtts
 import youtube_dl
-from youtube_dl import YoutubeDL
 from async_timeout import timeout
 from discord import opus
 from discord.ext import commands
+from pathvalidate import sanitize_filename
+from youtube_dl import YoutubeDL
 
+from cogs.admin_utils import is_admin
 from cogs.base_cog import BaseCog
 from ext_module import ExtModule
 from utils.config import SOUND_DIR
-
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -63,11 +61,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         super().__init__(source)
         self.requester = requester
 
-        self.title = data.get('title')
-        self.web_url = data.get('webpage_url')
-
-        # YTDL info dicts (data) have other useful information you might want
-        # https://github.com/rg3/youtube-dl/blob/master/README.md
+        self.title = data.get("title")
+        self.web_url = data.get("webpage_url")
 
     def __getitem__(self, item: str):
         """Allows us to access attributes similar to a dict.
@@ -83,24 +78,26 @@ class YTDLSource(discord.PCMVolumeTransformer):
         to_run = partial(ytdl.extract_info, url=search, download=download)
         data = await loop.run_in_executor(None, to_run)
 
-        if 'entries' in data:
+        if "entries" in data:
             # take first item from a playlist
-            data = data['entries'][0]
+            data = data["entries"][0]
 
-        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
+        await ctx.send(f"```\nAdded {data['title']} to the Queue.\n```", delete_after=10)
 
         if download:
             source = ytdl.prepare_filename(data)
         else:
-            return {'webpage_url': data['webpage_url'], 'requester': ctx.author, 'title': data['title']}
+            return {"webpage_url": data["webpage_url"], "requester": ctx.author, "title": data["title"]}
 
         return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
-    
+
     @classmethod
     async def create_local_source(cls, ctx, subdir: str, sound_name: str, *, loop):
         loop = loop or asyncio.get_event_loop()
+        # Get path to local sound file
         path = glob.glob(f"sounds/{subdir}*{sound_name}*")[0]
-        return cls(discord.FFmpegPCMAudio(path), data={"title":sound_name}, requester=ctx.author) 
+        await ctx.send(f"```\nAdded {sound_name} to the Queue.\n```", delete_after=10)
+        return cls(discord.FFmpegPCMAudio(path), data={"title":sound_name}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
@@ -127,10 +124,10 @@ class AudioPlayer:
         self.next = asyncio.Event()
 
         self.np = None
-        self.volume = .5
+        self.volume = 1
         self.current = None
-        
-        self.timeout_duration = 5
+
+        self.timeout_duration = 60
 
         ctx.bot.loop.create_task(self.player_loop())
 
@@ -152,10 +149,10 @@ class AudioPlayer:
                 except:
                     await self.channel.send("There was an error processing your song")
                     continue
-            
+
             source.volume = self.volume
             self.current = source
-            
+
             self.guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
             self.np = await self.channel.send(f"```\nNow playing: {source.title}```")
             await self.next.wait()
@@ -167,7 +164,7 @@ class AudioPlayer:
                 await self.np.delete()
             except discord.HTTPException:
                 pass
-    
+
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
         return self.bot.loop.create_task(self.cog.cleanup(guild))
@@ -181,36 +178,50 @@ class SoundFolder:
 
     MAXLEN = 1800
     BASE_DIR = SOUND_DIR
-    
+
     def __init__(self, folder:str="", header:str=None, color: str=None) -> None:
         self.folder = folder
         self.header = header if header else "General"
         self.color = color
 
     @property
-    def sound_list(self) -> list:    
-        return sorted([i.rsplit(".", 1)[0] for i in os.listdir(f"{self.BASE_DIR}/{self.folder}") if i.endswith(".mp3") or i.endswith(".webm")])
+    def sound_list(self) -> list:
+        return sorted(
+            [
+            i.rsplit(".", 1)[0]
+            for i in os.listdir(f"{self.BASE_DIR}/{self.folder}")
+            if i.endswith(".mp3") or i.endswith(".webm") # Only include known compatible containers
+            ],
+            key=lambda f: f.lower()) # Sort case insensitive
+
 
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     VALID_FILE_TYPES = ["mp3"]
     YTDL_MAXSIZE = 10000000 # 10 MB
-    
+    SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned"]
+
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
-        self.is_playing = False
-        self.folder = SOUND_DIR
-        #self.queue = Queue()
-        self.queue = deque()
-        self.sub_dirs = [SoundFolder(color="blurple"), # Base sound dir with uncategorized sounds
-                         SoundFolder("tts", "TTS", color="red"), 
-                         SoundFolder("ytdl", "YouTube", color="blue")]
+        subfolders = [
+            f.name for f in os.scandir(SOUND_DIR)
+            if f.is_dir() and f.name not in self.SOUND_DIR_IGNORE
+        ]
         
+        # Sound file directories
+        self.sub_dirs = [
+                         SoundFolder(sfolder, sfolder.capitalize(),
+                         color=int(hashlib.blake2b(sfolder.encode(),
+                         digest_size=24, key=b"vjemmie").hexdigest()[:6], 16))
+                         for sfolder in subfolders
+                         ]
+        
+        # Per-guild audio players
         self.players = {}
 
         super().__init__(bot, log_channel_id)
 
-        
-    
+
+
     @property
     def sound_list(self) -> list:
         """
@@ -222,22 +233,22 @@ class SoundCog(BaseCog):
         Raises Exception if the folder contains no .mp3 files.
         """
 
-        s = list(itertools.chain(*[sf.sound_list for sf in self.sub_dirs]))
+        s = list(chain(*[sf.sound_list for sf in self.sub_dirs]))
         if not s:
             raise Exception("No mp3 files in the given folder")
         return s
-    
+
     async def cleanup(self, guild):
         try:
             await guild.voice_client.disconnect()
         except AttributeError:
             pass
-        
+
         try:
             del self.players[guild.id]
         except KeyError:
             pass
-    
+
     def get_player(self, ctx: commands.Context) -> AudioPlayer:
         """Retrieve the guild player, or generate one."""
         try:
@@ -246,8 +257,8 @@ class SoundCog(BaseCog):
             player = AudioPlayer(ctx)
             self.players[ctx.guild.id] = player
         return player
-    
-    
+
+
     @commands.command(name='connect')
     async def connect(self, ctx, *, channel: discord.VoiceChannel=None):
         """Connect to voice.
@@ -267,7 +278,7 @@ class SoundCog(BaseCog):
                 raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
 
         vc = ctx.voice_client
-        
+
         # If bot is restarted while connected, it can sometimes get "stuck" in a channel
         if not vc and self.bot.user.id in [user.id for user in channel.members]:
             await channel.connect()
@@ -284,8 +295,8 @@ class SoundCog(BaseCog):
             try:
                 await channel.connect()
             except asyncio.TimeoutError:
-                raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')    
-    
+                raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
+
     @commands.command(name="play", aliases=["ytdl", "yt"])
     async def play(self, ctx: commands.Context, *args, voice_channel: commands.VoiceChannelConverter=None) -> None:
         """
@@ -301,7 +312,7 @@ class SoundCog(BaseCog):
             await ctx.invoke(self.connect, channel=voice_channel)
 
         player = self.get_player(ctx)
-        
+
         async def parse_sound_name(arg) -> Tuple[str, str]:
             #if arg in self.sound_list:
             for sf in self.sub_dirs:
@@ -320,13 +331,13 @@ class SoundCog(BaseCog):
                     return await parse_sound_name(sound_name)
         self.bot.voice_clients[0]._state.heartbeat_timeout = 5
         uri = " ".join(args)
-        
+
         # Play audio from youtube
         if urlparse(uri).scheme in ["http", "https"]:
             download = True if ctx.invoked_with == "ytdl" else False
             source = await YTDLSource.create_source(ctx, uri, loop=self.bot.loop, download=download)
             await player.queue.put(source)
-        
+
         # Play local file
         else:
             uri = uri.lower()
@@ -344,7 +355,7 @@ class SoundCog(BaseCog):
             await ctx.invoke(self.skip)
         else:
             await self.cleanup(ctx.guild)
-    
+
     @commands.command(name='skip')
     async def skip(self, ctx):
         """Skip the song."""
@@ -359,12 +370,12 @@ class SoundCog(BaseCog):
             return
 
         vc.stop()
-        await ctx.send(f'**`{ctx.author}`**: Skipped the song!')    
-    
+        await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
 
-    
     @commands.command(name="volume", aliases=["vol"])
-    async def change_volume(self, ctx, *, vol: float):
+    @is_admin()
+    async def change_volume(self, ctx, *, vol: int):
+        """Sets player volume (1-100)"""
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
@@ -372,14 +383,14 @@ class SoundCog(BaseCog):
 
         if not 0 < vol < 101:
             return await ctx.send('Please enter a value between 1 and 100.')
-        
+
         player = self.get_player(ctx)
 
         if vc.source:
             vc.source.volume = vol / 100
-        
+
         player.volume = vol / 100
-        await ctx.send(f'**`{ctx.author}`**: Set the volume to **{vol}%**') 
+        await ctx.send(f'**`{ctx.author}`**: Set the volume to **{vol}%**')
 
     @commands.command(name="now_playing", aliases=["np"])
     async def now_playing(self, ctx) -> None:
@@ -387,19 +398,19 @@ class SoundCog(BaseCog):
 
         if not vc or not vc.is_connected():
             return await ctx.send("I am not currently connected to voice!", delete_after=5)
-        
+
         player = self.get_player(ctx)
         if not player.current:
             return await ctx.send("I am not currently playing anything!")
-        
+
         try:
             await player.np.delete()
         except discord.HTTPException:
             pass
-        
+
         player.np = await ctx.send(f'**Now Playing:** `{vc.source.title}` '
                                    f'requested by `{vc.source.requester}`')
-    
+
     @commands.command(name="destroy", aliases=["quit"])
     async def destroy_player(self, ctx) -> None:
         vc = ctx.voice_client
@@ -407,8 +418,8 @@ class SoundCog(BaseCog):
         if not vc or not vc.is_connected():
             return await ctx.send('I am not currently playing anything!', delete_after=20)
 
-        await self.cleanup(ctx.guild)        
-    
+        await self.cleanup(ctx.guild)
+
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
     async def soundlist(self, ctx: commands.Context, category: Optional[str]=None) -> None:
@@ -427,17 +438,19 @@ class SoundCog(BaseCog):
         discord.DiscordException
             Raised if attempting to display all sound files at once.
         """
-        def get_category(category: str) -> Optional[str]:    
+        def get_category(category: str) -> Optional[str]:
             if category is not None:
                 if category in ["yt", "youtube", "ytdl"]:
                     return "ytdl"
                 elif category in ["tts", "texttospeech"]:
                     return "tts"
-        
+                elif category in [sf.folder for sf in self.sub_dirs]:
+                    return category
+
         # Parse argument `category`
         if not category:
-            categories = ", ".join([sf.header for sf in self.sub_dirs])
-            await ctx.send(f"Cannot display all sounds at once. Specify a category from: {categories}")
+            categories = ", ".join([f"**`{sf.folder}`**" for sf in self.sub_dirs])
+            await ctx.send(f"Cannot display all sounds at once.\nSpecify a category from: {categories}")
             return
 
         category = get_category(category.lower())
@@ -459,7 +472,7 @@ class SoundCog(BaseCog):
             _out = ""
             for sound in sf.sound_list:
                 if search_query.lower() in sound.lower():
-                        _out += f"\n{sound}"
+                    _out += f"\n{sound}"
             if _out:
                 await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
                 sent = True
@@ -467,35 +480,44 @@ class SoundCog(BaseCog):
             await ctx.send("No results")
 
     @commands.command(name="queue")
-    async def display_queue(self, ctx:commands.Context):
-        if len(self.queue)>0:
-            _queue = await self.format_output([s for _, s in self.queue], enum=True, formatting="glsl")
-            msg = f"Sound files currently queued up:\n{_queue}"
-        else:
-            msg = "No sound files in queue."
-        await ctx.send(msg)
-    
-    @commands.command(name="texttospeech",
-                      aliases=["tts", "text-to-speech"])
+    async def show_queue(self, ctx) -> Optional[str]:
+        vc = ctx.voice_client
+
+        if not vc or not vc.is_connected():
+            return await ctx.send("I am not currently connected to a voice channel!", delete_after=5)
+
+        player = self.get_player(ctx)
+        if player.queue.empty():
+            return await ctx.send("Queue is empty!")
+
+        upcoming = list(islice(player.queue._queue, 0, 5))
+
+        out_msg = "\n".join(f'**`{up["title"]}`**' for up in upcoming)
+        embed = await self.get_embed(ctx, fields=[self.EmbedField("Queue", out_msg)], color="red")
+        await ctx.send(embed=embed)
+
+    @commands.command(name="tts",
+                      aliases=["texttospeech", "text-to-speech"])
     async def texttospeech(self, ctx: commands.Context, text: str, language: str="en", filename: Optional[str]=None) -> None:
-        
+        """Text-to-speech
+        """
         help_str = ("2 arguments required: "
                                 "`text` "
                                 "`language` "
                                 "\nType `!tts lang` for more information about available languages.")
-        
-        # gTTS exception handling. 
+
+        # gTTS exception handling.
         # The language list keeps breaking between versions.
         try:
             valid_langs = gtts.lang.tts_langs()
         except:
             await self.send_log(f"**URGENT**: Update gTTS. <pip install -U gTTS> {self.AUTHOR_MENTION}")
             raise discord.DiscordException("Google Text-to-Speech needs to be updated. Try again later.")
-        
+
         # User error and help arguments
         if not text:
-            raise discord.DiscordException("Text for TTS is a required argument.") 
-        
+            raise discord.DiscordException("Text for TTS is a required argument.")
+
         elif text in ["languages", "lang", "options"]:
             langs = [f"{lang_long}: {lang_short}" for lang_long, lang_short in valid_langs.items()]
             output = await self.format_output(langs, item_type="languages") # should be item_name/category smh
@@ -504,13 +526,13 @@ class SoundCog(BaseCog):
 
         # Get tts object
         tts = gtts.gTTS(text=text, lang=language)
-        
+
         # Get filename
         if filename:
             sound_name = sanitize_filename(filename)
         else:
             sound_name = sanitize_filename(text.split(" ")[0])
-        
+
         # Check if filename already exists
         if not Path(f"sounds/ytdl/{sound_name}.mp3").exists() or len(sound_name) <= 5:
             sound_name = sanitize_filename(text)
@@ -519,10 +541,10 @@ class SoundCog(BaseCog):
 
         # Save mp3 file
         tts.save(f"sounds/ytdl/{sound_name}.mp3")
-        
+
         # Confirm creation of file
         await ctx.send(f'Sound created: **{sound_name}**')
-        
+
         # Try to play created sound file in author's voice channel afterwards
         try:
             if ctx.message.author.voice.channel is not None:
@@ -563,7 +585,7 @@ class SoundCog(BaseCog):
         directory, file_name, extension, sound_file = await self._do_download_sound(url)
         with open(f"{directory}/{file_name}.{extension}", "wb") as f:
             f.write(sound_file)
-        await ctx.send(f"Saved file {file_name}.{extension}")    
+        await ctx.send(f"Saved file {file_name}.{extension}")
 
     async def _do_download_sound(self, url: str) -> Tuple[str, str, str, bytes]:
         """Attempts to download file from URL. 
@@ -605,7 +627,7 @@ class SoundCog(BaseCog):
             }
         # Generate formatted string of valid file types
         file_types = ", ".join(VALID_FILETYPES.keys())
-        
+
         # Get file extension
         try:
             # TODO: This sucks. Find a cleaner way
@@ -615,13 +637,13 @@ class SoundCog(BaseCog):
             # Fails if URL is not a direct link to a file
             raise discord.DiscordException("Invalid URL. Must be a direct link to a file. "
                                            "Example: http://example.com/file.mp3")
-        
+
         # Check if file type is valid
         directory = VALID_FILETYPES.get(extension)
         if not directory:
             # Fails if file type is not defined in VALID_FILETYPES
             raise discord.DiscordException(f"Invalid file type. Must be one of: **{file_types}**")
-        
+
         # Attempt to download file
         sound_file = await self.download_from_url(url)
         return directory, file_name, extension, sound_file
@@ -649,7 +671,7 @@ class SoundCog(BaseCog):
             await ctx.invoke(cmd, url)
         else:
             raise discord.DiscordException("A URL or attached file is required!")
-    
+
     @commands.command(name="join", aliases=["combine"])
     async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
         """Joins two sound files together
@@ -688,7 +710,7 @@ class SoundCog(BaseCog):
                     break
         if not infile_1 or not infile_2:
             raise AttributeError("Could not find file ")
-        
+
         def convert(directory: str, filename: str, to_wav: bool) -> str:
             """Attempts to convert a file from .mp3 to .wav or vice versa"""
             directory = f"{directory}/" if directory else ""
@@ -703,7 +725,7 @@ class SoundCog(BaseCog):
                 cmd = f'ffmpeg -i "{f}" -acodec libmp3lame -ab 128k "{new}"'
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
             return new
-        
+
         # Convert mp3 files to wav so the wave module can interact with them
         infile_1_name = await self.bot.loop.run_in_executor(None, convert, *infile_1, True)
         infile_2_name = await self.bot.loop.run_in_executor(None, convert, *infile_2, True)
@@ -717,7 +739,7 @@ class SoundCog(BaseCog):
             for f in [file_1, file_2]:
                 with wave.open(f, "rb") as w:
                     wav_data.append([w.getparams(), w.readframes(w.getnframes())])
-            
+
             # Filenames. NOTE: This is ugly as hell
             joined_filename = f"{file_1_orig}_{file_2_orig}"
             filepath_base = f"{BASE_DIR}/{file_1_orig}_{file_2_orig}"
@@ -727,16 +749,16 @@ class SoundCog(BaseCog):
             # Check if a file with the same name already exists
             if Path(filepath_mp3).exists():
                 raise FileExistsError("File already exists")
-            
+
             # Join wave files
             with wave.open(filepath_wav, "wb") as wavfile:
                 wavfile.setparams(wav_data[0][0])
                 wavfile.writeframes(wav_data[0][1])
                 wavfile.writeframes(wav_data[1][1])
-            
+
             # Return filename and relative filepath
             return joined_filename, filepath_wav
-        
+
         # Combine wavs
         try:
             joined_filename_wav, joined_filepath_wav = join_wavs(infile_1_name, file_1, infile_2_name, file_2)
@@ -748,12 +770,12 @@ class SoundCog(BaseCog):
             # Delete all temporary files afterwards
             os.remove(infile_1_name)
             os.remove(infile_2_name)
-            
-        # Convert 
+
+        # Convert
         if joined_filename_wav:
             await self.bot.loop.run_in_executor(None, convert, "", joined_filename_wav, False)
             await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{joined_filename_wav}**")
-        
+
         # Delete wav version of joined file
         if Path(joined_filepath_wav).exists():
             os.remove(joined_filepath_wav)
