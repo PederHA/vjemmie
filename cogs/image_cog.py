@@ -272,10 +272,15 @@ class ImageCog(BaseCog):
 
     @commands.command(name="saxophone")
     async def saxophone(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
-        """https://i.imgur.com/2LQkErQ.png"""
+        """https://i.imgur.com/Gfw036Q.png"""
         await self._composite_images(ctx, "saxophone.png", (366, 358), [(0, 0), (0, 361)], user, template_overlay=True)
 
     @commands.command(name="fingercircle")
     async def fingercircle(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
-        """https://i.imgur.com/Vbkfu4u.jpg"""
+        """https://i.imgur.com/HnpJkvB.jpg"""
         await self._composite_images(ctx, "fingercircle.jpg", (251, 278), (317, 20), user)
+    
+    @commands.command(name="lordofthepit")
+    async def lordofthepit(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+        """https://i.imgur.com/IRntn02.jpg"""
+        await self._composite_images(ctx, "lordofthepit.jpg", (559, 410), (57, 110), user)
