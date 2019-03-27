@@ -1,6 +1,7 @@
-from discord.ext import commands
 import json
 import traceback
+
+from discord.ext import commands
 
 owners = [103890994440728576]
 
@@ -30,7 +31,31 @@ def is_owner():
     return commands.check(predicate)
 
 
-def is_not_blacklisted(ctx):
+def is_not_blacklisted():
     def predicate(ctx):
         return ctx.message.author.id not in load_blacklist()
+    return commands.check(predicate)
+
+
+def guild_predicate(ctx, guild_id):
+    if hasattr(ctx.author, "guild"):
+        return ctx.message.author.guild.id == guild_id
+    return False
+
+
+def is_pfm():
+    def predicate(ctx):
+        return guild_predicate(ctx, 133332608296681472)
+    return commands.check(predicate)
+
+
+def is_dgvgk():
+    def predicate(ctx):
+        return guild_predicate(ctx, 178865018031439872)
+    return commands.check(predicate)
+
+
+def is_test_server():
+    def predicate(ctx):
+        return guild_predicate(ctx, 340921036201525248)
     return commands.check(predicate)
