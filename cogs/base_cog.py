@@ -317,10 +317,8 @@ class BaseCog(commands.Cog):
             *_, file_name = image_url.split("/")
             fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
         else:
-            with open(filepath, "rb") as f:
-                image = f.read()
             *_, file_name = filepath.split("/")
-        msg = await channel.send(file=discord.File(image, file_name))
+        msg = await channel.send(file=discord.File(filepath, file_name))
         return msg
 
     async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple") -> None:
