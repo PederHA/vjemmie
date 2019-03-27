@@ -1,13 +1,13 @@
-import discord
-from discord.ext import commands
-from typing import Iterable, Union, Optional, List
-from datetime import datetime, timedelta
 import traceback
-from cogs.admin_utils import is_not_blacklisted
+import hashlib
 from collections import namedtuple
-import requests
+from datetime import datetime, timedelta
+from typing import Iterable, List, Optional, Union
+
 import aiohttp
-from typing import Optional
+import discord
+import requests
+from discord.ext import commands
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -464,3 +464,10 @@ class BaseCog(commands.Cog):
     async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> str:
         with open(path, "r", encoding=encoding) as f:
             return await self.send_text_message(ctx, f.read())
+
+    def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> int:
+        phrase = str(phrase).encode()
+        h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")    
+        if as_int:
+            return int(h.hexdigest(), 16)
+        return h.hexdigest()

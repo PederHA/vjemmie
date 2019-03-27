@@ -4,7 +4,6 @@ import os
 import random
 import subprocess
 import wave
-import hashlib
 from collections import deque
 from functools import partial
 from itertools import islice, chain
@@ -210,8 +209,7 @@ class SoundCog(BaseCog):
         # Sound file directories
         self.sub_dirs = [
                          SoundFolder(sfolder, sfolder.capitalize(),
-                         color=int(hashlib.blake2b(sfolder.encode(),
-                         digest_size=24, key=b"vjemmie").hexdigest()[:6], 16))
+                         color=self.generate_hex_color_code(sfolder))
                          for sfolder in subfolders
                          ]
         
