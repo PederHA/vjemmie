@@ -1,9 +1,13 @@
+from itertools import zip_longest
+from typing import List, Tuple, Union
+
 import discord
 from discord.ext import commands
-from cogs.base_cog import BaseCog
 from PIL import Image, ImageDraw, ImageFont
-from typing import Tuple, Union, List
-from itertools import zip_longest
+
+from cogs.admin_utils import MemberOrURLConverter
+from cogs.base_cog import BaseCog
+
 
 class ImageCog(BaseCog):
     """Various commands for creating dank memes featuring a user's avatar.
@@ -13,7 +17,7 @@ class ImageCog(BaseCog):
                              template: str,
                              resize:Union[Tuple[int,int], list],
                              offset:Union[Tuple[int,int], list],
-                             user: commands.MemberConverter=None,
+                             user: MemberOrURLConverter=None,
                              text: Union[List[dict], dict]=None,
                              template_overlay: bool=False) -> None:
         """Creates a composite image of a user's avatar and a given template.
@@ -46,8 +50,10 @@ class ImageCog(BaseCog):
         # Use message author's avatar if no user is specified
         if not user:
             user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024 suffix since a lower res image danker anyway
-        else:
+        elif isinstance(user, discord.Member):
             user_avatar_url = user.avatar_url
+        elif isinstance(user, str):
+            user_avatar_url = user
 
         # Download user's avatar
         with open("memes/temp/temp.webp", "wb") as f:
@@ -205,52 +211,52 @@ class ImageCog(BaseCog):
         return Image.alpha_composite(background, _txt)
 
     @commands.command(name="fuckup", aliases=["nasa"])
-    async def nasa(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def nasa(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "nasa.jpg", (100, 100), (347, 403), user)
 
     @commands.command(name="northkorea", aliases=["nk"])
-    async def northkorea(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def northkorea(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/PiqzXNs.jpg"""
         await self._composite_images(ctx, "northkorea1.jpg", (295, 295), (712, 195), user)
 
     @commands.command(name="cancer", aliases=["cer"])
-    async def cancer(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def cancer(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/vDtktIq.jpg"""
         await self._composite_images(ctx, "cancer.jpg", (762, 740), (772, 680), user)
 
     @commands.command(name="mlady", aliases=["neckbeard"])
-    async def mlady(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def mlady(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/2LQkErQ.png"""
         await self._composite_images(ctx, "mlady.png", (200, 200), (161, 101), user, template_overlay=True)
 
     @commands.command(name="loud", aliases=["loudest"])
-    async def loud(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def loud(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/y7y7MRt.jpg"""
         await self._composite_images(ctx, "loud.jpg", (190, 190), (556, 445), user)
 
     @commands.command(name="guys", aliases=["guyswant"])
-    async def guys_only_want_one_thing(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def guys_only_want_one_thing(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/5oUe8VN.jpg"""
         await self._composite_images(ctx, "guyswant.jpg", (400, 400), (121, 347), user)
 
     @commands.command(name="furry")
-    async def furry(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def furry(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Jq3uu02.png"""
         await self._composite_images(ctx, "furry.png", (230, 230), (26, 199), user, template_overlay=True)
 
     @commands.command(name="autism", aliases=["thirtyseven"])
-    async def autism(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def autism(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "autism.jpg", (303, 255), (0, 512), user)
 
     @commands.command(name="disabled")
-    async def disabled(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def disabled(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/hZSghxu.jpg"""
         await self._composite_images(ctx, "disabled.jpg", (320, 320), (736, 794), user)
 
     @commands.command(name="autism2")
-    async def autism2(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def autism2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/6lxlqPk.jpg"""
         text_content = user.name if user else ctx.message.author.name
         text = {
@@ -266,21 +272,21 @@ class ImageCog(BaseCog):
         await self._composite_images(ctx, "autism2.jpg", [(73, 73), (73, 73), (46, 46)], [(15, 1), (15, 551), (123, 709)], user, text=_txt)
 
     @commands.command(name="fatfuck")
-    async def fatfuck(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def fatfuck(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Vbkfu4u.jpg"""
         await self._composite_images(ctx, "fatfuck.jpg", (385, 385), (67, 0), user)
 
     @commands.command(name="saxophone")
-    async def saxophone(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def saxophone(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Gfw036Q.png"""
         await self._composite_images(ctx, "saxophone.png", (366, 358), [(0, 0), (0, 361)], user, template_overlay=True)
 
     @commands.command(name="fingercircle")
-    async def fingercircle(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def fingercircle(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HnpJkvB.jpg"""
         await self._composite_images(ctx, "fingercircle.jpg", (251, 278), (317, 20), user)
     
     @commands.command(name="lordofthepit")
-    async def lordofthepit(self, ctx: commands.Context, user: commands.MemberConverter=None) -> None:
+    async def lordofthepit(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/IRntn02.jpg"""
         await self._composite_images(ctx, "lordofthepit.jpg", (559, 410), (57, 110), user)
