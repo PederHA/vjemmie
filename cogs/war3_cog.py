@@ -13,6 +13,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
+from cogs.admin_utils import is_dgvgk
 
 
 class War3Cog(BaseCog):
@@ -25,6 +26,7 @@ class War3Cog(BaseCog):
 
     
     @commands.command(name="add")
+    @is_dgvgk()
     async def add_user(self, ctx: commands.Context, user_id: int, realname: str=None, game="legiontd") -> None:
         for member in self.bot.get_all_members():
             # This is the only way I found to obtain an arbitrary user's nickname
@@ -36,6 +38,7 @@ class War3Cog(BaseCog):
             await ctx.send(msg)
     
     @commands.command(name="leaderboard")
+    @is_dgvgk()
     async def leaderboard(self, ctx: commands.Context, game="legiontd", alias: bool=False, *, post_game: bool=False) -> None:
         players = self.db.get_players(game, alias=alias)
         output = "```\nDGVGK Legion TD Rankings:\n\n"
@@ -60,6 +63,7 @@ class War3Cog(BaseCog):
         
     
     @commands.command(name="result")
+    @is_dgvgk()
     async def result(self, ctx:commands.Context, winners: str, losers: str=None, game="legiontd", alias: bool=False, preview: bool=False):
         """
         Report result of a game, resulting in a rating update for the players involved.
@@ -229,6 +233,7 @@ class War3Cog(BaseCog):
             return rating_gain, rating_loss
 
     @commands.command(name="teams")
+    @is_dgvgk()
     async def autobalance(self, ctx: commands.Context, players: str=None, game: str="legiontd") -> None:
         """
         Distributes players to 2 teams based on their rating.
