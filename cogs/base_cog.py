@@ -22,7 +22,7 @@ class BaseCog(commands.Cog):
     Base Cog from which all other cogs are subclassed.
     """
     
-    IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube"]
+    IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
     #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
     IMAGE_CHANNEL_ID = 549649397420392567
     LOG_CHANNEL_ID = 340921036201525248
@@ -355,6 +355,8 @@ class BaseCog(commands.Cog):
             else:
                 cmd_name = command.signature.ljust(35,"\xa0")
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+        if not _out_str:
+            return
         field = self.EmbedField(f"{self.cog_name} commands", _out_str)
         embed = await self.get_embed(ctx, fields=[field])
         await ctx.send(embed=embed)
