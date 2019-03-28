@@ -204,6 +204,8 @@ class SoundCog(BaseCog):
 
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         super().__init__(bot, log_channel_id)
+        
+        # Find all subdirectories
         subfolders = [
             f.name for f in os.scandir(SOUND_DIR)
             if f.is_dir() and f.name not in self.SOUND_DIR_IGNORE
@@ -350,7 +352,7 @@ class SoundCog(BaseCog):
                 else:
                     sound_name = random.choice(self.sound_list)
                     return await parse_sound_name(sound_name)
-        self.bot.voice_clients[0]._state.heartbeat_timeout = 5
+        
         uri = " ".join(args)
 
         # Play audio from youtube
