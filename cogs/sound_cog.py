@@ -22,7 +22,7 @@ from discord.ext import commands
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
-from cogs.admin_utils import is_admin
+from ext.checks utils import is_admin
 from cogs.base_cog import BaseCog, InvalidFiletype
 from ext_module import ExtModule
 from utils.config import SOUND_DIR
@@ -292,7 +292,7 @@ class SoundCog(BaseCog):
         if players:
             await ctx.send(players)
         else:
-            await ctx.send("No players active")
+            await ctx.send("No active audio players")
     
     @commands.command(name="connect", aliases=["join"])
     async def connect(self, ctx, *, channel: discord.VoiceChannel=None):

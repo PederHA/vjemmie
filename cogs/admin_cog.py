@@ -2,7 +2,7 @@ from discord.ext import commands
 import discord
 from ext_module import ExtModule
 from ext_module import PmForbidden
-from cogs.admin_utils import load_blacklist, save_blacklist, is_admin
+from ext.checks utils import load_blacklist, save_blacklist, is_admin
 from cogs.base_cog import BaseCog
 from typing import Union, Optional
 import asyncio

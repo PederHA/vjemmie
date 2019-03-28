@@ -13,7 +13,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-from cogs.admin_utils import is_dgvgk
+from ext.checks utils import is_dgvgk
 
 
 class War3Cog(BaseCog):

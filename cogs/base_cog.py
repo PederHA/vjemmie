@@ -12,7 +12,7 @@ import aiohttp
 import discord
 import requests
 from discord.ext import commands
-from cogs.admin_utils import is_pfm
+from ext.checks utils import is_pfm
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',

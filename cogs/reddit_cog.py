@@ -16,7 +16,7 @@ import discord
 import praw
 from discord.ext import commands
 
-from cogs.admin_utils import is_admin, is_not_blacklisted
+from ext.checks utils import is_admin
 from cogs.base_cog import BaseCog
 from ext_module import ExtModule
 
@@ -31,7 +31,7 @@ RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"],
 class RedditCog(BaseCog):
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
-    IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif"]
+    
     IMAGE_HOSTS = ["imgur.com", "i.redd.it"]
     TIME_FILTERS = ["all", "year", "month", "week", "day"]
     SORTING_FILTERS = ["hot", "top"]
@@ -610,13 +610,13 @@ class RedditCog(BaseCog):
             if is_text or self._is_image_content(post.url):
                 break
         
-        # Obtain title and image URL or selftext and None if is_text==True
+        # Obtain (title, image URL) or (selftext, None) if is_text==True
         out_text, image_url = await self._format_reddit_post(post, subreddit, is_text)
 
         # Rehost image to discord CDN if image is hosted on Imgur
-        # Discord has trouble embedding Imgur images 
+        # Discord has trouble embedding Imgur images
         if image_url and "imgur" in image_url:
-            msg = await self.upload_image_to_discord(image_url)
+            msg = await self.rehost_image_to_discord(image_url)
             image_url = msg.attachments[0].url
 
         # Embed image if image URL is not None

@@ -5,7 +5,7 @@ import random
 import os
 from cogs.db_cog import DatabaseHandler
 from cogs.base_cog import BaseCog
-from cogs.admin_utils import is_pfm
+from ext.checks utils import is_pfm
 
 class PFMCog(BaseCog):
     """

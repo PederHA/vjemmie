@@ -4,6 +4,7 @@ from ext_module import ExtModule
 import requests
 import shutil
 from cogs.base_cog import BaseCog
+from ext.checks utils import is_owner
 import unicodedata
 
 class TestingCog(BaseCog):
@@ -80,5 +81,10 @@ class TestingCog(BaseCog):
         if emoji_name is not None:
             out += f"\nI am the sheriff of {emoji_name.title()}"
         await ctx.send(out)
-    
 
+    @commands.command(name="dbg")
+    @is_owner()
+    async def dbg(self, ctx: commands.Context) -> None:
+        breakpoint()
+        print("yeah!")
+        
