@@ -4,7 +4,7 @@ from ext_module import ExtModule
 import requests
 import shutil
 from cogs.base_cog import BaseCog
-from ext.checks utils import is_owner
+from ext.checks import is_owner
 import unicodedata
 
 class TestingCog(BaseCog):

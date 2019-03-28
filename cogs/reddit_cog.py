@@ -16,7 +16,7 @@ import discord
 import praw
 from discord.ext import commands
 
-from ext.checks utils import is_admin
+from ext.checks import is_admin
 from cogs.base_cog import BaseCog
 from ext_module import ExtModule
 
