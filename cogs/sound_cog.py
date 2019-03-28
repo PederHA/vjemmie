@@ -4,6 +4,7 @@ import os
 import random
 import subprocess
 import wave
+import json
 from collections import deque
 from functools import partial
 from itertools import islice, chain
@@ -22,7 +23,7 @@ from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
 from cogs.admin_utils import is_admin
-from cogs.base_cog import BaseCog
+from cogs.base_cog import BaseCog, InvalidFiletype
 from ext_module import ExtModule
 from utils.config import SOUND_DIR
 
@@ -199,8 +200,10 @@ class SoundCog(BaseCog):
     VALID_FILE_TYPES = ["mp3"]
     YTDL_MAXSIZE = 10000000 # 10 MB
     SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned"]
+    DOWNLOADS_DIR = f"{SOUND_DIR}/downloads"
 
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
+        super().__init__(bot, log_channel_id)
         subfolders = [
             f.name for f in os.scandir(SOUND_DIR)
             if f.is_dir() and f.name not in self.SOUND_DIR_IGNORE
@@ -215,10 +218,30 @@ class SoundCog(BaseCog):
         
         # Per-guild audio players
         self.players = {}
+        
+        # Monitor active players
+        #self.bot.loop.create_task(self.monitor_players())
 
-        super().__init__(bot, log_channel_id)
+        self.setup_directories()
 
+    async def monitor_players(self) -> None:
+        while True:
+            with open("db/players.json", "w") as f:
+                json.dump([str(player.guild) for player in self.players.values()], f)
+            await asyncio.sleep(10)
 
+    def setup_directories(self) -> None:
+        """Creates directories neccessary for soundboard commands"""
+        # Base sound directory
+        if not Path(SOUND_DIR).exists():
+            os.mkdir(SOUND_DIR)
+        # Downloaded sound files
+        if not Path(f"{SOUND_DIR}/downloads").exists():
+            os.mkdir(f"{SOUND_DIR}/downloads")
+        # Downloaded wav sound files
+        if not Path(f"{SOUND_DIR}/downloads/wav").exists():
+            os.mkdir(f"{SOUND_DIR}/downloads/wav")
+            
 
     @property
     def sound_list(self) -> list:
@@ -256,8 +279,8 @@ class SoundCog(BaseCog):
             self.players[ctx.guild.id] = player
         return player
 
-
-    @commands.command(name='connect')
+    
+    @commands.command(name="connect", aliases=["join"])
     async def connect(self, ctx, *, channel: discord.VoiceChannel=None):
         """Connect to voice.
 
@@ -410,6 +433,7 @@ class SoundCog(BaseCog):
                                    f'requested by `{vc.source.requester}`')
 
     @commands.command(name="destroy", aliases=["quit"])
+    @is_admin()
     async def destroy_player(self, ctx) -> None:
         vc = ctx.voice_client
 
@@ -580,10 +604,9 @@ class SoundCog(BaseCog):
             url = attachment.url
 
         # Download and save sound file
-        directory, file_name, extension, sound_file = await self._do_download_sound(url)
-        with open(f"{directory}/{file_name}.{extension}", "wb") as f:
-            f.write(sound_file)
-        await ctx.send(f"Saved file {file_name}.{extension}")
+        filename = await self._do_download_sound(url)
+
+        await ctx.send(f"Saved file {filename}")
 
     async def _do_download_sound(self, url: str) -> Tuple[str, str, str, bytes]:
         """Attempts to download file from URL. 
@@ -621,30 +644,33 @@ class SoundCog(BaseCog):
         """
         VALID_FILETYPES = {
                 # Will expand
-                "mp3": "sounds"
+                ".mp3": f"{SOUND_DIR}/downloads",
+                ".wav": f"{SOUND_DIR}/downloads/wav"
             }
         # Generate formatted string of valid file types
         file_types = ", ".join(VALID_FILETYPES.keys())
 
         # Get file extension
-        try:
-            # TODO: This sucks. Find a cleaner way
-            _, file_name, extension = url.rsplit(".", 2)
-            file_name = file_name.rsplit("/", 1)[1]
-        except:
-            # Fails if URL is not a direct link to a file
+        filename, ext = await self.get_filename_extension_from_url(url)
+        if not ext:
             raise discord.DiscordException("Invalid URL. Must be a direct link to a file. "
                                            "Example: http://example.com/file.mp3")
 
         # Check if file type is valid
-        directory = VALID_FILETYPES.get(extension)
+        directory = VALID_FILETYPES.get(ext)
         if not directory:
             # Fails if file type is not defined in VALID_FILETYPES
             raise discord.DiscordException(f"Invalid file type. Must be one of: **{file_types}**")
 
         # Attempt to download file
         sound_file = await self.download_from_url(url)
-        return directory, file_name, extension, sound_file
+        filepath = f"{directory}/{filename}{ext}"
+        with open(filepath, "wb") as f:
+            f.write(sound_file.getvalue())
+        
+        if ext in [".wav"]:
+            filename = await self.convert_soundfile_to_mp3(directory, filename, ext, self.DOWNLOADS_DIR)
+            return filename
 
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: str=None) -> None:
@@ -670,9 +696,9 @@ class SoundCog(BaseCog):
         else:
             raise discord.DiscordException("A URL or attached file is required!")
 
-    @commands.command(name="join", aliases=["combine"])
+    @commands.command(name="combine")
     async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
-        """Joins two sound files together
+        """Combines two sound files
         
         Parameters
         ----------
@@ -715,8 +741,8 @@ class SoundCog(BaseCog):
             in_ext = "mp3" if to_wav else "wav"
             out_ext = "wav" if to_wav else "mp3"
             temp = "_temp_" if to_wav else ""
-            f = f"{BASE_DIR}/{directory}{filename}.{in_ext}"
-            new = f"{BASE_DIR}/{directory}{temp}{filename}.{out_ext}"
+            f = f"{SOUND_DIR}/{directory}{filename}.{in_ext}"
+            new = f"{SOUND_DIR}/{directory}{temp}{filename}.{out_ext}"
             if to_wav:
                 cmd = f'ffmpeg -i "{f}" -acodec pcm_u8 -ar 44100 "{new}"'
             else:
@@ -740,7 +766,7 @@ class SoundCog(BaseCog):
 
             # Filenames. NOTE: This is ugly as hell
             joined_filename = f"{file_1_orig}_{file_2_orig}"
-            filepath_base = f"{BASE_DIR}/{file_1_orig}_{file_2_orig}"
+            filepath_base = f"{SOUND_DIR}/{file_1_orig}_{file_2_orig}"
             filepath_wav = f"{filepath_base}.wav"
             filepath_mp3 = f"{filepath_base}.mp3"
 
@@ -777,3 +803,20 @@ class SoundCog(BaseCog):
         # Delete wav version of joined file
         if Path(joined_filepath_wav).exists():
             os.remove(joined_filepath_wav)
+
+    async def convert_soundfile_to_mp3(self, src_dir: str, filename: str, extension: str, dest_dir) -> None:
+        """Converts a sound file to an .mp3 file, then deletes original file"""
+        if extension not in [".wav"]:
+            raise InvalidFiletype(f"Files with extension {extension} cannot be converted!")
+        
+        def convert(directory: str, filename: str, extension: str, dest_dir: str) -> str:
+            f_base = f"{src_dir}/{filename}{extension}"
+            f_mp3 = f"{dest_dir}/{filename}.mp3"
+
+            cmd = f'ffmpeg -i "{f_base}" -acodec libmp3lame -ab 128k "{f_mp3}"'
+            rtn = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+            if rtn == 0:
+                os.remove(f_base)
+                    
+        await self.bot.loop.run_in_executor(None, convert, src_dir, filename, extension, dest_dir)
+        return filename
