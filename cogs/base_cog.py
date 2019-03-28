@@ -25,16 +25,27 @@ EmbedField = namedtuple("EmbedField", "name value")
 class InvalidFiletype(Exception):
     """Invalid filetype in a given context"""
 
+class FileSizeError(Exception):
+    """File Size too small or too large"""
+
 class BaseCog(commands.Cog):
     """
     Base Cog from which all other cogs are subclassed.
     """
 
+    # Cogs to ignore when creating !help commands
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
+    
+    # Valid image extensions to post to a Discord channel
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
+    MAX_DL_SIZE = 25_000_000 # 25 MB
+    
+    # Channel and User IDs
     IMAGE_CHANNEL_ID = 549649397420392567
     LOG_CHANNEL_ID = 340921036201525248
     AUTHOR_MENTION = "<@103890994440728576>"
+    
+    # Embed Options
     EmbedField = namedtuple("EmbedField", "name value")
     CHAR_LIMIT = 1800
     EMBED_CHAR_LIMIT = 1000
@@ -50,6 +61,11 @@ class BaseCog(commands.Cog):
         cog_name = self.__class__.__name__
         return cog_name if not cog_name.endswith("Cog") else cog_name[:-3]
 
+    @property
+    def MAX_DL_SIZE_FMT(self) -> str:
+        size_mb = self.MAX_DL_SIZE / 1_000_000
+        return f"{size_mb} MB"
+    
     def add_help_command(self) -> None:
         command_name = self.cog_name
         if command_name != "base" and command_name not in self.IGNORE_HELP:
@@ -301,6 +317,8 @@ class BaseCog(commands.Cog):
         """
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
+            if r.content_length > self.MAX_DL_SIZE:
+                raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
             img = await r.read()
             return io.BytesIO(img)
 
