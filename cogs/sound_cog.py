@@ -283,6 +283,16 @@ class SoundCog(BaseCog):
             self.players[ctx.guild.id] = player
         return player
 
+    @commands.command(name="players")
+    @is_admin()
+    async def show_players(self, ctx: commands.Context) -> None:
+        """ADMIN ONLY: Shows active Audio Players"""
+        players = [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
+        players = "\n".join(players)
+        if players:
+            await ctx.send(players)
+        else:
+            await ctx.send("No players active")
     
     @commands.command(name="connect", aliases=["join"])
     async def connect(self, ctx, *, channel: discord.VoiceChannel=None):
@@ -476,7 +486,7 @@ class SoundCog(BaseCog):
         # Parse argument `category`
         if not category:
             categories = ", ".join([f"**`{sf.folder}`**" for sf in self.sub_dirs])
-            await ctx.send(f"Cannot display all sounds at once.\nSpecify a category from: {categories}")
+            await ctx.send(f"Specify a category.\nType **`!{ctx.invoked_with}`** + {categories}")
             return
 
         category = get_category(category.lower())
