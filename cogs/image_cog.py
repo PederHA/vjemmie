@@ -1,3 +1,4 @@
+import io
 from itertools import zip_longest
 from typing import List, Tuple, Union
 
@@ -17,7 +18,7 @@ class ImageCog(BaseCog):
                              template: str,
                              resize:Union[Tuple[int,int], list],
                              offset:Union[Tuple[int,int], list],
-                             user: MemberOrURLConverter=None,
+                             user: MemberOrURLConverter=None, # I suppose this could just be Union[str, discord.Member]
                              text: Union[List[dict], dict]=None,
                              template_overlay: bool=False) -> None:
         """Creates a composite image of a user's avatar and a given template.
@@ -58,7 +59,7 @@ class ImageCog(BaseCog):
         # Download user's avatar
         with open("memes/temp/temp.webp", "wb") as f:
             avatar_img = await self.download_from_url(user_avatar_url)
-            f.write(avatar_img)
+            f.write(avatar_img.read())
 
         # Open user's avatar
         user_avatar = Image.open("memes/temp/temp.webp", "r")
@@ -81,12 +82,15 @@ class ImageCog(BaseCog):
                 for txt in text:
                     background = await self._add_text(ctx, background, **txt)
 
-        # Save image
-        file_name = "memes/temp/out.png"
-        background.save(file_name)
+        # Save image to file-like object
+        file_like_obj = io.BytesIO()
+        background.save(file_like_obj, format="PNG")
+        file_like_obj.seek(0) # Seek to byte 0, so discord.File can use BytesIO.read()
+
         # Upload image to discord and get url
-        msg = await self.upload_image_to_discord(None, file_name)
+        msg = await self.upload_bytes_obj_to_discord(file_like_obj, "out.png")
         image_url = msg.attachments[0].url
+        
         # Send embeded image
         embed = await self.get_embed(ctx, image_url=image_url)
         await ctx.send(embed=embed)
