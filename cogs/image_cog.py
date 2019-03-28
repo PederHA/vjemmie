@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from cogs.admin_utils import MemberOrURLConverter
+from ext.converters import MemberOrURLConverter
 from cogs.base_cog import BaseCog
 
 
