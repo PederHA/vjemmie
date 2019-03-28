@@ -235,15 +235,17 @@ class SoundCog(BaseCog):
     def setup_directories(self) -> None:
         """Creates directories neccessary for soundboard commands"""
         # Base sound directory
-        if not Path(SOUND_DIR).exists():
-            os.mkdir(SOUND_DIR)
-        # Downloaded sound files
-        if not Path(f"{SOUND_DIR}/downloads").exists():
-            os.mkdir(f"{SOUND_DIR}/downloads")
-        # Downloaded wav sound files
-        if not Path(f"{SOUND_DIR}/downloads/wav").exists():
-            os.mkdir(f"{SOUND_DIR}/downloads/wav")
-            
+        paths = [
+            SOUND_DIR,
+            f"{SOUND_DIR}/downloads",
+            f"{SOUND_DIR}/downloads/wav",
+            f"{SOUND_DIR}/ytdl/",
+            f"{SOUND_DIR}/general",
+            f"{SOUND_DIR}/yeah"   
+        ]
+        for path in paths:
+            if not Path(path).exists():
+                os.mkdir(path)
 
     @property
     def sound_list(self) -> list:
@@ -558,13 +560,13 @@ class SoundCog(BaseCog):
             sound_name = sanitize_filename(text.split(" ")[0])
 
         # Check if filename already exists
-        if not Path(f"sounds/ytdl/{sound_name}.mp3").exists() or len(sound_name) <= 5:
+        if not Path(f"sounds/tts/{sound_name}.mp3").exists() or len(sound_name) <= 5:
             sound_name = sanitize_filename(text)
-            if Path(f"sounds/ytdl/{sound_name}.mp3").exists():
+            if Path(f"sounds/tts/{sound_name}.mp3").exists():
                 raise FileExistsError("Sound already exists.")
 
         # Save mp3 file
-        tts.save(f"sounds/ytdl/{sound_name}.mp3")
+        tts.save(f"sounds/tts/{sound_name}.mp3")
 
         # Confirm creation of file
         await ctx.send(f'Sound created: **{sound_name}**')
