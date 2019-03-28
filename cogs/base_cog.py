@@ -1,5 +1,9 @@
 import traceback
 import hashlib
+import os.path
+from io import BytesIO
+import io
+from urllib.parse import urlsplit
 from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import Iterable, List, Optional, Union
@@ -8,6 +12,7 @@ import aiohttp
 import discord
 import requests
 from discord.ext import commands
+from cogs.admin_utils import is_pfm
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -17,13 +22,16 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 
 EmbedField = namedtuple("EmbedField", "name value")
 
+class InvalidFiletype(Exception):
+    """Invalid filetype in a given context"""
+
 class BaseCog(commands.Cog):
     """
     Base Cog from which all other cogs are subclassed.
     """
-    
+
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
-    #IGNORE_HELP = ["admin", "base", "cod", "reddit", "weather", "youtube"]
+    IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
     IMAGE_CHANNEL_ID = 549649397420392567
     LOG_CHANNEL_ID = 340921036201525248
     AUTHOR_MENTION = "<@103890994440728576>"
@@ -31,7 +39,7 @@ class BaseCog(commands.Cog):
     CHAR_LIMIT = 1800
     EMBED_CHAR_LIMIT = 1000
     EMBED_FILL_CHAR = "\xa0"
-    
+
     def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
         self.bot = bot
         self.log_channel_id = log_channel_id
@@ -212,11 +220,11 @@ class BaseCog(commands.Cog):
         """
         try:
             cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
-            await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID) 
+            await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
             if cause_of_error:
                 await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
         except discord.Forbidden:
-            print(f"Insufficient permissions for channel {self.log_channel_id}.") 
+            print(f"Insufficient permissions for channel {self.log_channel_id}.")
         except discord.HTTPException:
             print(f"Failed to send message to channel {self.log_channel_id}.")
 
@@ -278,13 +286,13 @@ class BaseCog(commands.Cog):
         else:
             out_msg = "An unknown error occured"
         await ctx.send(out_msg) # Display error to user
-        
+
         # Get formatted traceback
         traceback_msg = traceback.format_exc()
         await self.send_log(traceback_msg, ctx) # Send entire exception traceback to log channel
 
-    async def download_from_url(self, url: str) -> bytes: # TODO: FIX
-        """Downloads the contents of URL `url` and returns a bytes object.
+    async def download_from_url(self, url: str) -> io.BytesIO: # TODO: FIX
+        """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
         
         Returns
         -------
@@ -294,9 +302,9 @@ class BaseCog(commands.Cog):
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
             img = await r.read()
-            return img
+            return io.BytesIO(img)
 
-    async def upload_image_to_discord(self, image_url: str, filepath: str=None) -> discord.Message:
+    async def rehost_image_to_discord(self, image_url: str=None) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
         
@@ -310,16 +318,49 @@ class BaseCog(commands.Cog):
         `discord.Message`
             The Discord message belonging to the uploaded image.
         """
+        
+        # Get rehosting channel
+        channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
+
+        # Check if url has an image extension
+        file_name, ext = await self.get_filename_extension_from_url(image_url)
+        if ext.lower() not in self.IMAGE_EXTENSIONS:
+            raise InvalidFiletype("Attempted to upload a non-image file")
+
+        # Get file-like bytes object (io.BytesIO)
+        file_bytes = await self.download_from_url(image_url)
+        
+        # Upload image
+        f = discord.File(file_bytes, f"{file_name}.{ext}")
+        msg = await channel.send(file=f)
+        
+        # Return message referencing image
+        return msg
+
+    async def upload_bytes_obj_to_discord(self, data: io.BytesIO, filename: str) -> discord.Message:
+        """Uploads a bytesIO stream(?) as a Discord file attachment
+        
+        Parameters
+        ----------
+        data : `io.BytesIO`
+            Bytes-encoded data
+        
+        filename : `str`
+            Filename + filetype. (FILETYPE IS REQUIRED!)
+        
+        Returns
+        -------
+        discord.Message
+            Discord Message referencing uploaded file.
+            File URL can be accessed via `msg.attachments[0].url`
+        """
 
         channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
-        if not filepath:
-            image = await self.download_from_url(image_url)
-            *_, file_name = image_url.split("/")
-            fname, ext = file_name.split(".", 1) # Fails if image_url is not an URL to a file
-        else:
-            *_, file_name = filepath.split("/")
-        msg = await channel.send(file=discord.File(filepath, file_name))
-        return msg
+
+        f = discord.File(data, filename)
+        msg = await channel.send(file=f)
+
+        return msg # Could do return await.channel.send(), but I think this is more self documenting
 
     async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple") -> None:
         """Sends an embed listing all commands belonging the cog.
@@ -343,9 +384,7 @@ class BaseCog(commands.Cog):
             signatures or not. (the default is True, which ommits signatures)
         """
         simple = True if output_style == "simple" else False
-        _commands = sorted(
-            [cmd for cmd in self.get_commands() if not cmd.checks],
-            key=lambda cmd: cmd.name)
+        _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
         _out_str = ""
         for command in _commands:
             if simple:
@@ -379,7 +418,7 @@ class BaseCog(commands.Cog):
             channel = self.bot.get_channel(channel_id)
         else:
             channel = ctx.message.channel
-        
+
         # Split string into chunks
         chunks = await self._split_string_to_chunks(text)
 
@@ -407,10 +446,10 @@ class BaseCog(commands.Cog):
             _out.append(temp)
         return _out
 
-    async def send_chunked_embed_message(self, 
-                                         ctx: commands.Context, 
-                                         header: str, 
-                                         text: str, 
+    async def send_chunked_embed_message(self,
+                                         ctx: commands.Context,
+                                         header: str,
+                                         text: str,
                                          limit: int=None,
                                          *,
                                          color: Union[str, int]=None,
@@ -441,7 +480,7 @@ class BaseCog(commands.Cog):
         if len(text_fields) > 1:
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False, timestamp=False, color=color) 
+                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
                 await self.get_embed(ctx, fields=[self.EmbedField("_", field)], color=color)
@@ -452,11 +491,11 @@ class BaseCog(commands.Cog):
         else:
             # Create normal embed with title and footer if text is not chunked
             embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True, color=color)]
-        
+
         # Return embed objects if desired
         if return_embeds:
             return embeds
-        
+
         # Otherwise just send each embed as a message
         for embed in embeds:
             await ctx.send(embed=embed)
@@ -467,7 +506,16 @@ class BaseCog(commands.Cog):
 
     def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> int:
         phrase = str(phrase).encode()
-        h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")    
+        h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
         if as_int:
             return int(h.hexdigest(), 16)
         return h.hexdigest()
+
+    async def get_filename_extension_from_url(self, url: str) -> tuple:
+        fname, extension = os.path.splitext(
+            os.path.basename(urlsplit(url).path))
+
+        if not extension:
+            raise AttributeError("URL has no file extension")
+
+        return fname, extension
