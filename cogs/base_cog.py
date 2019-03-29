@@ -51,9 +51,8 @@ class BaseCog(commands.Cog):
     EMBED_CHAR_LIMIT = 1000
     EMBED_FILL_CHAR = "\xa0"
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.log_channel_id = log_channel_id
         self.add_help_command()
 
     @property
@@ -240,9 +239,9 @@ class BaseCog(commands.Cog):
             if cause_of_error:
                 await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
         except discord.Forbidden:
-            print(f"Insufficient permissions for channel {self.log_channel_id}.")
+            print(f"Insufficient permissions for channel {self.LOG_CHANNEL_ID}.")
         except discord.HTTPException:
-            print(f"Failed to send message to channel {self.log_channel_id}.")
+            print(f"Failed to send message to channel {self.LOG_CHANNEL_ID}.")
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.

@@ -46,8 +46,8 @@ class RedditCog(BaseCog):
         TIME_FILTERS[4]: 25,
     }
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None) -> None:
-        super().__init__(bot, log_channel_id)
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
         self.subs = self.load_subs()
         for sub in self.subs.values():
             self._add_sub(sub)

@@ -6,8 +6,8 @@ from random import randint
 from cogs.base_cog import BaseCog
 
 class UserCog(BaseCog):
-    def __init__(self, bot: commands.Bot, log_channel_id: int=None):
-        super().__init__(bot, log_channel_id)
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
         self.bot.remove_command('help')
 
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])

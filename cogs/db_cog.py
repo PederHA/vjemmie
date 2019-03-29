@@ -27,6 +27,10 @@ class DatabaseHandler:
     
 
     async def get_memes(self, topic: str, ctx: commands.Context, args: tuple) -> None:
+        """
+        Holy shit this is trash
+        """
+        
         meme_index = None
         print_list = False
         print_all_memes = False
@@ -109,29 +113,33 @@ class DatabaseHandler:
             embed.set_image(url=content)
             return None, embed
     
-    async def whosaidit(self, message: discord.Message) -> None:
+    # Meme 
+    def log_gaming_moment(self, message: discord.Message) -> None:
         """
-        Tracking begun 19/09/2018
+        Logging began 19/09/2018
         """
-        update_row = False
-        msg_author = message.author.name    
-        for name, occurences in self.c.execute(f'SELECT "NAME", "occurences" FROM "wordtrack"'):
-            if name == msg_author:
-                update_row = True
-                break
-        else:
-            # Create new entry in DB if message author's name does not exist already
-            self.c.execute(f'INSERT INTO `wordtrack`(`name`,`occurences`) VALUES ("{msg_author}",1);')
-        if update_row:
-            try:
-                occurences = int(occurences)
-                occurences += 1
-            except:
-                pass
-            else:
-                self.c.execute(f'UPDATE `wordtrack` SET `occurences`={occurences} WHERE "name"="{name}";')
+        # Check if message author has a DB entry
+        msg_author = f"{message.author.name}#{message.author.discriminator}"
+        exists_in_db = msg_author in [name[0] for name in self.c.execute(f'SELECT "NAME" FROM "wordtrack"')]
+        if not exists_in_db:
+            self.c.execute(f'INSERT INTO `wordtrack`(`name`,`occurences`) VALUES ("{msg_author}",0);')
+
+        # Get number of gaming moments and increment by 1
+        occurences = list(self.c.execute(f'SELECT "occurences" FROM "wordtrack" WHERE "name"=="{msg_author}"'))[0][0]
+        occurences = int(occurences) + 1
+
+        self.c.execute(f'UPDATE `wordtrack` SET `occurences`={occurences} WHERE "name"=="{msg_author}";')
         self.conn.commit()
 
+    def get_gaming_moments(self) -> list:
+        l = list(self.c.execute(f'SELECT "name", "occurences" FROM "wordtrack"'))
+        return sorted(l, key=lambda user: user[1], reverse=True)
+    
+    # PUBG
+    def crate_rolls(self, username, guns, armor) -> None:
+        rolls = dict((k, True) for k in guns + armor)
+        print(username, rolls, sep=": ")
+        
     # Rating
     def add_user(self, user: discord.Member, realname: str, game: str, base_rating: float) -> str:
         base_rating = float(base_rating)

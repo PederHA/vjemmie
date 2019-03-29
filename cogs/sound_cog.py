@@ -201,13 +201,12 @@ class SoundFolder:
 
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
-    VALID_FILE_TYPES = ["mp3", ".mp4", ".webm"] # this is probably useless
     YTDL_MAXSIZE = 10000000 # 10 MB
     SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned"]
     DOWNLOADS_DIR = f"{SOUND_DIR}/downloads"
 
-    def __init__(self, bot: commands.Bot, log_channel_id: int) -> None:
-        super().__init__(bot, log_channel_id)
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
 
         # Find all subdirectories
         subfolders = [
@@ -267,7 +266,7 @@ class SoundCog(BaseCog):
 
         s = list(chain(*[sf.sound_list for sf in self.sub_dirs]))
         if not s:
-            raise Exception("No mp3 files in the given folder")
+            raise Exception("No sound files sound folder")
         return s
 
     async def cleanup(self, guild):
@@ -545,7 +544,7 @@ class SoundCog(BaseCog):
             _out = []
             for sound in sf.sound_list:
                 if search_query.lower() in sound.lower():
-                    # Append sound name to _out string
+                    # Append sound name to _out list
                     _out.append(sound)
             if _out:
                 _out_str = "\n".join(_out)

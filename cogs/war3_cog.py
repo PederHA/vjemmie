@@ -17,8 +17,8 @@ from ext.checks import is_dgvgk
 
 
 class War3Cog(BaseCog):
-    def __init__(self, bot: commands.Bot, log_channel_id: int, replays_folder: str=None) -> None:
-        super().__init__(bot, log_channel_id)
+    def __init__(self, bot: commands.Bot, replays_folder: str=None) -> None:
+        super().__init__(bot)
         self.replays_folder = replays_folder
         self.db = DatabaseHandler("db/rating.db")
         self.base_rating = 25
