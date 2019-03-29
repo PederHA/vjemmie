@@ -13,10 +13,10 @@ from cogs.war3_cog import War3Cog
 from cogs.image_cog import ImageCog
 from cogs.sound_cog import SoundCog
 from cogs.meme_cog import MemeCog
-
+from cogs.stats_cog import StatsCog
 
 __all__ = [
     "AdminCog", "FunCog", "PFMCog", "PUBGCog", "RedditCog", "SoundCog",
     "UserCog", "WoWProgressCog", "TestingCog", "FryingCog", "WeatherCog",
-    "War3Cog", "ImageCog", "MemeCog"
+    "War3Cog", "ImageCog", "MemeCog", "StatsCog"
 ]
