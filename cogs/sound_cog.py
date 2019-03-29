@@ -398,10 +398,12 @@ class SoundCog(BaseCog):
                 subdir, sound_name = await parse_sound_name(uri)
             # Suggest sound files with similar names if no results
             except:
-                await ctx.send(f"No sound with name **`{uri}`**. Did you mean:")
-                result = await ctx.invoke(self.search, uri)
-                if result:
-                    await self.send_text_message(ctx, result)
+                # TODO: Do some dumb shit with partial methods
+                embeds = await ctx.invoke(self.search, uri, rtn=True)
+                dym = "Did you mean:" if embeds else ""
+                await ctx.send(f"No sound with name **`{uri}`**. {dym}")
+                for embed in embeds:
+                    await ctx.send(embed=embed)
                 return
             
             source = await YTDLSource.create_local_source(ctx, subdir, sound_name, loop=self.bot.loop)
@@ -535,27 +537,28 @@ class SoundCog(BaseCog):
                 break
 
     @commands.command(name="search")
-    async def search(self, ctx: commands.Context, *search_query: str, rtn: bool=False) -> Optional[str]:
+    async def search(self, ctx: commands.Context, *search_query: str, rtn: bool=False) -> None:
         search_query = " ".join(search_query)
         sent = False
-        _rtn_out = []
-        
+        _out_embeds = []
+
         for sf in self.sub_dirs:
             _out = ""
             for sound in sf.sound_list:
                 if search_query.lower() in sound.lower():
                     _out += f"\n{sound}"
             if _out:
+                embeds = await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color, return_embeds=rtn)
                 if rtn:
-                    _rtn_out.append(_out)
-                await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
+                    for embed in embeds:
+                        _out_embeds.append(embed)
                 sent = True
         
         if not sent and not rtn:
             await ctx.send("No results")
-       
+        
         if rtn:
-            return "\n".join(_rtn_out)
+            return _out_embeds
 
     @commands.command(name="queue")
     async def show_queue(self, ctx) -> Optional[str]:
