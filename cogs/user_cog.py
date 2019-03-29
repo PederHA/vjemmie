@@ -21,7 +21,7 @@ class UserCog(BaseCog):
                                    if cog.cog_name not in self.IGNORE_HELP)
             embed = await self.get_embed(ctx, fields=[self.EmbedField("Categories", categories)])
             await ctx.send(embed=embed)
-            await ctx.send("Type `!help <category> (advanced)` or `!<Category> (advanced)`")
+            await ctx.send("Type `!help <category> (advanced)`")
         else:
             cog_name = cog_name.lower()
             for cog in self.bot.cogs.values():
