@@ -49,7 +49,7 @@ ffmpegopts = {
 
 ytdl = YoutubeDL(ytdlopts)
 
-VALID_FILE_TYPES = ["mp3", ".mp4", ".webm"] # this is probably useless
+VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 
 class VoiceConnectionError(commands.CommandError):
     """Custom Exception class for connection errors."""
@@ -384,7 +384,7 @@ class SoundCog(BaseCog):
 
         uri = " ".join(args)
 
-        # Play audio from youtube
+        # Play audio from online source
         if urlparse(uri).scheme in ["http", "https"]:
             download = True if ctx.invoked_with == "ytdl" else False
             source = await YTDLSource.create_source(ctx, uri, loop=self.bot.loop, download=download)
@@ -392,13 +392,28 @@ class SoundCog(BaseCog):
 
         # Play local file
         else:
-            uri = uri.lower()
-            subdir, sound_name = await parse_sound_name(uri)
+            uri = uri.lower()      
+            # Try to parse provided sound name
+            try:
+                subdir, sound_name = await parse_sound_name(uri)
+            # Suggest sound files with similar names if no results
+            except:
+                await ctx.send(f"No sound with name **`{uri}`**. Did you mean:")
+                result = await ctx.invoke(self.search, uri)
+                if result:
+                    await self.send_text_message(ctx, result)
+                return
+            
             source = await YTDLSource.create_local_source(ctx, subdir, sound_name, loop=self.bot.loop)
             await player.queue.put(source)
         
+        # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
 
+    @commands.command(name="rplay")
+    async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *args) -> None:
+        print("yeah")
+        await ctx.invoke(self.play, *args, voice_channel=channel)
 
     @commands.command(name="stop", aliases=["s"])
     async def stop(self, ctx: commands.Context) -> Optional[str]:
@@ -520,19 +535,27 @@ class SoundCog(BaseCog):
                 break
 
     @commands.command(name="search")
-    async def search_sound(self, ctx: commands.Context, *search_query: str) -> None:
+    async def search(self, ctx: commands.Context, *search_query: str, rtn: bool=False) -> Optional[str]:
         search_query = " ".join(search_query)
         sent = False
+        _rtn_out = []
+        
         for sf in self.sub_dirs:
             _out = ""
             for sound in sf.sound_list:
                 if search_query.lower() in sound.lower():
                     _out += f"\n{sound}"
             if _out:
+                if rtn:
+                    _rtn_out.append(_out)
                 await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
                 sent = True
-        if not sent:
+        
+        if not sent and not rtn:
             await ctx.send("No results")
+       
+        if rtn:
+            return "\n".join(_rtn_out)
 
     @commands.command(name="queue")
     async def show_queue(self, ctx) -> Optional[str]:
@@ -704,7 +727,24 @@ class SoundCog(BaseCog):
         if ext in [".wav"]:
             filename = await self.convert_soundfile_to_mp3(directory, filename, ext, self.DOWNLOADS_DIR)
             return filename
+    
+    async def convert_soundfile_to_mp3(self, src_dir: str, filename: str, extension: str, dest_dir) -> None:
+        """Converts a sound file to an .mp3 file, then deletes original file"""
+        if extension not in [".wav"]:
+            raise InvalidFiletype(f"Files with extension {extension} cannot be converted!")
 
+        def convert(directory: str, filename: str, extension: str, dest_dir: str) -> str:
+            f_base = f"{src_dir}/{filename}{extension}"
+            f_mp3 = f"{dest_dir}/{filename}.mp3"
+
+            cmd = f'ffmpeg -i "{f_base}" -acodec libmp3lame -ab 128k "{f_mp3}"'
+            rtn = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+            if rtn == 0:
+                os.remove(f_base)
+
+        await self.bot.loop.run_in_executor(None, convert, src_dir, filename, extension, dest_dir)
+        return filename
+    
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: str=None) -> None:
         """Lazy download sound command.
@@ -838,19 +878,4 @@ class SoundCog(BaseCog):
         if Path(joined_filepath_wav).exists():
             os.remove(joined_filepath_wav)
 
-    async def convert_soundfile_to_mp3(self, src_dir: str, filename: str, extension: str, dest_dir) -> None:
-        """Converts a sound file to an .mp3 file, then deletes original file"""
-        if extension not in [".wav"]:
-            raise InvalidFiletype(f"Files with extension {extension} cannot be converted!")
 
-        def convert(directory: str, filename: str, extension: str, dest_dir: str) -> str:
-            f_base = f"{src_dir}/{filename}{extension}"
-            f_mp3 = f"{dest_dir}/{filename}.mp3"
-
-            cmd = f'ffmpeg -i "{f_base}" -acodec libmp3lame -ab 128k "{f_mp3}"'
-            rtn = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
-            if rtn == 0:
-                os.remove(f_base)
-
-        await self.bot.loop.run_in_executor(None, convert, src_dir, filename, extension, dest_dir)
-        return filename
