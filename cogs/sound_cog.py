@@ -532,7 +532,7 @@ class SoundCog(BaseCog):
                 _out = ""
                 for sound in sf.sound_list:
                     _out += f"{sound}\n"
-                await self.send_chunked_embed_message(ctx, sf.header, _out, color=sf.color)
+                await self.send_embed_message(ctx, sf.header, _out, color=sf.color)
                 break
 
     @commands.command(name="search")
@@ -548,7 +548,7 @@ class SoundCog(BaseCog):
                     _out.append(sound)
             if _out:
                 _out_str = "\n".join(_out)
-                _rtn_embeds = await self.send_chunked_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=rtn)
+                _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=rtn)
                 for embed in _rtn_embeds:
                     embeds.append(embed)
         

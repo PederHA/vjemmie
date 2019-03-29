@@ -411,9 +411,7 @@ class BaseCog(commands.Cog):
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         if not _out_str:
             return
-        field = self.EmbedField(f"{self.cog_name} commands", _out_str)
-        embed = await self.get_embed(ctx, fields=[field])
-        await ctx.send(embed=embed)
+        await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
 
     async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
         """
@@ -463,7 +461,7 @@ class BaseCog(commands.Cog):
             _out.append(temp)
         return _out
 
-    async def send_chunked_embed_message(self,
+    async def send_embed_message(self,
                                          ctx: commands.Context,
                                          header: str,
                                          text: str,

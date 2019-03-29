@@ -182,7 +182,7 @@ class RedditCog(BaseCog):
             s = f"`r/{cmd.subreddit.ljust(longest_subreddit, self.EMBED_FILL_CHAR)}:`\xa0`{commands_}`"
             _out.append(s)  
         out = "\n".join(_out)
-        await self.send_chunked_embed_message(ctx, "Subreddits", out, limit=1000)
+        await self.send_embed_message(ctx, "Subreddits", out, limit=1000)
 
     @commands.command(name="rtime", aliases=["change_reddit_time", "reddit_time"])
     async def change_time_filtering(self, ctx: commands.Context, opt: str=None) -> None:
