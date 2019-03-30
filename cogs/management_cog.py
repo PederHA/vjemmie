@@ -32,7 +32,7 @@ class ManagementCog(BaseCog):
                 out_players[gid] = await self._get_player_data(gid, player)    
             with open("out/audioplayers.json", "w") as f:
                 json.dump(out_players, f, indent=4, cls=DateTimeEncoder)
-            await asyncio.sleep(10)
+            await asyncio.sleep(60)
         
     async def _get_player_data(self, gid: int, player: AudioPlayer) -> dict:
         """Creates dictionary from specific AudioPlayer instance attributes"""
