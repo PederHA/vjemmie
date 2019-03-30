@@ -13,6 +13,7 @@ from queue import Queue
 from typing import Iterator, Optional, Tuple, DefaultDict, Dict
 from urllib.parse import urlparse
 from collections import defaultdict
+from datetime import datetime
 
 import discord
 import gtts
@@ -122,6 +123,8 @@ class AudioPlayer:
         self.guild = ctx.guild
         self.channel = ctx.channel
         self.cog = ctx.cog
+        
+        self.created_at = datetime.now()
 
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
@@ -131,7 +134,7 @@ class AudioPlayer:
         self.current = None
 
         self.timeout_duration = 60
-
+        
         ctx.bot.loop.create_task(self.player_loop())
 
     async def player_loop(self):
