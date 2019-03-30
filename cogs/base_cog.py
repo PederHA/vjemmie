@@ -35,16 +35,16 @@ class BaseCog(commands.Cog):
 
     # Cogs to ignore when creating !help commands
     IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
-    
+
     # Valid image extensions to post to a Discord channel
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
     MAX_DL_SIZE = 25_000_000 # 25 MB
-    
+
     # Channel and User IDs
     IMAGE_CHANNEL_ID = 549649397420392567
     LOG_CHANNEL_ID = 340921036201525248
     AUTHOR_MENTION = "<@103890994440728576>"
-    
+
     # Embed Options
     EmbedField = namedtuple("EmbedField", "name value")
     CHAR_LIMIT = 1800
@@ -64,7 +64,7 @@ class BaseCog(commands.Cog):
     def MAX_DL_SIZE_FMT(self) -> str:
         size_mb = self.MAX_DL_SIZE / 1_000_000
         return f"{size_mb} MB"
-    
+
     def add_help_command(self) -> None:
         command_name = self.cog_name
         if command_name != "base" and command_name not in self.IGNORE_HELP:
@@ -335,7 +335,7 @@ class BaseCog(commands.Cog):
         `discord.Message`
             The Discord message belonging to the uploaded image.
         """
-        
+
         # Get rehosting channel
         channel = self.bot.get_channel(self.IMAGE_CHANNEL_ID)
 
@@ -346,11 +346,11 @@ class BaseCog(commands.Cog):
 
         # Get file-like bytes object (io.BytesIO)
         file_bytes = await self.download_from_url(image_url)
-        
+
         # Upload image
         f = discord.File(file_bytes, f"{file_name}.{ext}")
         msg = await channel.send(file=f)
-        
+
         # Return message referencing image
         return msg
 
@@ -468,7 +468,9 @@ class BaseCog(commands.Cog):
                                          limit: int=None,
                                          *,
                                          color: Union[str, int]=None,
-                                         return_embeds: bool=False) -> Optional[list]:
+                                         return_embeds: bool=False,
+                                         footer: bool=True,
+                                         timestamp: bool=True) -> Optional[list]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
         ctx.channel.
@@ -484,7 +486,7 @@ class BaseCog(commands.Cog):
         limit : `int`, optional
             Character limit. Cannot exceed 1024.
         return_embeds : `bool`, optional
-            If enabled, returns chunked message as list of 
+            If True, returns chunked message as list of 
             embed objects instead of sending them to ctx.channel.
         """
         # Split text by line
@@ -498,14 +500,21 @@ class BaseCog(commands.Cog):
                 await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], color=color)
+                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=footer, timestamp=timestamp, color=color)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
                 await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False, timestamp=False, color=color)
                 for field in text_fields]
         else:
             # Create normal embed with title and footer if text is not chunked
-            embeds = [await self.get_embed(ctx, fields=[self.EmbedField(header, text_fields[0])], footer=True, color=color)]
+            embeds = [
+                await self.get_embed(
+                    ctx,
+                    fields=[self.EmbedField(header, text_fields[0])],
+                    footer=footer,
+                    timestamp=timestamp,
+                    color=color)
+            ]
 
         # Return embed objects if desired
         if return_embeds:
