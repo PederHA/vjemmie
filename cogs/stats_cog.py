@@ -2,6 +2,8 @@ from discord.ext import commands
 import discord
 from cogs.base_cog import BaseCog
 from datetime import datetime
+from time import perf_counter, time
+import json
 
 
 class StatsCog(BaseCog):
@@ -26,3 +28,31 @@ class StatsCog(BaseCog):
                        f"{up_fmt(hours, 'h')}"
                        f"{up_fmt(minutes, 'm')}"
                        f"{up_fmt(seconds, 's')}")
+
+    @commands.command(name="get_players")
+    async def get_players(self, ctx) -> None:
+        sound_cog = self.bot.get_cog("SoundCog")
+        players = sound_cog.players
+        #with open("out/audioplayers.json", "r") as f:
+        #    players = json.load(f)
+        
+        out = []
+        for gid, player in players.items():
+            #embed_body = ( 
+            #        f"**Created at**: {player['created_at']}\n"
+            #        f"**Currently playing**: {player['current']}"
+            #        f"**Guild ID**: {gid}\n"
+            #        )
+            embed_body = ( 
+                    f"**Created at**: {player.created_at}\n"
+                    f"**Currently playing**: {player.current.title if player.current else None}\n"
+                    f"**Guild ID**: {gid}\n"
+                    )            
+            out.append((str(self.bot.get_guild(gid)), embed_body))
+
+        # Post active players
+        if out:
+            for gname, o in out:
+                await self.send_embed_message(ctx, gname, o)
+        else:
+            await ctx.send("No active audio players")
