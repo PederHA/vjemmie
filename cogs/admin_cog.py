@@ -26,7 +26,7 @@ class AdminCog(BaseCog):
         Args:
             guild: The guild which the bot joined on (discord.Guild)
             """
-        await self.send_log('Joined guild: ' + guild.name)
+        await self.send_log(f"Joined guild {guild.name}")
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
@@ -34,7 +34,7 @@ class AdminCog(BaseCog):
         Args:
             guild: The guild which was left by the bot (discord.Guild)
             """
-        await self.send_log('Left guild: ' + guild.name)
+        await self.send_log(f"Joined guild {guild.name}")
     
     @commands.command(aliases=["change_activity"])
     @is_admin()
@@ -54,57 +54,50 @@ class AdminCog(BaseCog):
         guilds = "\n".join([guild.name for guild in self.bot.guilds])
         await self.send_embed_message(ctx, "Guilds", guilds)
 
-    @commands.command(name='leave',
-                      description='(ID) || The bot will attempt to leave the server with the given ID.')
+    @commands.command(name="leave")
     @is_admin()
-    async def leave(self, ctx: commands.Context, guild_id: int=None) -> None:
-        """This commands makes the bot leave the server with the given ID
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-            guild_id: The id of the server, which will be left (int)
-            """
+    async def leave(self, ctx: commands.Context, guild_id: int) -> None:
+        "Attempts to leave a Discord Guild (server)."
+        
+        # Get discord.Guild object for guild with ID guild_id
         guild = self.bot.get_guild(int(guild_id))
+        
+        # Raise exception if guild is not found
+        if not guild:
+            raise discord.DiscordException(f"No guild with ID {guild_id}")
+        
         try:
             await guild.leave()
         except discord.HTTPException:
-            await self.send_log('Could not leave guild ' + guild.name)
-            raise discord.DiscordException
-        except AttributeError:
-            await self.send_log('Guild not found ' + guild.name)
-            raise discord.DiscordException
+            raise discord.DiscordException(f"Unable to leave guild {guild.name}")
         else:
-            await self.send_log('Left guild successfully ' + guild.name)
+            await self.send_log(f"Left guild {guild.name} successfully")
 
-    @commands.command(name='sendtoall',
-                      aliases=['send_to_all', 'send-to-all', 'broadcast'],
-                      description='(textblock) || The bot will attempt to send the textblock to every server'
-                                  ' he is a member of. Do NOT use for spamming purposes.')
+    @commands.command(name="announce",
+                      aliases=["send_all", "broadcast"])
     @is_admin()
-    async def sendtoall(self, ctx: commands.Context, *args) -> None:
-        """This command tries to send a message to all guilds this bot is a member of.
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite (commands.Context)
-            args: The words of the message to be send
-            """
-        message = ''
-        for word in args:
-            message = message + str(word) + ' '
-        message = message[:-1]
-        for guild in self.bot.guilds:
-            _channel = guild.text_channels[0]
-            _maximum = max([len(channel.members) for channel in guild.text_channels])
-            for channel in guild.text_channels:
-                if len(channel.members) == _maximum:
-                    _channel = channel
-                    break               # take the topmost channel with most members reading it
+    async def sendtoall(self, ctx: commands.Context, *msg) -> None:
+        """
+        Attempts to send text message to every server the bot
+        is a member of.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        msg: `tuple`
+            String to send.
+        """
+        msg = " ".join(msg)
+        guilds = self.bot.guilds
+        for guild in guilds:
+            channel = guild.text_channels[0]
             try:
-                await _channel.send(message)
-            except discord.Forbidden:
-                await self.send_log('Missing permissions for guild ' + guild.name)
-            except discord.HTTPException:
-                await self.send_log('Failed to send message to ' + guild.name + ' with a connection error')
-            else:
-                await self.send_log('Successfully send the message to guild ' + guild.name)
+                await channel.send(message)
+            except:
+                # CBA spamming log channel with every message attempt
+                print(f"Failed to send message to guild {guild.name}")
+
 
     @commands.command(name="blacklist")
     @is_admin()
