@@ -9,9 +9,8 @@ from bot_resources import GUILDS, NON_PUBG_PLAYERS
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
 from events_module import contains_rad
-from ext_module import ExtModule
+
 from utils.config import GENERAL_DB_PATH
-from utils.ext_utils import is_int
 
 
 class PUBGCog(BaseCog):

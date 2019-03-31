@@ -15,8 +15,15 @@ from typing import Tuple
 import discord
 from discord.ext import commands
 
-from utils.ext_utils import is_int
 import trueskill
+
+def is_int(string: str) -> bool:
+    try:
+        string = int(string)
+    except:
+        return False
+    else:
+        return True
 
 class DatabaseHandler:
 
@@ -47,7 +54,8 @@ class DatabaseHandler:
         
         # Users can request specific images by adding an integer as argument to a meme command
         # Example: `!nezgroul 5` will always post the same, specific image
-
+        
+        #??????????????????????? 31/03/2019: wtf is this lmao
         if len(args) > 0:
             if is_int(args[0]):
                 try:

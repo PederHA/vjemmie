@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from ext_module import ExtModule
+
 import requests
 import shutil
 from cogs.fryer import ImageFryer

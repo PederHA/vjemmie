@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from ext_module import ExtModule
+
 import random
 import os
 from cogs.db_cog import DatabaseHandler

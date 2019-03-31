@@ -1,7 +1,7 @@
 import bs4 as bs
 from discord.ext import commands
 import discord
-from ext_module import ExtModule
+
 import time
 from urllib.parse import urlencode
 import urllib.request

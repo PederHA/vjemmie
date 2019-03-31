@@ -9,8 +9,7 @@ from discord.ext import commands
 from fpl import FPL
 
 from cogs.base_cog import BaseCog
-from ext_module import ExtModule
-from utils.argsparsing import parse_args
+
 
 
 class FunCog(BaseCog): 
@@ -94,34 +93,3 @@ class FunCog(BaseCog):
                 error_amount = "Only **1** argument was"
         
             await ctx.send(f"{error_amount} provided. Type `!random` followed by at least 2 words.")
-        
-    @commands.command(name="fpl")
-    async def fantasy_pl(self, ctx: commands.Context, *args) -> None:
-        """
-        Fantasy Premier League commands. 
-        -----
-        Only functionality implemented so far is printing the best or
-        worst player from the current game week.
-        """
-        
-        TIMEFRAME_ARGS = ["week", "all"]
-        FILTERING_ARGS = ["worst", "best"]
-        DEBUG_ARGS = ["test", "debug"]
-        
-        if args == ():
-            # Defaults to "week" & "best"
-            args = (TIMEFRAME_ARGS[1], FILTERING_ARGS[1])
-        if args != ():
-            timeframe, filtering = parse_args(args, 2)
-            if timeframe in TIMEFRAME_ARGS:
-                if filtering == FILTERING_ARGS[1] or filtering == None:
-                    returned = await self.fpl_week_points(best=True)
-                elif filtering == FILTERING_ARGS[0]:
-                    returned = await self.fpl_week_points(best=False)
-            # Duplicate code, but will be refactored later
-            elif timeframe in DEBUG_ARGS:
-                if filtering == "best" or filtering == None:
-                    returned = await self.fpl_week_points(best=True, debug=True)
-                else:
-                    returned = await self.fpl_week_points(best=False, debug=True)
-            await ctx.send(returned)
