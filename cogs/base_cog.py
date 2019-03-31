@@ -232,28 +232,40 @@ class BaseCog(commands.Cog):
             raise AttributeError("Message author is not connected to a voice channel.")
         return users
 
-    async def send_log(self, msg: str, ctx: Optional[commands.Context]=None) -> None:
-        """Sends log message to log channel.
-
-        If param `ctx` is not None, `send_log` assumes an error has occured,
-        and includes the bot command that triggered the error and the user
-        that used it.
+    async def send_log(self, msg: str) -> None:
+        """Sends log message to log channel
         
-        Args:
-            msg (str): Message to be logged
-            ctx (commands.Context, optional): a `discord.ext.commands.Context` object of message
-            that caused an error
+        Parameters
+        ----------
+        msg : `str`
+            String to send as message to log channel
         """
         try:
-            cause_of_error = f"\n\nMessage that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
             await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
-            if cause_of_error:
-                await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {self.LOG_CHANNEL_ID}.")
         except discord.HTTPException:
             print(f"Failed to send message to channel {self.LOG_CHANNEL_ID}.")
 
+    async def log_error(self, ctx: commands.Context, error_msg: str) -> None:
+        """Logs command exception to log channel
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context, used to get message that caused
+            command exception.
+        error_msg : `str`
+            Traceback returned by traceback.format_exc() from
+            BaseCog._unknown_error()
+        """
+
+        # Send traceback
+        await self.send_text_message(ctx, error_msg, channel_id=self.LOG_CHANNEL_ID)
+        # Send message that caused error
+        cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
+        await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
+    
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
 
@@ -315,7 +327,7 @@ class BaseCog(commands.Cog):
 
         # Get formatted traceback
         traceback_msg = traceback.format_exc()
-        await self.send_log(traceback_msg, ctx) # Send entire exception traceback to log channel
+        await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
 
     async def download_from_url(self, url: str) -> io.BytesIO: # TODO: FIX
         """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
