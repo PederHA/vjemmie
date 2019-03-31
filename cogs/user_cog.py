@@ -14,15 +14,20 @@ class UserCog(BaseCog):
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])
     async def send_help(self, ctx: commands.Context, cog_name: str=None, simple: str="simple"):
         """Sends information about a specific cog's commands"""
+        
+        # Enable advanced !help output
         if simple in ["n", "-", "advanced"]:
             simple = "advanced"
+        
+        # Send message listing all possible !help categories
         if not cog_name:
             categories = "\n".join(cog.cog_name
                                    for cog in list(self.bot.cogs.values())
                                    if cog.cog_name not in self.IGNORE_HELP)
-            embed = await self.get_embed(ctx, fields=[self.EmbedField("Categories", categories)])
-            await ctx.send(embed=embed)
+            await self.send_embed_message(ctx, "Categories", categories)
             await ctx.send("Type `!help <category> (advanced)`")
+        
+        # Send help message for specific category
         else:
             cog_name = cog_name.lower()
             for cog in self.bot.cogs.values():

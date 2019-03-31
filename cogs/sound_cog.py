@@ -580,8 +580,9 @@ class SoundCog(BaseCog):
         upcoming = list(islice(player.queue._queue, 0, 5))
 
         out_msg = "\n".join(f'**`{up["title"]}`**' for up in upcoming)
-        embed = await self.get_embed(ctx, fields=[EmbedField("Queue", out_msg)], color="red")
-        await ctx.send(embed=embed)
+        
+        await self.send_embed_message(ctx, "Queue", out_msg, color="red")
+
 
     @commands.command(name="tts",
                       aliases=["texttospeech", "text-to-speech"])
