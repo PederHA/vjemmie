@@ -17,9 +17,14 @@ pillow = "*"
 geopy = "*"
 pynacl = "*"
 trueskill = "*"
+loguru = "*"
+"72eb2aa" = {file = "https://github.com/Rapptz/discord.py/archive/rewrite.zip"}
+pathvalidate = "*"
 
 [dev-packages]
 pylint = "*"
+yapf = "*"
+bandit = "*"
 
 [requires]
 python_version = "3.7"
