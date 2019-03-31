@@ -76,29 +76,40 @@ class BaseCog(commands.Cog):
         """
         Creates a multi-line codeblock in markdown formatting
         listing items in iterable `items` on separate lines.
-
-        Args:
-            items (Iterable): Iterable of items to be represented
-            item_type (str): (optional) Description of items in iterable. Default: None
-            enum: (optional) Generates index next to each item listing. Default: False
         
-        Returns:
-            output (str): Markdown formatted code block listing items in iterable, 1 per line.
+        NOTE
+        ----
+        This method is more or less deprecated in favor of methods
+        using discord.Embed objects.
 
-        Example:
-            >>>format_output(["foo", "bar", "baz"], "generic items")
-            ```Available generic items:
-
-            1. foo
-            2. bar
-            3. baz
-            ```
+        Parameters
+        ----------
+        items : `Iterable`
+            Iterable of strings to format
+        item_type : `str`, optional
+            Description of items in iterable. Default: None
+        enum : `bool`, optional
+            Adds index number next to each item listing. Default: False
         
-        TODO: Split messages longer than 1800 chars
+        Returns
+        -------
+        output : `str`
+            Markdown formatted code block of items in iterable, 1 item per line.
+
+        Example
+        -------
+        >>>format_output(["foo", "bar", "baz"], "generic items")
+        '```
+        Available generic items:
+
+        1. foo
+        2. bar
+        3. baz
+        ```'
         """
         if formatting not in md_formats:
             formatting = ""
-
+        
         output = f"```{formatting}\n"
         if item_type is not None:
             output += f"Available {item_type}:\n\n"
@@ -447,7 +458,7 @@ class BaseCog(commands.Cog):
         return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
 
     async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
-        if not limit or limit > 1024:
+        if not limit or limit > 1024: # NOTE: This shouldn't be hardcoded
             limit = self.CHAR_LIMIT
         _out = []
         temp = ""
