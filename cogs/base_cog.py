@@ -344,7 +344,7 @@ class BaseCog(commands.Cog):
         if ext.lower() not in self.IMAGE_EXTENSIONS:
             raise InvalidFiletype("Attempted to upload a non-image file")
 
-        # Get file-like bytes object (io.BytesIO)
+        # Get file-like bytes stream (io.BytesIO)
         file_bytes = await self.download_from_url(image_url)
 
         # Upload image
@@ -410,22 +410,22 @@ class BaseCog(commands.Cog):
                 cmd_name = command.signature.ljust(35,"\xa0")
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         if not _out_str:
-            return
+            return # NOTE: Raise exception here?
         await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
 
     async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
         """
-        Posts an arbitrarily long string as a message to a channel.
-
-        Message is split into multiple parts if string exceeds 1800 characters.
+        Sends an arbitrarily long string as one or more messages to a channel.
+        String is split into multiple messages if length of string exceeds 
+        text message character limit.
         
         Parameters
         ----------
-        ctx : commands.Context
+        ctx : `commands.Context`
             Discord Context
-        text : str
+        text : `str`
             String to post to channel
-        channel_id : Optional[int], optional
+        channel_id : `Optional[int]`, optional
             Optional channel ID if target channel is not part of the context.
         """
         # Obtain channel
@@ -497,20 +497,20 @@ class BaseCog(commands.Cog):
         if len(text_fields) > 1:
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, fields=[self.EmbedField(header, field)], footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, fields=[EmbedField(header, field)], footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=footer, timestamp=timestamp, color=color)
+                await self.get_embed(ctx, fields=[EmbedField("_", field)], footer=footer, timestamp=timestamp, color=color)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
-                await self.get_embed(ctx, fields=[self.EmbedField("_", field)], footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, fields=[EmbedField("_", field)], footer=False, timestamp=False, color=color)
                 for field in text_fields]
         else:
             # Create normal embed with title and footer if text is not chunked
             embeds = [
                 await self.get_embed(
                     ctx,
-                    fields=[self.EmbedField(header, text_fields[0])],
+                    fields=[EmbedField(header, text_fields[0])],
                     footer=footer,
                     timestamp=timestamp,
                     color=color)
