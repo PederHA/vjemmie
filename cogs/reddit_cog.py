@@ -17,8 +17,8 @@ import praw
 from discord.ext import commands
 
 from ext.checks import is_admin
-from cogs.base_cog import BaseCog
-from ext_module import ExtModule
+from cogs.base_cog import BaseCog, EmbedField
+
 
 reddit = praw.Reddit(
     client_id=secrets.REDDIT_ID,
@@ -249,7 +249,7 @@ class RedditCog(BaseCog):
             msg = f"Content sorting is currently set to {self.DEFAULT_SORTING}"
         else:
             msg = "Usage:\n`!rsort` toggles between hot/top\n`!hot` & `!top` for manual selection"
-        embed = await self.get_embed(ctx, fields=[self.EmbedField("!rsort / !top / !hot", msg)], footer=False, timestamp=False, color="red")
+        embed = await self.get_embed(ctx, fields=[EmbedField("!rsort / !top / !hot", msg)], footer=False, timestamp=False, color="red")
         await ctx.send(embed=embed)
 
     @commands.command(name="rsettings", aliases=["reddit_settings"])
@@ -268,7 +268,7 @@ class RedditCog(BaseCog):
             out += f"\n**Time:**".ljust(20, "\xa0") + time_sorting.capitalize()
         embed = await self.get_embed(
             ctx,
-            fields=[self.EmbedField("Reddit settings", out)],
+            fields=[EmbedField("Reddit settings", out)],
             footer=False,
             color="red",
             timestamp=False)
@@ -393,9 +393,9 @@ class RedditCog(BaseCog):
 
         if category in ["help", "categories", "?"]:
             # Posts an embed with a field for each category and their subreddits.
-            default_field = self.EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
-            edgy_field = self.EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
-            fried_field = self.EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
+            default_field = EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
+            edgy_field = EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
+            fried_field = EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
             embed = await self.get_embed(ctx, title="Memes", fields=[default_field, edgy_field, fried_field], color="red")
             await ctx.send(embed=embed)
         else:

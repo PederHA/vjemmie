@@ -1,9 +1,10 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
-from ext_module import PmForbidden
 from random import randint
+
+import discord
+from discord.ext import commands
+
 from cogs.base_cog import BaseCog
+
 
 class UserCog(BaseCog):
     def __init__(self, bot: commands.Bot):

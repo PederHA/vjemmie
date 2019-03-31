@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from ext.checks import is_pfm
-from cogs.base_cog import BaseCog
+from cogs.base_cog import BaseCog, EmbedField
 from cogs.db_cog import DatabaseHandler
 from utils.config import GENERAL_DB_PATH
 
@@ -45,7 +45,7 @@ class MemeCog(BaseCog):
                 break
 
         # Get embed object for gamer leaderboard
-        embed = await self.get_embed(ctx, fields=[self.EmbedField("Heated Gaming Moments", out)], color=0xe98cb0)
+        embed = await self.get_embed(ctx, fields=[EmbedField("Heated Gaming Moments", out)], color=0xe98cb0)
 
         # Set embed thumnail to rank 1 gamer if a matching Discord member is found
         if member:

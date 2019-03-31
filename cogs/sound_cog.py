@@ -26,7 +26,7 @@ from youtube_dl import YoutubeDL
 
 from ext.checks import is_admin
 from cogs.base_cog import BaseCog, InvalidFiletype
-from ext_module import ExtModule
+
 from utils.config import SOUND_DIR
 
 ytdlopts = {
@@ -205,7 +205,7 @@ class SoundFolder:
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     YTDL_MAXSIZE = 10000000 # 10 MB
-    SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned"]
+    SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned", "unused_tts"]
     DOWNLOADS_DIR = f"{SOUND_DIR}/downloads"
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -524,7 +524,7 @@ class SoundCog(BaseCog):
         # Parse argument `category`
         if not category:
             categories = ", ".join([f"**`{sf.folder}`**" for sf in self.sub_dirs])
-            await ctx.send(f"Specify a category.\nType **`!{ctx.invoked_with}`** + {categories}")
+            await ctx.send(f"Specify a category.\nType **`!{ctx.invoked_with}`** + <{categories}>")
             return
 
         category = get_category(category.lower())
@@ -580,7 +580,7 @@ class SoundCog(BaseCog):
         upcoming = list(islice(player.queue._queue, 0, 5))
 
         out_msg = "\n".join(f'**`{up["title"]}`**' for up in upcoming)
-        embed = await self.get_embed(ctx, fields=[self.EmbedField("Queue", out_msg)], color="red")
+        embed = await self.get_embed(ctx, fields=[EmbedField("Queue", out_msg)], color="red")
         await ctx.send(embed=embed)
 
     @commands.command(name="tts",

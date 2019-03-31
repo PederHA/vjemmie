@@ -1,12 +1,12 @@
-from discord.ext import commands
-import discord
-from ext_module import ExtModule
-from ext_module import PmForbidden
-from ext.checks import load_blacklist, save_blacklist, is_admin
-from cogs.base_cog import BaseCog
-from typing import Union, Optional
 import asyncio
 from datetime import datetime, timedelta
+from typing import Optional, Union
+
+import discord
+from discord.ext import commands
+
+from cogs.base_cog import BaseCog, EmbedField
+from ext.checks import is_admin, load_blacklist, save_blacklist
 
 
 class AdminCog(BaseCog):
@@ -52,8 +52,7 @@ class AdminCog(BaseCog):
             ctx: The context of the command, which is mandatory in rewrite
         """
         guilds = "\n".join([guild.name for guild in self.bot.guilds])
-        embed = await self.get_embed(ctx, fields=[self.EmbedField("Guilds", guilds)])
-        await ctx.send(embed=embed)
+        await self.send_embed_message(ctx, "Guilds", guilds)
 
     @commands.command(name='leave',
                       description='(ID) || The bot will attempt to leave the server with the given ID.')
