@@ -12,9 +12,9 @@ from ext.checks import is_admin, load_blacklist, save_blacklist
 class AdminCog(BaseCog):
     @commands.Cog.listener()
     async def on_ready(self, *, activity_name: Optional[str]=None) -> None:
-        """Is called when the bot is completely started up. Calls in this function need variables only a started bot can give.
+        """Sets activity and prints a message when cog is instantiated 
+        and added to the bot.
         """
-
         activity_name = "!help" if not activity_name else activity_name
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
@@ -22,43 +22,54 @@ class AdminCog(BaseCog):
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
-        """Is called when the bot joins a new guild. Sends an informative message to the log_channel
-        Args:
-            guild: The guild which the bot joined on (discord.Guild)
-            """
+        """Called when bot joins a guild."""
         await self.send_log(f"Joined guild {guild.name}")
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
-        """Is called when the bot leaves a guild. Sends an informative message to the log_channel
-        Args:
-            guild: The guild which was left by the bot (discord.Guild)
-            """
-        await self.send_log(f"Joined guild {guild.name}")
+        """Called when bot leaves a guild."""
+        await self.send_log(f"Left guild {guild.name}")
     
     @commands.command(aliases=["change_activity"])
     @is_admin()
-    async def ca(self, ctx, activity_name: Optional[str]=None) -> None:
+    async def ca(self, ctx: commands.Context, activity_name: Optional[str]=None) -> None:
+        """Changes bot activity.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        activity_name : `Optional[str]`, optional
+            Name of activity.
+        """
         await self.on_ready(activity_name=activity_name)
     
-    @commands.command(name='serverlist',
-                      aliases=['list'],
-                      description='Prints a list of all the servers'
-                                  ' this bot is a member of to the admin log_channel')
+    @commands.command(name="serverlist")
     @is_admin()
     async def serverlist(self, ctx: commands.Context) -> None:
-        """This function sends a list with all the servers this bot is a member of to the self.log_channel
-        Args:
-            ctx: The context of the command, which is mandatory in rewrite
-        """
+        """Sends a list of all guilds the bot is joined to."""
         guilds = "\n".join([guild.name for guild in self.bot.guilds])
         await self.send_embed_message(ctx, "Guilds", guilds)
 
     @commands.command(name="leave")
     @is_admin()
     async def leave(self, ctx: commands.Context, guild_id: int) -> None:
-        "Attempts to leave a Discord Guild (server)."
+        """Attempts to leave a Discord Guild (server).
         
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        guild_id : `int`
+            ID of guild to leave.
+        
+        Raises
+        ------
+        `discord.DiscordException`
+            Raised if a guild with ID `guild_id` cannot be found.
+        `discord.DiscordException`
+            Raised if bot is unable to leave the specified guild.
+        """
         # Get discord.Guild object for guild with ID guild_id
         guild = self.bot.get_guild(int(guild_id))
         
