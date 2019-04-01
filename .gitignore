@@ -1,28 +1,46 @@
-Sounds/
-Deprecated/deprecated_functions.txt
-cogs/libopus-0.dll
-cogs/libopus-0.x64.dll
-cogs/libopus.so.0.dll
-botstartup.bat
-botstartup.bat - Shortcut.ink
-secrets.py
-soundboard_bot.py
-test1.py
-bin/libopus.dll
-bin/libopus (2).dll
-bin/libopus-0.x64.dll
-bin/libopus.so.0.dll
-bin/libopus-0.x86.dll
-bot - Copy.py
-botstartup.bat - Shortcut.lnk
-.vscode/launch.json
-.vscode/settings.json
+# VS Code
+.vscode*
+
+# Python
 __pycache__/
-boi
-cogs/mac_pubg_cog.py
-cogs/serial_cog.py
-requirements.txt
+
+# Startup scripts
+botstartup*
+
+# Config and credentials files
+utils/config.py
+secrets.py
+
+# Filetypes
+*.pkl
+*.psd
+*.db
+traceback.txt
+SoundboardProxy
+utils/oldidk.py
+
+# Docker
+docker*
+Docker*
+.docker*
+config.py
+
+# Directories
+downloads/
+_dev/*
+db/*
+deepfryer/images/*
+memes/images*
+sounds/
+temp/
+
+# Single files
 cogs/message_cog.py
-testfile.py
-bot_resources.py
-temp
+soundboard_bot.py
+ffmpeglog.txt
+TODO
+alexa.json
+out/audioplayers.json
+
+# Tests
+*pytest*
