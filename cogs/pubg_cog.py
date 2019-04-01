@@ -5,9 +5,7 @@ import discord
 import numpy
 from discord.ext import commands
 
-from bot_resources import GUILDS, NON_PUBG_PLAYERS
 from cogs.base_cog import BaseCog
-
 from utils.config import GENERAL_DB_PATH
 
 
@@ -243,8 +241,7 @@ class PUBGCog(BaseCog):
         try:
             for member in ctx.message.author.voice.channel.members:
                 if not member.voice.self_deaf:
-                    if member.id not in NON_PUBG_PLAYERS:
-                        squad_list.append(member.name)
+                    squad_list.append(member.name)
         except AttributeError:
             pass # This error will be handled by `crate` method. 
         return squad_list
