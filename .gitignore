@@ -36,6 +36,11 @@ temp/
 
 # Single files
 cogs/message_cog.py
+cogs/pfm_cog.py
+cogs/pfm_memes_cog.py
+cogs/db_cog.py
+cogs/war3_cog.py
+utils/events.py
 soundboard_bot.py
 ffmpeglog.txt
 TODO
