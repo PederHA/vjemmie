@@ -19,7 +19,6 @@ import discord
 import gtts
 import youtube_dl
 from async_timeout import timeout
-from discord import opus
 from discord.ext import commands
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
@@ -189,7 +188,6 @@ class SoundFolder:
         self.folder = folder
         self.header = header if header else "General"
         self.color = color
-        
 
     @property
     def sound_list(self) -> list:
