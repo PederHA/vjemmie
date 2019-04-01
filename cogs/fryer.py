@@ -11,7 +11,6 @@ a richer set of functionality than what DeepFryBot provides.
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-import cv2
 from random import randint
 import requests
 import shutil
@@ -20,7 +19,7 @@ from typing import Iterable
 import textwrap
 from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
 import math
-import progressbar
+
 
 class ImageFryer:
     def __init__(self, img_url):
