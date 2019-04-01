@@ -5,7 +5,6 @@ import secrets
 from secrets import PFMSecrets
 
 import discord
-from discord import opus
 from discord.ext import commands
 from discord.ext.commands import Bot
 
