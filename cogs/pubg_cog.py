@@ -7,8 +7,6 @@ from discord.ext import commands
 
 from bot_resources import GUILDS, NON_PUBG_PLAYERS
 from cogs.base_cog import BaseCog
-from cogs.db_cog import DatabaseHandler
-from events_module import contains_rad
 
 from utils.config import GENERAL_DB_PATH
 
@@ -174,13 +172,11 @@ class PUBGCog(BaseCog):
         # Limit names to one word
         squad = [name.split(" ")[0] for name in squad]
 
-        if contains_rad(squad):
-            await ctx.message.add_reaction(":8xscope:417396529452810241")
 
         # Determines size of squad and distributes guns accordingly.
         # Returns size of squad and gun list containing n=squadsize lists.
         gunsplit, armorsplit = await self.roll_guns(squad)
-        #db = DatabaseHandler(GENERAL_DB_PATH)
+
         #for idx, player in enumerate(squad):
         #    db.crate_rolls(player, [gun for gun in gunsplit[idx]], [armor for armor in armorsplit[idx]])
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
