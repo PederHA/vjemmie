@@ -15,9 +15,6 @@ secrets.py
 *.pkl
 *.psd
 *.db
-traceback.txt
-SoundboardProxy
-utils/oldidk.py
 
 # Docker
 docker*
@@ -33,6 +30,7 @@ deepfryer/images/*
 memes/images*
 sounds/
 temp/
+SoundboardProxy/
 
 # Single files
 cogs/message_cog.py
@@ -46,6 +44,8 @@ ffmpeglog.txt
 TODO
 alexa.json
 out/audioplayers.json
+utils/oldidk.py
+pfmalexa.py
 
 # Tests
 *pytest*
