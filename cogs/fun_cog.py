@@ -6,7 +6,6 @@ from secrets import FPL_LEAGUE_ID, REALNAME_ID
 
 import discord
 from discord.ext import commands
-from fpl import FPL
 
 from cogs.base_cog import BaseCog
 
