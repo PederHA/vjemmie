@@ -3,7 +3,7 @@ import hashlib
 import os.path
 from io import BytesIO
 import io
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlparse
 from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import Iterable, List, Optional, Union
@@ -539,11 +539,11 @@ class BaseCog(commands.Cog):
                     color=color)
             ]
 
-        # Return embed objects if desired
+        # Return embed objects if enabled
         if return_embeds:
             return embeds
 
-        # Otherwise just send each embed as a message
+        # Send each embed object to ctx.channel
         for embed in embeds:
             await ctx.send(embed=embed)
 
@@ -566,3 +566,7 @@ class BaseCog(commands.Cog):
             raise AttributeError("URL has no file extension")
 
         return fname, extension
+
+    async def is_img_url(self, url: str) -> bool:
+        return (urlparse(url).scheme in ["http", "https"] and
+                "."+url.rsplit(".", 1)[1] in self.IMAGE_EXTENSIONS)
