@@ -25,7 +25,7 @@ from cogs.stats_cog import StatsCog
 from cogs.management_cog import ManagementCog
 
 
-__all__ = [
-    k for k, v in dict(locals()).items()
+COGS = [
+    v for k, v in dict(locals()).items()
     if k.endswith("Cog") and issubclass(v, commands.Cog)
 ]
