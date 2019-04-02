@@ -15,35 +15,29 @@ class FryingCog(BaseCog):
 
     @commands.command(name="deepfry")
     async def deepfry(self, ctx: commands.Context, image_url: str="", emoji: str="", text: str="", caption: str="") -> None:
-        args = (image_url, emoji, text, caption)
-        if image_url != "list":
-            try:
-                fryer = ImageFryer(image_url)
-                fryer.fry(emoji, text, caption)
-            except InvalidURL:
-                await ctx.send("Could not parse URL.")
-            except NonImgURL:
-                await ctx.send("The provided URL has to be a direct link to an image.")
-            except WordExceededLimit:
-                # Catch exception that is raised when textwrap tries to wrap a word that exceeds its limit
-                await ctx.send("A single word in a given string cannot exceed 26 characters.")
-            except ConnectionError:
-                await ctx.send("Could not connect to the provided URL.")
-            except MissingSchema:
-                await ctx.send("The URL must include a schema (http/https).")
-            except:
-                exc = traceback.format_exc()
-                with open("traceback.txt", mode="w+") as f:
-                    f.write(exc)
-                print(exc)
-                await ctx.send("Something went wrong when trying to fry the image provided.")
+        
+        if not await self.is_img_url(image_url):
+            if image_url == "emojis":
+                emojis = await ImageFryer.get_files_in_dir("emojis")
+                return await self.send_text_message(ctx, emojis)
+            elif image_url == "captions":
+                captions = await ImageFryer.get_files_in_dir("captions")
+                return await self.send_text_message(ctx, emojis)
             else:
-                await ctx.send(file=discord.File("deepfryer/temp/fried_img.jpg"))
-        elif args[0] == "list":
-            returned = ImageFryer.get_files_in_dir(args[1])
-            if returned is not None:
-                await ctx.send(returned)
-            else:
-                await ctx.send("**List syntax:** `!deepfry list <emojis/captions/all>`")        
+                help_cmd = self.bot.get_command("help")
+                return await ctx.invoke(help_cmd, "frying")
+
+        if len(text) > 26:
+            raise discord.DiscordException("Text string cannot exceed 26 characters")
+        
+        try:
+            img = await self.download_from_url(image_url)
+            fryer = ImageFryer(img)
+            img = fryer.fry(emoji, text, caption)
+        except Exception as e:
+            exc = traceback.format_exc()
+            await self.log_error(ctx, exc)
+            return await ctx.send("An unknown error occured.") 
         else:
-            await ctx.send("**Syntax:** `!deepfry <URL to image \***required**> <emoji -_optional_> <text _optional_> <caption graphic _optional_>`")
+            await ctx.send(file=discord.File(img, filename="deepfried.jpeg"))
+
