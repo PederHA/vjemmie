@@ -6,7 +6,7 @@ import numpy
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-from utils.config import GENERAL_DB_PATH
+from config import GENERAL_DB_PATH
 
 
 class PUBGCog(BaseCog):

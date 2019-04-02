@@ -26,7 +26,7 @@ from youtube_dl import YoutubeDL
 from ext.checks import is_admin
 from cogs.base_cog import BaseCog, InvalidFiletype
 
-from utils.config import SOUND_DIR
+from config import SOUND_DIR
 
 ytdlopts = {
     'format': 'bestaudio/best',

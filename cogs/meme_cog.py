@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from ext.checks import is_pfm
 from cogs.base_cog import BaseCog, EmbedField
-from utils.config import GENERAL_DB_PATH
+from config import GENERAL_DB_PATH
 
 class MemeCog(BaseCog):
     """Various meme commands"""
@@ -19,8 +19,6 @@ class MemeCog(BaseCog):
     @commands.command()
     async def psio(self, ctx: commands.Context) -> None:
         await self.read_send_file(ctx, "memes/txt/psio.txt")
-
-
 
     @commands.command(name="braille")
     async def braille(self, ctx: commands.Context, *text: str) -> None:
