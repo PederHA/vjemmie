@@ -129,36 +129,42 @@ class ImageFryer:
             and its background to obscure parts of the image.
         """
 
-        tmp = img.copy()        
-        tmp = tmp.convert("RGBA")
+        tmp = img.copy().convert("RGBA")
 
+        # Create image to draw text on
         txt = Image.new("RGBA", tmp.size, (255,255,255,0))
         fnt = ImageFont.truetype(".deepfryer/fonts/LiberationSans-Regular.ttf", tmp.height//8)         
         d = ImageDraw.Draw(txt)
         
+        # Split text into lines
         # Each character is aproximately 26 pixels
-        try:
-            lines = textwrap.wrap(text_string, width=(tmp.width//26.5))
-        except:
-            raise WordExceededLimit
-        # Line count is used to determine height of text background
-        # as well as limiting the amount of text that is displayed
-        line_count = 0
-        y_text = 0
-        for  line in lines:
+        lines = textwrap.wrap(text_string, width=(tmp.width//26.5))
+        
+        if len(lines) > 2:
+            raise ValueError("Some error about text string being too long")
+
+        
+        # Draw text, limited to 2 lines
+        y_text_pos = 0
+        for line_count, line in enumerate(lines):
             if line_count < 2:
                 width, height = fnt.getsize(line)
-                d.text((0,y_text), line, font=fnt, fill=(0,0,0,255), align="center")
-                y_text += height
+                d.text((0,y_text_pos), line, font=fnt, fill=(0,0,0,255), align="center")
+                y_text_pos += height
                 line_count += 1
-            
+
+        # Get size of text
+        coords = ((tmp.width, 0),(0, (tmp.height//6.4)*line_count))
+        
+        # Draw white background for text
         white_bg = Image.new("RGBA", tmp.size, (255,255,255,0))
         image_caption_box = ImageDraw.Draw(white_bg)
-        coords = ((tmp.width, 0),(0, (tmp.height//6.4)*line_count))
         image_caption_box.rectangle(coords, fill="white", outline="white")
 
+        # Composite text, background & base image
         text_box = Image.alpha_composite(white_bg, txt)
         out = Image.alpha_composite(tmp, text_box)
+        
         return out
     
 
