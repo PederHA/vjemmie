@@ -26,11 +26,11 @@ from youtube_dl import YoutubeDL
 from ext.checks import is_admin
 from cogs.base_cog import BaseCog, InvalidFiletype
 
-from config import SOUND_DIR
+from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR
 
 ytdlopts = {
     'format': 'bestaudio/best',
-    'outtmpl': 'sounds/ytdl/%(title)s.%(ext)s',
+    'outtmpl': f'{YTDL_DIR.path}/%(title)s.%(ext)s',
     #'restrictfilenames': True, # Leads to markdown formatting issues when enabled
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -95,12 +95,14 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
 
     @classmethod
-    async def create_local_source(cls, ctx, subdir: str, sound_name: str, *, loop):
-        loop = loop or asyncio.get_event_loop()
+    async def create_local_source(cls, ctx, subdir: str, filename: str):
         # Get path to local sound file
-        path = glob.glob(f"sounds/{subdir}*{sound_name}*")[0]
-        await ctx.send(f"```\nAdded {sound_name} to the Queue.\n```", delete_after=10)
-        return cls(discord.FFmpegPCMAudio(path), data={"title":sound_name}, requester=ctx.author)
+        path = glob.glob(f"{subdir}/{filename}*")[0]
+
+        # Send add-to-queue confirmation
+        await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
+
+        return cls(discord.FFmpegPCMAudio(path), data={"title":filename}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
@@ -122,7 +124,7 @@ class AudioPlayer:
         self.guild = ctx.guild
         self.channel = ctx.channel
         self.cog = ctx.cog
-        
+
         self.created_at = datetime.now()
 
         self.queue = asyncio.Queue()
@@ -133,7 +135,7 @@ class AudioPlayer:
         self.current = None
 
         self.timeout_duration = 60
-        
+
         ctx.bot.loop.create_task(self.player_loop())
 
     async def player_loop(self):
@@ -175,18 +177,17 @@ class AudioPlayer:
         return self.bot.loop.create_task(self.cog.cleanup(guild))
 
 
-class SoundFolder:
+class SoundDirectory:
     """
-    Class holding directory listing and markdown formatting
-    of a specific folder/directory.
+    Represents a subdirectory of the base sound directory defined
+    in `config.py`.
     """
 
-    MAXLEN = 1800
-    BASE_DIR = SOUND_DIR
-
-    def __init__(self, folder:str="", header:str=None, color: str=None) -> None:
+    def __init__(self, folder: str, header: str=None, aliases=None, path: str=None, color: str=None) -> None:
         self.folder = folder
         self.header = header if header else "General"
+        self.aliases = aliases
+        self.path = path
         self.color = color
 
     @property
@@ -194,7 +195,7 @@ class SoundFolder:
         return sorted(
             [
             i.rsplit(".", 1)[0]
-            for i in os.listdir(f"{self.BASE_DIR}/{self.folder}")
+            for i in os.listdir(self.path)
             if any([i.endswith(ext) for ext in VALID_FILE_TYPES]) # Only include known compatible containers
             ],
             key=lambda f: f.lower()) # Sort case insensitive
@@ -203,55 +204,35 @@ class SoundFolder:
 class SoundCog(BaseCog):
     """Cog for the soundboard feature"""
     YTDL_MAXSIZE = 10000000 # 10 MB
-    SOUND_DIR_IGNORE = ["emptytest", "original", "cleaned", "unused_tts"]
-    DOWNLOADS_DIR = f"{SOUND_DIR}/downloads"
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
 
-        # Find all subdirectories
-        subfolders = [
-            f.name for f in os.scandir(SOUND_DIR)
-            if f.is_dir() and f.name not in self.SOUND_DIR_IGNORE
-        ]
-
-        # Sound file directories
+        # Create SoundDirectory instance for each subdirectory
         self.sub_dirs = [
-                         SoundFolder(sfolder, sfolder.capitalize(),
-                         color=self.generate_hex_color_code(sfolder))
-                         for sfolder in subfolders
+                         SoundDirectory(subdir.name,
+                         header=subdir.name.capitalize(),
+                         aliases=subdir.aliases,
+                         path=subdir.path,
+                         color=self.generate_hex_color_code(subdir.name))
+                         for subdir in SOUND_SUB_DIRS
                          ]
 
-        # Per-guild audio players
+        # Per-guild audio players. Key: Guild ID
         self.players: Dict[int, AudioPlayer] = {}
 
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
-        
-        # Monitor active players
-        #self.bot.loop.create_task(self.monitor_players())
 
+        # Create required directories
         self.setup_directories()
-
-    async def monitor_players(self) -> None:
-        while True:
-            with open("db/players.json", "w") as f:
-                json.dump([str(player.guild) for player in self.players.values()], f)
-            await asyncio.sleep(10)
 
     def setup_directories(self) -> None:
         """Creates directories neccessary for soundboard commands"""
-        # Base sound directory
-        paths = [
-            SOUND_DIR,
-            f"{SOUND_DIR}/downloads",
-            f"{SOUND_DIR}/downloads/wav",
-            f"{SOUND_DIR}/ytdl/",
-            f"{SOUND_DIR}/general",
-            f"{SOUND_DIR}/yeah"
-        ]
-        for path in paths:
-            if not Path(path).exists():
+        # Get directory paths from config
+        for sub_dir in SOUND_SUB_DIRS:
+            if not Path(sub_dir.path).exists():
+                print(f"Creating directory {sub_dir.path}")
                 os.mkdir(path)
 
     @property
@@ -366,21 +347,14 @@ class SoundCog(BaseCog):
         player = self.get_player(ctx)
 
         async def parse_sound_name(arg) -> Tuple[str, str]:
-            #if arg in self.sound_list:
-            for sf in self.sub_dirs:
-                for sound_filename in sf.sound_list:
-                    if sound_filename.lower() == arg:
-                        if sf.folder:
-                            folder = f"{sf.folder}/"
-                        else:
-                            folder = sf.folder # empty string
-                        return folder, sound_filename
+            for sub_dir in self.sub_dirs:
+                if arg in sub_dir.sound_list:
+                    return sub_dir.path, arg
             else:
-                if len(args)>0:
-                    raise discord.DiscordException(f"Could not find sound with name {arg}")
+                if not arg:
+                    return await parse_sound_name(random.choice(self.sound_list))
                 else:
-                    sound_name = random.choice(self.sound_list)
-                    return await parse_sound_name(sound_name)
+                    raise discord.DiscordException(f"Could not find sound with name {arg}")
 
         uri = " ".join(args)
 
@@ -392,23 +366,24 @@ class SoundCog(BaseCog):
 
         # Play local file
         else:
-            uri = uri.lower()      
+            breakpoint()
+            uri = uri.lower()
             # Try to parse provided sound name
             try:
                 subdir, sound_name = await parse_sound_name(uri)
+
             # Suggest sound files with similar names if no results
             except:
-                # TODO: Do some dumb shit with partial methods
                 embeds = await ctx.invoke(self.search, uri, rtn=True)
                 dym = "Did you mean:" if embeds else ""
                 await ctx.send(f"No sound with name **`{uri}`**. {dym}")
                 for embed in embeds:
                     await ctx.send(embed=embed)
                 return
-            
+
             source = await YTDLSource.create_local_source(ctx, subdir, sound_name, loop=self.bot.loop)
             await player.queue.put(source)
-        
+
         # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
 
@@ -510,31 +485,40 @@ class SoundCog(BaseCog):
         discord.DiscordException
             Raised if attempting to display all sound files at once.
         """
+
+
         def get_category(category: str) -> Optional[str]:
-            if category is not None:
-                if category in ["yt", "youtube", "ytdl"]:
-                    return "ytdl"
-                elif category in ["tts", "texttospeech"]:
-                    return "tts"
-                elif category in [sf.folder for sf in self.sub_dirs]:
+            for sub_dir in self.sub_dirs:
+                if category in sub_dir.aliases:
                     return category
 
-        # Parse argument `category`
+        # Formatted string of sound categories
+        categories = ", ".join([f"**`{sd.folder}`**" for sd in self.sub_dirs])
+
+        # Raise exception if no category argument is given
         if not category:
-            categories = ", ".join([f"**`{sf.folder}`**" for sf in self.sub_dirs])
-            await ctx.send(f"Specify a category.\nType **`!{ctx.invoked_with}`** + <{categories}>")
+            await ctx.send(
+                f"Specify a category.\nType **`!{ctx.invoked_with}`** + {categories}"
+            )
             return
 
-        category = get_category(category.lower())
+        # Directory names are all lowercase
+        category = category.lower()
 
-        # Send sound list
-        for sf in self.sub_dirs:
-            if sf.folder == category or not category:
+        # Check if a subdirectory matches `category` argument, then send list of sounds
+        for sub_dir in self.sub_dirs:
+            if category in sub_dir.aliases:
                 _out = ""
-                for sound in sf.sound_list:
+                for sound in sub_dir.sound_list:
                     _out += f"{sound}\n"
-                await self.send_embed_message(ctx, sf.header, _out, color=sf.color)
-                break
+                return await self.send_embed_message(
+                    ctx, sub_dir.header, _out, color=sub_dir.color)
+        # Raise exception if no sound directory matches category
+        else:
+            raise discord.DiscordException(f"No such category **`{category}`**.\n"
+                                           f"Categories: {categories}"
+                                           )
+
 
     @commands.command(name="search")
     async def search(self, ctx: commands.Context, *search_query: str, rtn: bool=False) -> None:
@@ -549,15 +533,15 @@ class SoundCog(BaseCog):
                     _out.append(sound)
             if _out:
                 _out_str = "\n".join(_out)
-                _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=rtn)
+                _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=True)
                 for embed in _rtn_embeds:
                     embeds.append(embed)
-        
+
         # Return embeds if enabled
         if rtn:
             return embeds
-        
-        # Post results
+
+        # Post search results to ctx.channel otherwise
         if embeds:
             for embed in embeds:
                 await ctx.send(embed=embed)
@@ -578,7 +562,7 @@ class SoundCog(BaseCog):
         upcoming = list(islice(player.queue._queue, 0, 5))
 
         out_msg = "\n".join(f'**`{up["title"]}`**' for up in upcoming)
-        
+
         await self.send_embed_message(ctx, "Queue", out_msg, color="red")
 
 
@@ -733,9 +717,9 @@ class SoundCog(BaseCog):
             f.write(sound_file.getvalue())
 
         if ext in [".wav"]:
-            filename = await self.convert_soundfile_to_mp3(directory, filename, ext, self.DOWNLOADS_DIR)
+            filename = await self.convert_soundfile_to_mp3(directory, filename, ext, DOWNLOADS_DIR.path)
             return filename
-    
+
     async def convert_soundfile_to_mp3(self, src_dir: str, filename: str, extension: str, dest_dir) -> None:
         """Converts a sound file to an .mp3 file, then deletes original file"""
         if extension not in [".wav"]:
@@ -752,7 +736,7 @@ class SoundCog(BaseCog):
 
         await self.bot.loop.run_in_executor(None, convert, src_dir, filename, extension, dest_dir)
         return filename
-    
+
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: str=None) -> None:
         """Lazy download sound command.
@@ -885,5 +869,3 @@ class SoundCog(BaseCog):
         # Delete wav version of joined file
         if Path(joined_filepath_wav).exists():
             os.remove(joined_filepath_wav)
-
-
