@@ -16,7 +16,7 @@ class SoundSubdir:
     
     def __post_init__(self) -> None:
         # Add directory name to aliases
-        if self.aliases and self.folder not in self.aliases:
+        if self.folder not in self.aliases:
             self.aliases.append(self.folder)
         
         # Add relative path to sound subdirectory
