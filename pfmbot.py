@@ -1,6 +1,5 @@
 import sys
 
-import discord
 from discord.ext.commands import Bot
 
 from cogs import COGS
@@ -14,7 +13,9 @@ for cog in COGS:
         bot.add_cog(cog(bot=bot))
 
 # Development mode is triggered if arbitrary commandline arg is present
-dev = False if len(sys.argv)==1 else True
-token = BOT_TOKEN if not dev or not DEV_BOT_TOKEN else DEV_BOT_TOKEN
+token = BOT_TOKEN if len(sys.argv)==1 or not DEV_BOT_TOKEN else DEV_BOT_TOKEN
+dev = False if token==BOT_TOKEN else True
+
+# Run bot
 print(f"Dev mode: {dev}")
 bot.run(token)
