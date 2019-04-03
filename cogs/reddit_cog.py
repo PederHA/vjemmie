@@ -1,29 +1,28 @@
 import asyncio
 import datetime
+import json
 import math
 import pickle
 import random
 import re
-import secrets
 import traceback
-import json
 from collections import namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
-from typing import Iterable, Tuple, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import discord
 import praw
 from discord.ext import commands
 
-from ext.checks import is_admin
+from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
-
+from ext.checks import is_admin
 
 reddit = praw.Reddit(
-    client_id=secrets.REDDIT_ID,
-    client_secret=secrets.REDDIT_SECRET,
-    user_agent=secrets.REDDIT_USER_AGENT,
+    client_id=REDDIT_ID,
+    client_secret=REDDIT_SECRET,
+    user_agent=REDDIT_USER_AGENT,
 )
 
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
@@ -39,11 +38,11 @@ class RedditCog(BaseCog):
     DEFAULT_TIME = TIME_FILTERS[0]
     TOP_ALL = (SORTING_FILTERS[1], TIME_FILTERS[0])
     POST_LIMITS = {
-        TIME_FILTERS[0]: ALL_POST_LIMIT,
-        TIME_FILTERS[1]: ALL_POST_LIMIT,
-        TIME_FILTERS[2]: OTHER_POST_LIMIT,
-        TIME_FILTERS[3]: 25,
-        TIME_FILTERS[4]: 25,
+        "all": ALL_POST_LIMIT,
+        "year": ALL_POST_LIMIT,
+        "month": OTHER_POST_LIMIT,
+        "week": 25,
+        "day": 25,
     }
 
     def __init__(self, bot: commands.Bot) -> None:

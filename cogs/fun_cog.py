@@ -2,13 +2,13 @@ import asyncio
 import random
 import traceback
 from pprint import pprint
-from secrets import FPL_LEAGUE_ID, REALNAME_ID
 
 import discord
+import aiohttp
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-
+from botsecrets import REMOVEBG_API_KEY
 
 
 class FunCog(BaseCog): 
@@ -92,3 +92,24 @@ class FunCog(BaseCog):
                 error_amount = "Only **1** argument was"
         
             await ctx.send(f"{error_amount} provided. Type `!random` followed by at least 2 words.")
+
+    # UNFINISHED!
+    @commands.command(name="removebg")
+    async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
+        if not image_url and not ctx.message.attachments:
+            raise discord.DiscordException("Message has image URL or image attachment")
+        
+        if ctx.message.attachments:
+            iamge_url = ctx.message.attachments[0].url
+
+        img = await self.download_from_url(image_url)
+
+        # im suer this is broken im tired cba
+        async with aiohttp.ClientSession() as session:
+            response = await session.post(
+                image_url,
+                data={'image_file': img_file,
+                      'size': 'auto'},
+                headers={'X-Api-Key': API_KEY}
+            )
+        
