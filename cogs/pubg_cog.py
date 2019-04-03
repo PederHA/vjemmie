@@ -17,7 +17,7 @@ class PUBGCog(BaseCog):
     )
     async def drop(self, ctx: commands.Context, map_:str=None, hot: str=None):
         """
-        ``!drop``command that chooses random drop location on a given PUBG map.
+        Chooses random drop location on a given map.
         """
         MAPS = {
             "miramar": { 
@@ -68,7 +68,7 @@ class PUBGCog(BaseCog):
 
         # Raise exception if map cannot be found
         if not pubgmap:
-            raise discord.DiscordException("Invalid map!")
+            return await ctx.send("Invalid map!")
 
         # Get list of locations for selected map
         locations = pubgmap.get("locations")
@@ -103,17 +103,17 @@ class PUBGCog(BaseCog):
         elif players[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
             if len(squad)==0:
-                raise AttributeError(
+                return await ctx.send(
                     f"Must be connected to a voice channel to use `{players[0]}` argument."
                 )
             elif len(squad)==1:
-                raise ValueError(
+                return await ctx.send(
                     "Only 1 user is connected to the voice channel. Crate cannot be rolled."
                 )
        
        # At least 2 players must be specified 
         elif len(players) < 2:
-            raise ValueError("Can't roll crate for 1 player.")
+            return await ctx.send("Can't roll crate for 1 player.")
         
         else:
             squad = args
