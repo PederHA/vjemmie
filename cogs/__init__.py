@@ -1,10 +1,7 @@
 """
-Add/remove cogs in this module.
-
-NOTE
-----
-Only subclasses of discord.ext.commands.Cog are added to __all__!
+Add/remove bot cogs in this module.
 """
+
 from discord.ext import commands
 
 from cogs.admin_cog import AdminCog
@@ -29,6 +26,8 @@ try:
 except:
     pass
 
+# List of all cogs in the local namespace
+# This should be imported in the bot's main module
 COGS = [
     v for k, v in dict(locals()).items()
     if k.endswith("Cog") and issubclass(v, commands.Cog)
