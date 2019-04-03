@@ -18,4 +18,4 @@ cd vjemmie
 pipenv install
 ```
 
-Rename `secrets_example.py` to `secrets.py` and add credentials.
+Rename `botsecrets_example.py` to `botsecrets.py` and add credentials.

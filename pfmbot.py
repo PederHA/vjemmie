@@ -1,7 +1,5 @@
 import asyncio
-import secrets
 import sys
-from secrets import PFMSecrets
 
 import discord
 from discord.ext import commands
@@ -9,6 +7,7 @@ from discord.ext.commands import Bot
 
 from cogs import COGS
 from ext.checks import load_blacklist
+from botsecrets import BOT_TOKEN, DEV_BOT_TOKEN
 
 # Bot setup
 bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
@@ -17,8 +16,8 @@ bot = Bot(command_prefix="!", description="Meme bot", pm_help=False)
 for cog in COGS:
         bot.add_cog(cog(bot=bot))
 
-
+# Development mode is triggered if arbitrary commandline arg is present
 dev = False if len(sys.argv)==1 else True
-token = secrets.BOT_TOKEN if not dev else secrets.DEV_BOT_TOKEN
-print(f"Dev: {dev}")
+token = BOT_TOKEN if not dev or not DEV_BOT_TOKEN else DEV_BOT_TOKEN
+print(f"Dev mode: {dev}")
 bot.run(token)

@@ -8,8 +8,8 @@ __pycache__/
 botstartup*
 
 # Config and credentials files
-utils/config.py
-secrets.py
+botsecrets.py
+config.py
 
 # Filetypes
 *.pkl
@@ -20,7 +20,6 @@ secrets.py
 docker*
 Docker*
 .docker*
-config.py
 
 # Directories
 downloads/
