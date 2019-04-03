@@ -6,7 +6,6 @@ from discord.ext import commands
 from discord.ext.commands import Bot
 
 from cogs import COGS
-from ext.checks import load_blacklist
 from botsecrets import BOT_TOKEN, DEV_BOT_TOKEN
 
 # Bot setup
