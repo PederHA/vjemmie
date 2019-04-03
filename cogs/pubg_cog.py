@@ -85,60 +85,46 @@ class PUBGCog(BaseCog):
     # Start of Crate command
     @commands.command(
         name="crate",
-        aliases=["crateplay", "dibs"],
+        aliases=["crateplay", "dibs", "airdrop"],
         description="nah mate ur not getting the awm",
     )
-    async def crate(self, ctx: commands.Context, *args):
+    async def crate(self, ctx: commands.Context, *players):
         """
-        Distributes potential weapons found in PUBG airdrops among
-        `args` number of players. 
-        
-        `args` can be a tuple containing
-        multiple strings, each representing a squad member, or a 
-        tuple containing a single string representing the number
-        of squad members.
+        Distributes airdrop loot among a squad.
         """
 
-        bot_msg = ""
         default_squad = ("Simon", "Hugo", "Travis", "Steve")
 
-        if args == ():
+        # Resort to default squad if no players arguments
+        if not players:
             squad = default_squad
-        elif args[0].isdigit():
-            n_players = int(args[0])
-            if 1 < n_players <= 4:
-                int_list = list(range(1, n_players))
-                squad_list = [str(n) for n in int_list]
-                squad = squad_list
-            elif n_players > 4:
-                bot_msg = "Can't roll crate for more than 4 players."
-            else:
-                bot_msg = "The specified range is too low. 2-4 players are needed."
-        elif args[0] in ["channel", "c", "ch", "chanel"]:
+
+        # Get players from ctx.author's voice channel
+        elif players[0] in ["channel", "c", "ch", "chanel"]:
             squad = await self.get_squad_from_channel(ctx)
-            if len(squad)==0:    
-                bot_msg = "Must be connected to a voice channel to use <channel> argument."
+            if len(squad)==0:
+                raise AttributeError(
+                    f"Must be connected to a voice channel to use `{players[0]}` argument."
+                )
             elif len(squad)==1:
-                bot_msg = "Only 1 user is connected to the voice channel. Crate cannot be rolled."
-        elif len(args) == 1:
-            bot_msg = "Can't roll crate for 1 player."
+                raise ValueError(
+                    "Only 1 user is connected to the voice channel. Crate cannot be rolled."
+                )
+       
+       # At least 2 players must be specified 
+        elif len(players) < 2:
+            raise ValueError("Can't roll crate for 1 player.")
+        
         else:
             squad = args
-        
-        if bot_msg:
-            await ctx.send(bot_msg)
-            raise Exception(f"Exception in !crate: {bot_msg}")
 
         # Limit names to one word
         squad = [name.split(" ")[0] for name in squad]
-
 
         # Determines size of squad and distributes guns accordingly.
         # Returns size of squad and gun list containing n=squadsize lists.
         gunsplit, armorsplit = await self.roll_guns(squad)
 
-        #for idx, player in enumerate(squad):
-        #    db.crate_rolls(player, [gun for gun in gunsplit[idx]], [armor for armor in armorsplit[idx]])
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
 
         await ctx.send(output)
