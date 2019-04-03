@@ -11,16 +11,16 @@ INSERT_STUFF_HERE = None
 
 @dataclass
 class SoundSubdir:
-    name: str
+    folder: str
     aliases: list = field(default_factory=list)
     
     def __post_init__(self) -> None:
         # Add directory name to aliases
-        if self.aliases and self.name not in self.aliases:
-            self.aliases.append(self.name)
+        if self.aliases and self.folder not in self.aliases:
+            self.aliases.append(self.folder)
         
         # Add relative path to sound subdirectory
-        self.path = f"{SOUND_DIR}/{self.name}"
+        self.path = f"{SOUND_DIR}/{self.folder}"
 
 # Base sound directory
 SOUND_DIR = "sounds"

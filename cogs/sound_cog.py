@@ -210,11 +210,12 @@ class SoundCog(BaseCog):
 
         # Create SoundDirectory instance for each subdirectory
         self.sub_dirs = [
-                         SoundDirectory(subdir.name,
-                         header=subdir.name.capitalize(),
+                         SoundDirectory(
+                         folder=subdir.folder,
+                         header=subdir.folder.capitalize(),
                          aliases=subdir.aliases,
                          path=subdir.path,
-                         color=self.generate_hex_color_code(subdir.name))
+                         color=self.generate_hex_color_code(subdir.folder))
                          for subdir in SOUND_SUB_DIRS
                          ]
 
