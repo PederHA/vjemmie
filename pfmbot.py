@@ -1,8 +1,6 @@
-import asyncio
 import sys
 
 import discord
-from discord.ext import commands
 from discord.ext.commands import Bot
 
 from cogs import COGS
