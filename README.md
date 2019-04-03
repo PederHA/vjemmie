@@ -18,9 +18,4 @@ cd vjemmie
 pipenv install
 ```
 
-The following import statements must also be removed from `cogs/__init__.py`:
-```python
-from cogs.pfm_memes_cog import PFMCog
-from cogs.war3_cog import War3Cog
-```
-I'll add a plug-n-play `cogs/__init__.py ` when I can be bothered.
+Rename `secrets_example.py` to `secrets.py` and add credentials.
