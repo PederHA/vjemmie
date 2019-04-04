@@ -13,6 +13,7 @@ import discord
 import requests
 from discord.ext import commands
 from ext.checks import is_pfm
+from config import LOG_CHANNEL_ID, DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, AUTHOR_MENTION, DISABLE_HELP
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -34,16 +35,17 @@ class BaseCog(commands.Cog):
     """
 
     # Cogs to ignore when creating !help commands
-    IGNORE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
+    DISABLE_HELP = DISABLE_HELP
 
     # Valid image extensions to post to a Discord channel
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
     MAX_DL_SIZE = 25_000_000 # 25 MB
 
     # Channel and User IDs
-    IMAGE_CHANNEL_ID = 549649397420392567
-    LOG_CHANNEL_ID = 340921036201525248
-    AUTHOR_MENTION = "<@103890994440728576>"
+    IMAGE_CHANNEL_ID = IMAGE_CHANNEL_ID
+    LOG_CHANNEL_ID = LOG_CHANNEL_ID
+    DOWNLOAD_CHANNEL_ID = DOWNLOAD_CHANNEL_ID
+    AUTHOR_MENTION = AUTHOR_MENTION
 
     # Embed Options
     EmbedField = namedtuple("EmbedField", "name value")
@@ -67,7 +69,7 @@ class BaseCog(commands.Cog):
 
     def add_help_command(self) -> None:
         command_name = self.cog_name
-        if command_name != "base" and command_name not in self.IGNORE_HELP:
+        if command_name != "base" and command_name not in self.DISABLE_HELP:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=command_name)(cmd_coro)
             self.bot.add_command(cmd)
@@ -109,7 +111,7 @@ class BaseCog(commands.Cog):
         """
         if formatting not in md_formats:
             formatting = ""
-        
+
         output = f"```{formatting}\n"
         if item_type is not None:
             output += f"Available {item_type}:\n\n"
@@ -265,7 +267,7 @@ class BaseCog(commands.Cog):
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
         await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
-    
+
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
 
@@ -329,7 +331,7 @@ class BaseCog(commands.Cog):
         traceback_msg = traceback.format_exc()
         await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
 
-    async def download_from_url(self, url: str) -> io.BytesIO: # TODO: FIX
+    async def download_from_url(self, url: str) -> io.BytesIO:
         """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
         
         Returns
@@ -570,3 +572,18 @@ class BaseCog(commands.Cog):
     async def is_img_url(self, url: str) -> bool:
         return (urlparse(url).scheme in ["http", "https"] and
                 "."+url.rsplit(".", 1)[1] in self.IMAGE_EXTENSIONS)
+
+    async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
+        await self.send_text_message(ctx, f"**ERROR:** {msg}")
+
+    async def log_file_download(self,
+                                ctx: commands.Context,
+                                *,
+                                url: str=None,
+                                filename: str=None,
+                                msg: str=None) -> None:
+        author = ctx.message.author
+        guild = ctx.message.author.guild
+        if not msg:
+            msg = f"**`{author}`** from **`{guild}`** downloaded **`{filename}`** from {url}"
+        await self.send_text_message(ctx, msg, channel_id=self.DOWNLOAD_CHANNEL_ID)
