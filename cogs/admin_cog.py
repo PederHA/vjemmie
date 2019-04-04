@@ -75,7 +75,7 @@ class AdminCog(BaseCog):
         
         # Raise exception if guild is not found
         if not guild:
-            raise discord.DiscordException(f"No guild with ID {guild_id}")
+            return await ctx.send(f"No guild with ID {guild_id}")
         
         try:
             await guild.leave()
