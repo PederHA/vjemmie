@@ -1,35 +1,48 @@
-from dataclasses import dataclass, field
-from typing import Iterable
+from utils.ext_models import SoundSubdir
 
-
-# Database
-##########
+#///////////////////
+# Database        /
+#/////////////////
+# Delete this if cloning
+GENERAL_DB_PATH = "pfm.db"
+PFM_MEMES_DB_PATH = "memes/pfm_memes.db"
 INSERT_STUFF_HERE = None
 
-# Soundboard config
-###################
 
-@dataclass
-class SoundSubdir:
-    folder: str
-    aliases: list = field(default_factory=list)
-    
-    def __post_init__(self) -> None:
-        # Add directory name to aliases
-        if self.folder not in self.aliases:
-            self.aliases.append(self.folder)
-        
-        # Add relative path to sound subdirectory
-        self.path = f"{SOUND_DIR}/{self.folder}"
+#///////////////////
+# Cogs            /
+#/////////////////
+# Add cogs to disable !help message for. Makes cogs "unlisted".
+DISABLE_HELP = ["Admin", "Base", "Cod", "Weather", "YouTube", "War3"]
 
-# Base sound directory
-SOUND_DIR = "sounds"
+
+#///////////////////
+# Downloads       /
+#/////////////////
+MAX_DL_SIZE = 25_000_000 # 25 MB
+
+#///////////////////
+# Channels       /
+#/////////////////
+IMAGE_CHANNEL_ID = 549649397420392567 # Upload images
+LOG_CHANNEL_ID = 340921036201525248 # Log errors
+DOWNLOAD_CHANNEL_ID = 563312629045788692 # Log downloads
+AUTHOR_MENTION = "<@103890994440728576>" # Creates an @BOT_AUTHOR mention. Replace with own ID
+
+
+#///////////////////
+# Soundboard      /
+#/////////////////
+SOUND_DIR = "sounds" # Base sound directory
+SoundSubdir.SOUND_DIR = SOUND_DIR # Don't touch this.
 
 # Sound subdirectories
+#                      Folder  Aliases
 YTDL_DIR = SoundSubdir("ytdl", ["youtube", "utube", "yt"])
 TTS_DIR = SoundSubdir("tts", ["text-to-speech", "texttospeech"])
-GENERAL_DIR = SoundSubdir("general", ["general", "other", "normal", "uncategorized"])
-DOWNLOADS_DIR = SoundSubdir("downloads", ["downloads", "dl", "downloaded", "download"])
+GENERAL_DIR = SoundSubdir("general", ["other", "normal", "uncategorized"])
+DOWNLOADS_DIR = SoundSubdir("downloads", ["dl", "downloaded", "download"])
+## Add subdirectory as SoundSubdir here ##
 
 # Dynamic list of SoundSubdir instances. Import this one!
 SOUND_SUB_DIRS = [v for v in dict(locals()).values() if isinstance(v, SoundSubdir)]
