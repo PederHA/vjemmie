@@ -232,15 +232,15 @@ class SoundCog(BaseCog):
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
 
         # Create required directories
-        self.setup_directories()
+        self.setup()
 
-    def setup_directories(self) -> None:
+    def setup(self) -> None:
         """Creates directories neccessary for soundboard commands"""
         # Get directory paths from config
         for sub_dir in SOUND_SUB_DIRS:
             if not Path(sub_dir.path).exists():
                 print(f"Creating directory {sub_dir}")
-                os.mkdir(sub_dir.path)
+                os.makedirs(sub_dir.path)
 
     @property
     def sound_list(self) -> list:
