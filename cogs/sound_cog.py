@@ -50,7 +50,7 @@ ffmpegopts = {
 ytdl = YoutubeDL(ytdlopts)
 
 VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
-FILETYPES = {".mp3", ".wav", ".m4a"}
+FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
 class VoiceConnectionError(commands.CommandError):
     """Custom Exception class for connection errors."""
@@ -363,20 +363,19 @@ class SoundCog(BaseCog):
                 else:
                     raise discord.DiscordException(f"Could not find sound with name {arg}")
 
-        uri = " ".join(args)
+        arg = " ".join(args)
 
         # Play audio from online source
-        if urlparse(uri).scheme in ["http", "https"]:
+        if urlparse(arg).scheme in ["http", "https"]:
             download = True if ctx.invoked_with == "ytdl" else False
-            source = await YTDLSource.create_source(ctx, uri, loop=self.bot.loop, download=download)
+            source = await YTDLSource.create_source(ctx, arg, loop=self.bot.loop, download=download)
             await player.queue.put(source)
 
         # Play local file
         else:
-            uri = uri.lower()
             # Try to parse provided sound name
             try:
-                subdir, sound_name = await parse_sound_name(uri)
+                subdir, sound_name = await parse_sound_name(arg)
 
             # Suggest sound files with similar names if no results
             except:
