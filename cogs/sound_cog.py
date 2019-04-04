@@ -10,7 +10,7 @@ from functools import partial
 from itertools import islice, chain
 from pathlib import Path
 from queue import Queue
-from typing import Iterator, Optional, Tuple, DefaultDict, Dict
+from typing import Iterator, Optional, Tuple, DefaultDict, Dict, Union, List
 from urllib.parse import urlparse
 from collections import defaultdict
 from datetime import datetime
@@ -184,7 +184,12 @@ class SoundDirectory:
     in `config.py`.
     """
 
-    def __init__(self, folder: str, header: str=None, aliases=None, path: str=None, color: str=None) -> None:
+    def __init__(self, 
+                 folder: str, 
+                 header: str, 
+                 aliases: list, 
+                 path: str, 
+                 color: Optional[Union[str, int]]=None) -> None:
         self.folder = folder
         self.header = header if header else "General"
         self.aliases = aliases
@@ -394,7 +399,7 @@ class SoundCog(BaseCog):
         await ctx.invoke(self.play, *args, voice_channel=channel)
 
     @commands.command(name="stop", aliases=["s"])
-    async def stop(self, ctx: commands.Context) -> Optional[str]:
+    async def stop(self, ctx: commands.Context) -> None:
         player = self.get_player(ctx)
         vc = ctx.voice_client
 
@@ -487,12 +492,6 @@ class SoundCog(BaseCog):
             Raised if attempting to display all sound files at once.
         """
 
-
-        def get_category(category: str) -> Optional[str]:
-            for sub_dir in self.sub_dirs:
-                if category in sub_dir.aliases:
-                    return category
-
         # Formatted string of sound categories
         categories = ", ".join([f"**`{sd.folder}`**" for sd in self.sub_dirs])
 
@@ -521,7 +520,10 @@ class SoundCog(BaseCog):
                                            )
 
     @commands.command(name="search")
-    async def search(self, ctx: commands.Context, *search_query: str, rtn: bool=False) -> None:
+    async def search(self, 
+                     ctx: commands.Context, 
+                     *search_query: str, 
+                     rtn: bool=False) -> Optional[List[discord.Embed]]:
         search_query = " ".join(search_query)
         embeds = []
 
@@ -549,7 +551,7 @@ class SoundCog(BaseCog):
             await ctx.send("No results")
 
     @commands.command(name="queue")
-    async def show_queue(self, ctx) -> Optional[str]:
+    async def show_queue(self, ctx) -> None:
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
