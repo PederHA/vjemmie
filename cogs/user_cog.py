@@ -23,7 +23,7 @@ class UserCog(BaseCog):
         if not cog_name:
             categories = "\n".join(cog.cog_name
                                    for cog in list(self.bot.cogs.values())
-                                   if cog.cog_name not in self.IGNORE_HELP)
+                                   if cog.cog_name not in self.DISABLE_HELP)
             await self.send_embed_message(ctx, "Categories", categories)
             await ctx.send("Type `!help <category> (advanced)`")
         
@@ -31,7 +31,7 @@ class UserCog(BaseCog):
         else:
             cog_name = cog_name.lower()
             for cog in self.bot.cogs.values():
-                if cog_name == cog.cog_name.lower() and cog_name not in self.IGNORE_HELP:
+                if cog_name == cog.cog_name.lower() and cog_name not in self.DISABLE_HELP:
 
                     await cog._get_cog_commands(ctx, simple)
                     break
