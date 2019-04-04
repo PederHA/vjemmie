@@ -6,6 +6,9 @@ import pickle
 import random
 import re
 import traceback
+import os
+from pathlib import Path
+from recordclass import recordclass
 from collections import namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
@@ -47,14 +50,29 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
+        self.setup()
+
+        # Load subreddits
         self.subs = self.load_subs()
         for sub in self.subs.values():
             self._add_sub(sub)
         # Generators for changing reddit sorting.
         self.time_cycle = cycle(self.TIME_FILTERS) # Command: !rtime
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
-        # Avoid repeat reddit submissions in a single session
+        
+        # Iterable of reddit submissions that have been posted in the current session
         self.posts = set()
+        
+        # NSFW Whitelist
+        self._NSFW_WHITELIST = recordclass("CachedList", "contents modified_at", defaults=[None, None])()
+
+    def setup(self) -> None:
+        paths = [
+            "db/reddit"
+        ]
+        for path in paths:
+            if not Path(path).exists():
+                os.makedirs(path)
     
     def load_subs(self) -> dict:
         with open("db/reddit/subs.json", "r") as f:
@@ -67,8 +85,14 @@ class RedditCog(BaseCog):
 
     @property
     def NSFW_WHITELIST(self):
-        with open("db/reddit/nsfw_whitelist.json", "r") as f:
-            return json.load(f)
+        filename = "db/reddit/nsfw_whitelist.json"
+        _modified = os.path.getmtime(filename)
+        if not self._NSFW_WHITELIST.modified_at or _modified != self._NSFW_WHITELIST.modified_at:
+            self._NSFW_WHITELIST.modified_at = _modified
+            with open(filename, "r") as f:  
+                self._NSFW_WHITELIST.contents =  json.load(f)
+        return self._NSFW_WHITELIST.contents
+
 
     @commands.command(name="add_sub")
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
@@ -360,29 +384,7 @@ class RedditCog(BaseCog):
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
 
-    @commands.command(name="reddit")
-    async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
-        """Get a random post from <subreddit> (<sorting>) (<time>)
 
-        If no argument to parameter `subreddit` is passed in, the bot invokes
-        the help command for the Reddit Cog instead.
-        
-        Parameters
-        ----------
-        ctx : `commands.Context`
-            Discord Context object
-        subreddit : `str`, optional
-            Name of subreddit to fetch posts from. Defaults to None.
-        sorting : `str`, optional
-            Content sorting to filter posts by. Defaults to None.
-        time : `str`, optional
-            Time sorting to filter posts by. Defaults to None.
-        """
-        if not subreddit:
-            cmd = self.bot.get_command("help")
-            await ctx.invoke(cmd, "reddit")
-        else:
-            await self.get_from_reddit(ctx, subreddit, sorting, time)
 
     @commands.command(name="meme")
     async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
@@ -418,7 +420,31 @@ class RedditCog(BaseCog):
 
             subreddit = random.choice(subreddits)
             await self.get_from_reddit(ctx, subreddit)
+    
+    @commands.command(name="reddit")
+    async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
+        """Get a random post from <subreddit> (<sorting>) (<time>)
 
+        If no argument to parameter `subreddit` is passed in, the bot invokes
+        the help command for the Reddit Cog instead.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord Context object
+        subreddit : `str`, optional
+            Name of subreddit to fetch posts from. Defaults to None.
+        sorting : `str`, optional
+            Content sorting to filter posts by. Defaults to None.
+        time : `str`, optional
+            Time sorting to filter posts by. Defaults to None.
+        """
+        if not subreddit:
+            cmd = self.bot.get_command("help")
+            await ctx.invoke(cmd, "reddit")
+        else:
+            await self.get_from_reddit(ctx, subreddit, sorting, time)
+    
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
         """Small helper method for getting a valid sorting filter
         for Praw and reducing code duplication in RedditCog.check_time()
@@ -461,7 +487,7 @@ class RedditCog(BaseCog):
     async def check_sorting(self, ctx,  sorting: Optional[str]) -> str:
         return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
-    def _is_image_content(self, url) -> bool:
+    def _is_image_content(self, url: str) -> bool:
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
 
     def _is_nsfw(self, ctx: commands.Context, sub: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
@@ -482,7 +508,7 @@ class RedditCog(BaseCog):
             return True if over_18 and subreddit not in self.NSFW_WHITELIST else False
 
 
-    async def _get_random_reddit_post(self, posts: list) -> praw.models.Submission:
+    async def _get_random_reddit_post(self, posts: set) -> praw.models.Submission:
         """Attempts to select a random reddit post that has not
         yet been posted in the current bot session from list of posts.
         
@@ -505,7 +531,7 @@ class RedditCog(BaseCog):
             A Reddit post unique to the current bot session.
         """
         # Get random post
-        posts = list(set(posts) - self.posts)
+        posts = posts - self.posts
         # Try to select random post
         try:
             post = random.choice(list(posts))
