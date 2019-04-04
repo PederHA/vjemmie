@@ -153,7 +153,8 @@ class RedditCog(BaseCog):
         cmd = self.subs.get(subreddit)
         # Check if subreddit command exists
         if not cmd:
-            raise discord.DiscordException(f"Could not find command for subreddit with name **{subreddit}**")
+            return await self.send_error_msg(ctx, 
+                f"Could not find command for subreddit with name **{subreddit}**")
         
         # Remove sub from instance subreddit dict
         self.subs.pop(subreddit)
@@ -203,7 +204,7 @@ class RedditCog(BaseCog):
                 try:
                     time = await self.check_time(ctx,opt)
                 except:
-                    raise discord.DiscordException(f"Invalid argument `{opt}`")
+                    return await self.send_error_msg(ctx, f"Invalid argument `{opt}`")
                 else:
                     # Match up time filter cycle and current time
                     _next_time = next(self.time_cycle)
@@ -243,13 +244,18 @@ class RedditCog(BaseCog):
                 if sort == self.DEFAULT_SORTING: # Avoid setting same value as current if !top or !hot has been used
                     sort = next(self.sorting_cycle)
                 self.DEFAULT_SORTING = sort
-            msg = f"Content sorting set to {self.DEFAULT_SORTING}"
+            msg = f"Content sorting set to **`{self.DEFAULT_SORTING}`**"
         elif status in ["status", "show", "s"]:
-            msg = f"Content sorting is currently set to {self.DEFAULT_SORTING}"
+            msg = f"Content: **`{self.DEFAULT_SORTING}`**"
         else:
             msg = "Usage:\n`!rsort` toggles between hot/top\n`!hot` & `!top` for manual selection"
-        embed = await self.get_embed(ctx, fields=[EmbedField("!rsort / !top / !hot", msg)], footer=False, timestamp=False, color="red")
-        await ctx.send(embed=embed)
+        
+        await self.send_embed_message(ctx, 
+                                      header="Reddit", 
+                                      text=msg, 
+                                      footer=False, 
+                                      timestamp=False, 
+                                      color="red")
 
     @commands.command(name="rsettings", aliases=["reddit_settings"])
     async def reddit_settings(self, ctx: commands.Context) -> None:
@@ -262,16 +268,21 @@ class RedditCog(BaseCog):
         """
         content_sorting = self.DEFAULT_SORTING
         time_sorting = self.DEFAULT_TIME
-        out = "**Content:**".ljust(15, "\xa0") + content_sorting.capitalize()
+        
+        # Display content filtering
+        out = "Content:".ljust(15, "\xa0") + f"**`{content_sorting.capitalize()}`**"
+        
+        # Display time filtering if "hot" is not active
         if not content_sorting == "hot":
-            out += f"\n**Time:**".ljust(20, "\xa0") + time_sorting.capitalize()
-        embed = await self.get_embed(
+            out += f"\nTime:".ljust(20, "\xa0") + f"**`{time_sorting.capitalize()}`**"
+        
+        await self.send_embed_message(
             ctx,
-            fields=[EmbedField("Reddit settings", out)],
-            footer=False,
-            color="red",
+            header="Reddit settings",
+            text=out,
+            color="Red",
             timestamp=False)
-        await ctx.send(embed=embed)
+
 
     @commands.command(name="add_alias")
     async def change_sub_command(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
@@ -644,10 +655,3 @@ class RedditCog(BaseCog):
         subreddit, aliases, *_ = cmd
         command = self.bot.command_prefix
         return command + f", {command}".join(aliases+[subreddit]) if aliases else command + subreddit
-
-    async def _send_error(self, ctx: commands.Context, item_type: str, valid_items: Iterable) -> None:
-        """Sends error message to ctx.channel, then raises exception
-        """
-        items_str = ", ".join(valid_items)
-        await ctx.send(f"Invalid {item_type}. Valid {item_type}s are:\n{items_str}.")
-        raise discord.DiscordException(f"User provided invalid {item_type} argument.")
