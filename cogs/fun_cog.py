@@ -17,9 +17,6 @@ class FunCog(BaseCog):
                       description='Random roll. Provide number argument to specify range (1-100 default).')
     async def roll(self, ctx: commands.Context, lower: int=0, upper: int=100) -> None:
         """!roll <range>"""      
-        if not isinstance(lower, int) or not isinstance(upper, int):
-            return await ctx.send("Arguments must be integers!")
-        
         await ctx.send(random.randint(lower, upper))
             
     @commands.command(name='random')
