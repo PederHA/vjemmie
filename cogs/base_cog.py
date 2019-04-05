@@ -6,8 +6,7 @@ import io
 from urllib.parse import urlsplit, urlparse
 from collections import namedtuple
 from datetime import datetime, timedelta
-from typing import Iterable, List, Optional, Union
-
+from typing import Iterable, List, Optional, Union, Iterator
 import aiohttp
 import discord
 import requests
@@ -219,20 +218,18 @@ class BaseCog(commands.Cog):
             embed.color = _color
         return embed
 
-    async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> list:
+    async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> Iterator[str]:
         """
-        Returns list of discord users in voice channel of ctx.message.author.
+        Generator of discord users in voice channel of ctx.message.author.
         """
-        users = []
-        if ctx.message.author.voice.channel.members is not None:
-            for member in ctx.message.author.voice.channel.members:
-                if member.nick != None and nick:
-                    users.append(member.nick)
-                else:
-                    users.append(member.name)
-        else:
+        if not hasattr(ctx.message.author.voice, "channel"):
             raise AttributeError("Message author is not connected to a voice channel.")
-        return users
+
+        for member in ctx.message.author.voice.channel.members:
+            if member.nick and nick:
+                yield member.nick
+            else:
+                yield member.name
 
     async def send_log(self, msg: str) -> None:
         """Sends log message to log channel
@@ -312,10 +309,10 @@ class BaseCog(commands.Cog):
         
         Parameters
         ----------
-        ctx : commands.Context
+        ctx : `commands.Context`
             Discord Context object
-        error_msg : str
-            Error message of exception FIXME: Word this better than a brain damaged chimpanzee
+        error_msg : `str`
+            Error message
         
         """
 
@@ -324,7 +321,7 @@ class BaseCog(commands.Cog):
         if not any(x in error_msg for x in ignore):
             out_msg = f"**Error:** {error_msg}"
         else:
-            out_msg = "An unknown error occured"
+            out_msg = "An error occured."
         await ctx.send(out_msg) # Display error to user
 
         # Get formatted traceback
@@ -339,8 +336,17 @@ class BaseCog(commands.Cog):
         `bytes`
             The downloaded content of the URL
         """
+        #session = self.sessions.get(ctx.guild.id)
+        #session = self.bot.sessions.get(ctx.guild.id) ?
+        #if not session:
+        #    async with aiohttp.ClientSession() as session:
+        #        self.sessions[ctx.guild.id] = session
+        #async with session:
+        
         async with aiohttp.ClientSession() as session:
             r = await session.get(url)
+            if not r:
+                raise Exception("No response from destination host")
             if r.content_length > self.MAX_DL_SIZE:
                 raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
             img = await r.read()
@@ -495,7 +501,7 @@ class BaseCog(commands.Cog):
                                          color: Union[str, int]=None,
                                          return_embeds: bool=False,
                                          footer: bool=True,
-                                         timestamp: bool=True) -> Optional[list]:
+                                         timestamp: bool=True) -> Optional[List[discord.Embed]]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
         ctx.channel.
@@ -553,7 +559,7 @@ class BaseCog(commands.Cog):
         with open(path, "r", encoding=encoding) as f:
             return await self.send_text_message(ctx, f.read())
 
-    def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> int:
+    def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> Union[str, int]:
         phrase = str(phrase).encode()
         h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
         if as_int:
