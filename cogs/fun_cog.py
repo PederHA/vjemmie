@@ -22,9 +22,7 @@ class FunCog(BaseCog):
         
         await ctx.send(random.randint(lower, upper))
             
-    @commands.command(name='randomchoice',
-                      aliases=['random'],
-                      description='Random choice of two or more args')
+    @commands.command(name='random')
     async def roll2(self, ctx: commands.Context, *args) -> None:
         """
         Select from  <thing1, thing2, ..., thinglast>
@@ -35,9 +33,7 @@ class FunCog(BaseCog):
         elif len(args)>1:
             to_roll = list(args)
         
-        # Implemented due to complaints about rigged RNG :thinking:
-        for i in range(random.randint(2,5)):
-            choice = random.choice(to_roll)
+        choice = random.choice(to_roll)
         
         await ctx.send(choice)
         
