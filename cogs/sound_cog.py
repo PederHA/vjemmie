@@ -31,7 +31,6 @@ from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR
 ytdlopts = {
     'format': 'bestaudio/best',
     'outtmpl': f'{YTDL_DIR}/%(title)s.%(ext)s',
-    #'restrictfilenames': True, # Leads to markdown formatting issues when enabled
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
@@ -43,7 +42,7 @@ ytdlopts = {
 }
 
 ffmpegopts = {
-    'before_options': '-nostdin',
+    'before_options': "-nostdin -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     'options': '-vn'
 }
 
@@ -92,7 +91,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             source = ytdl.prepare_filename(data)
         else:
             return {"webpage_url": data["webpage_url"], "requester": ctx.author, "title": data["title"]}
-
+        
         return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
 
     @classmethod
@@ -115,8 +114,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         to_run = partial(ytdl.extract_info, url=data['webpage_url'], download=False)
         data = await loop.run_in_executor(None, to_run)
-
-        return cls(discord.FFmpegPCMAudio(data['url']), data=data, requester=requester)
+        
+        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpegopts), data=data, requester=requester)
 
 
 class AudioPlayer:
@@ -377,11 +376,11 @@ class SoundCog(BaseCog):
             try:
                 subdir, sound_name = await parse_sound_name(arg)
 
-            # Suggest sound files with similar names if no results
+            # Attempt to suggest sound files with similar names if no results
             except:
-                embeds = await ctx.invoke(self.search, uri, rtn=True)
+                embeds = await ctx.invoke(self.search, arg, rtn=True)
                 dym = "Did you mean:" if embeds else ""
-                await ctx.send(f"No sound with name **`{uri}`**. {dym}")
+                await ctx.send(f"No sound with name **`{arg}`**. {dym}")
                 for embed in embeds:
                     await ctx.send(embed=embed)
                 return
@@ -394,7 +393,7 @@ class SoundCog(BaseCog):
 
     @commands.command(name="rplay")
     async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *args) -> None:
-        print("yeah")
+        """`!play` in a specific channel."""
         await ctx.invoke(self.play, *args, voice_channel=channel)
 
     @commands.command(name="stop", aliases=["s"])
