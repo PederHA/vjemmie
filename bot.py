@@ -13,7 +13,8 @@ for cog in COGS:
         bot.add_cog(cog(bot=bot))
 
 # Development mode is triggered if arbitrary commandline arg is present
-token = BOT_TOKEN if len(sys.argv)==1 or not DEV_BOT_TOKEN else DEV_BOT_TOKEN
+# This can be removed and replaced with bot.run(BOT_TOKEN) if no dev bot exists
+token = DEV_BOT_TOKEN if len(sys.argv)>1 and DEV_BOT_TOKEN else BOT_TOKEN
 dev = False if token==BOT_TOKEN else True
 
 # Run bot
