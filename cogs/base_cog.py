@@ -1,18 +1,22 @@
-import traceback
 import hashlib
-import os.path
-from io import BytesIO
 import io
-from urllib.parse import urlsplit, urlparse
+import os.path
+import traceback
 from collections import namedtuple
 from datetime import datetime, timedelta
-from typing import Iterable, List, Optional, Union, Iterator
+from io import BytesIO
+from typing import Iterable, Iterator, List, Optional, Union
+from urllib.parse import urlparse, urlsplit
+
 import aiohttp
 import discord
 import requests
 from discord.ext import commands
+
+from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, DISABLE_HELP,
+                    DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
+                    MAX_DL_SIZE)
 from ext.checks import is_pfm
-from config import LOG_CHANNEL_ID, DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, AUTHOR_MENTION, DISABLE_HELP
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -38,13 +42,16 @@ class BaseCog(commands.Cog):
 
     # Valid image extensions to post to a Discord channel
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
-    MAX_DL_SIZE = 25_000_000 # 25 MB
 
     # Channel and User IDs
     IMAGE_CHANNEL_ID = IMAGE_CHANNEL_ID
     LOG_CHANNEL_ID = LOG_CHANNEL_ID
     DOWNLOAD_CHANNEL_ID = DOWNLOAD_CHANNEL_ID
     AUTHOR_MENTION = AUTHOR_MENTION
+
+    # Download options
+    MAX_DL_SIZE = MAX_DL_SIZE
+    DOWNLOADS_ALLOWED = DOWNLOADS_ALLOWED
 
     # Embed Options
     EmbedField = namedtuple("EmbedField", "name value")
@@ -67,10 +74,9 @@ class BaseCog(commands.Cog):
         return f"{size_mb} MB"
 
     def add_help_command(self) -> None:
-        command_name = self.cog_name
-        if command_name != "base" and command_name not in self.DISABLE_HELP:
+        if self.cog_name not in self.DISABLE_HELP:
             cmd_coro = self._get_cog_commands
-            cmd = commands.command(name=command_name)(cmd_coro)
+            cmd = commands.command(name=self.cog_name)(cmd_coro)
             self.bot.add_command(cmd)
 
     async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
@@ -327,31 +333,45 @@ class BaseCog(commands.Cog):
         # Get formatted traceback
         traceback_msg = traceback.format_exc()
         await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
-
-    async def download_from_url(self, url: str) -> io.BytesIO:
+    
+    async def download_from_url(self, ctx: commands.Context, url: str) -> io.BytesIO:
         """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
         
         Returns
         -------
-        `bytes`
-            The downloaded content of the URL
+        `io.BytesIO`
+            The downloaded contents of the URL
         """
-        #session = self.sessions.get(ctx.guild.id)
-        #session = self.bot.sessions.get(ctx.guild.id) ?
-        #if not session:
-        #    async with aiohttp.ClientSession() as session:
-        #        self.sessions[ctx.guild.id] = session
-        #async with session:
+        # Check if downloads are enabled in config
+        if not self.DOWNLOADS_ALLOWED:
+            raise PermissionError("Downloads are not allowed for this bot!")
         
-        async with aiohttp.ClientSession() as session:
-            r = await session.get(url)
-            if not r:
-                raise Exception("No response from destination host")
-            if r.content_length > self.MAX_DL_SIZE:
-                raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
-            img = await r.read()
-            return io.BytesIO(img)
+        # Add bot attribute keeping track of aiohttp ClientSession objects
+        if not hasattr(self.bot, "sessions"):
+            self.bot.sessions = {}
+        
+        # Get client session for ctx.guild
+        session = self.bot.sessions.get(ctx.guild.id)
 
+        # Create persistent client session for guild if none exists
+        if not session:
+            session = aiohttp.ClientSession()
+            self.bot.sessions[ctx.guild.id] = session  
+        
+        # Check if host responds
+        try:
+            resp = await session.get(url)
+        except aiohttp.ClientConnectionError:
+            raise Exception("No response from destination host")
+        
+        # Check content size
+        if resp.content_length > self.MAX_DL_SIZE:
+            raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
+        
+        # Download content
+        data = await resp.read()
+        return io.BytesIO(data)
+    
     async def rehost_image_to_discord(self, image_url: str=None) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
@@ -386,12 +406,13 @@ class BaseCog(commands.Cog):
         return msg
 
     async def upload_bytes_obj_to_discord(self, data: io.BytesIO, filename: str) -> discord.Message:
-        """Uploads a bytesIO stream(?) as a Discord file attachment
+        """Uploads a file-like io.BytesIO stream as a 
+        Discord file attachment
         
         Parameters
         ----------
         data : `io.BytesIO`
-            Bytes-encoded data
+            File-like byte stream
         
         filename : `str`
             Filename + filetype. (FILETYPE IS REQUIRED!)
@@ -431,17 +452,24 @@ class BaseCog(commands.Cog):
             Defines whether the command listing should display calling
             signatures or not. (the default is True, which ommits signatures)
         """
+        # Toggle simple/advanced output
         simple = True if output_style == "simple" else False
+        
+        # Get commands for current cog
         _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
-        _out_str = ""
+        
+        # Get commands as string of command names + descriptions, separated by newlines
+        _out_str = "" 
         for command in _commands:
             if simple:
                 cmd_name = command.name.ljust(20,"\xa0")
             else:
                 cmd_name = command.signature.ljust(35,"\xa0")
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+        
         if not _out_str:
-            return # NOTE: Raise exception here?
+            raise ValueError("Cog has no commands!")
+
         await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
 
     async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
