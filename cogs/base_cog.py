@@ -133,9 +133,6 @@ class BaseCog(commands.Cog):
         md_format = md_format if md_format in md_formats else ""
         return f"```{md_format}\n{content}\n```"
 
-    async def get_embed_field(self, name, value) -> EmbedField:
-        return EmbedField(name, value)
-
     async def get_discord_color(self, color: Union[str, int]) -> discord.Color:
         """Returns a discord.Color object corresponding to a color specified
         by name via string or as an integer value
@@ -160,15 +157,20 @@ class BaseCog(commands.Cog):
         discord.Color
             A discord.Color object initialized with the desired color
         """
+        # Parse str arg
         if isinstance(color, str):
             try:
-                color_func = getattr(discord.Color, color)
+                # discord.Color has classmethods for several basic colors. Check src!
+                color_classmethod = getattr(discord.Color, color)
             except:
                 raise discord.DiscordException(f"Could not interpret {color}")
             else:
-                return color_func()
+                return color_classmethod()
+        
+        # Parse int arg
         elif isinstance(color, int):
             return discord.Color(color)
+        
         else:
             raise discord.DiscordException("Could not obtain color")
 
