@@ -183,7 +183,7 @@ class BaseCog(commands.Cog):
                         image_url: str=None,
                         color: Union[str, int]=None,
                         timestamp: bool=True) -> discord.Embed:
-        """Constructs a discord embed object.
+        """Constructs a discord.Embed object.
         
         Parameters
         ----------
@@ -214,16 +214,21 @@ class BaseCog(commands.Cog):
 
         opts = {"timestamp":datetime.now()} if timestamp else {}
         embed = discord.Embed(title=title, **opts)
+        
         if footer:
             embed.set_footer(text=f"Requested by {ctx.message.author.name}", icon_url=ctx.message.author.avatar_url)
+        
         if fields:
             for field in fields:
                 embed.add_field(name=field.name, value=field.value)
+        
         if image_url:
             embed.set_image(url=image_url)
+        
         if color:
             _color = await self.get_discord_color(color)
             embed.color = _color
+        
         return embed
 
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> Iterator[str]:
@@ -269,6 +274,7 @@ class BaseCog(commands.Cog):
 
         # Send traceback
         await self.send_text_message(ctx, error_msg, channel_id=self.LOG_CHANNEL_ID)
+        
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
         await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
@@ -470,7 +476,7 @@ class BaseCog(commands.Cog):
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         
         if not _out_str:
-            raise ValueError("Cog has no commands!")
+            return await self.send_error_msg(ctx, "Cog has no commands!")
 
         await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
 
