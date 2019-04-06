@@ -44,7 +44,7 @@ class FunCog(BaseCog):
         if ctx.message.attachments:
             iamge_url = ctx.message.attachments[0].url
 
-        img = await self.download_from_url(image_url)
+        img = await self.download_from_url(ctx, image_url)
 
         # im suer this is broken im tired cba
         async with aiohttp.ClientSession() as session:

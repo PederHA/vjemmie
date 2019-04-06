@@ -600,14 +600,18 @@ class SoundCog(BaseCog):
         # Get filename
         if filename:
             sound_name = sanitize_filename(filename)
+        # Generate filename from first word of `text`
         else:
             sound_name = sanitize_filename(text.split(" ")[0])
 
-        # Check if filename already exists
-        if not Path(f"sounds/tts/{sound_name}.mp3").exists() or len(sound_name) <= 5:
+        # Use `text` as filename if automatically generated filename is too short
+        if len(sound_name) <= 4 and text >= sound_name:
             sound_name = sanitize_filename(text)
-            if Path(f"sounds/tts/{sound_name}.mp3").exists():
-                raise FileExistsError("Sound already exists.")
+        
+        # Check if filename already exists
+        if Path(f"sounds/tts/{sound_name}.mp3").exists():
+            raise FileExistsError(f"File with name {sound_name} already exists")
+        
 
         # Save mp3 file
         tts.save(f"sounds/tts/{sound_name}.mp3")
@@ -625,8 +629,7 @@ class SoundCog(BaseCog):
 
     @commands.command(name="add_sound")
     async def add_sound(self, ctx: commands.Context, url: str=None) -> None:
-        """Downloads a sound file supplied as a Discord message attachment
-        or as an HTTP(s) URL.
+        """Downloads a sound file from msg attachment or URL
         
         Parameters
         ----------
@@ -653,7 +656,7 @@ class SoundCog(BaseCog):
 
         # Download and save sound file
         try:
-            filename = await self._do_download_sound(url)
+            filename = await self._do_download_sound(ctx, url)
         except AttributeError:
             return await self.send_error_msg(ctx,
                 "Invalid URL. Must be a direct link to a file. "
@@ -669,7 +672,7 @@ class SoundCog(BaseCog):
             if hasattr(ctx.author.voice, "channel"):
                 await ctx.invoke(self.play, filename)
 
-    async def _do_download_sound(self, url: str) -> str:
+    async def _do_download_sound(self, ctx, url: str) -> str:
         """Attempts to download sound file from URL.
         
         Fails if file already exists or file is not a 
@@ -688,13 +691,15 @@ class SoundCog(BaseCog):
         # Check if file type is valid
         if ext not in FILETYPES:
             raise ValueError
-                
-        # Attempt to download file
-        sound_file = await self.download_from_url(url)
-        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"
         
+        # Check if file already exists
+        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"
         if Path(filepath).exists():
-            raise FileExistsError
+            raise FileExistsError                
+        
+        # Attempt to download file
+        sound_file = await self.download_from_url(ctx, url)
+
         
         with open(filepath, "wb") as f:
             f.write(sound_file.getvalue())
@@ -727,6 +732,7 @@ class SoundCog(BaseCog):
             raise discord.DiscordException("A URL or attached file is required!")
 
     @commands.command(name="combine")
+    @is_admin()
     async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
         """Combines two sound files
         
@@ -754,6 +760,7 @@ class SoundCog(BaseCog):
         # NOTE: ugly
         infile_1 = None
         infile_2 = None
+        
         for folder in self.sub_dirs:
             for sound in folder.sound_list:
                 if file_1 == sound:
@@ -762,6 +769,7 @@ class SoundCog(BaseCog):
                     infile_2 = (folder.folder, sound)
                 if infile_1 and infile_2:
                     break
+        
         if not infile_1 or not infile_2:
             raise AttributeError("Could not find file ")
 

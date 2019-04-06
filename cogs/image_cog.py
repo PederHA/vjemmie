@@ -58,7 +58,7 @@ class ImageCog(BaseCog):
 
         # Download user's avatar
         with open("memes/temp/temp.webp", "wb") as f:
-            avatar_img = await self.download_from_url(user_avatar_url)
+            avatar_img = await self.download_from_url(ctx, user_avatar_url)
             f.write(avatar_img.read())
 
         # Open user's avatar

@@ -5,7 +5,6 @@ import requests
 import shutil
 from cogs.fryer import ImageFryer
 from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
-from requests.exceptions import ConnectionError, MissingSchema
 import traceback
 from cogs.base_cog import BaseCog
 
@@ -14,8 +13,12 @@ class FryingCog(BaseCog):
     """
 
     @commands.command(name="deepfry")
-    async def deepfry(self, ctx: commands.Context, image_url: str="", emoji: str="", text: str="", caption: str="") -> None:
-        
+    async def deepfry(self,
+                      ctx: commands.Context,
+                      image_url: str=None,
+                      emoji: str=None,
+                      text: str=None,
+                      caption: str=None) -> None:
         if not await self.is_img_url(image_url):
             if image_url == "emojis":
                 emojis = await ImageFryer.get_files_in_dir("emojis")
@@ -28,16 +31,15 @@ class FryingCog(BaseCog):
                 return await ctx.invoke(help_cmd, "frying")
 
         if len(text) > 26:
-            raise discord.DiscordException("Text string cannot exceed 26 characters")
-        
+            return await ctx.send("Text string cannot exceed 26 characters")
+
         try:
-            img = await self.download_from_url(image_url)
+            img = await self.download_from_url(ctx, image_url)
             fryer = ImageFryer(img)
             img = fryer.fry(emoji, text, caption)
         except Exception as e:
             exc = traceback.format_exc()
             await self.log_error(ctx, exc)
-            return await ctx.send("An unknown error occured.") 
+            return await ctx.send("An unknown error occured.")
         else:
             await ctx.send(file=discord.File(img, filename="deepfried.jpeg"))
-
