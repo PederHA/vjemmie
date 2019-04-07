@@ -16,7 +16,6 @@ from discord.ext import commands
 from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
                     MAX_DL_SIZE)
-from ext.checks import is_pfm
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -302,20 +301,29 @@ class BaseCog(commands.Cog):
             ctx = error
             error = bugged_params[0]
 
+        # Check if error stems from lack of privileges
+        if isinstance(error, commands.CheckFailure):
+            return await ctx.send("Insufficient privileges to perform command!")
+
+        if hasattr(error, "original"):
+            return await self.send_error_msg(ctx, error.original.args[0])
+
         # Get error message
         if hasattr(error, "original"):
             # Result of raised exception
             # `raise discord.DiscordException("error")`
             error_msg = error.original.args[0]
+            #return await self._unknown_error(ctx, error_msg)
         else:
             # Result of "real" exception
             # `n = 1 / 0`
             error_msg = error.args[0]
 
-        if "The check functions" in error_msg: # lack of user privileges
-            await ctx.send("Insufficient rights to perform command!")
-        else:
-            await self._unknown_error(ctx, error_msg)
+        await self._unknown_error(ctx, error_msg)
+
+    async def parse_error(self, error: BaseException) -> None:
+        if isinstance(error.original, PermissionError):
+            return error.original.args[0]
 
     async def _unknown_error(self, ctx: commands.Context, error_msg: str):
         """Method called when raised exception is not recognized
@@ -350,7 +358,7 @@ class BaseCog(commands.Cog):
         `io.BytesIO`
             The downloaded contents of the URL
         """
-        # Check if downloads are enabled in config
+        # Check if downloads are enabled in config. 
         if not self.DOWNLOADS_ALLOWED:
             raise PermissionError("Downloads are not allowed for this bot!")
         
@@ -370,7 +378,7 @@ class BaseCog(commands.Cog):
         try:
             resp = await session.get(url)
         except aiohttp.ClientConnectionError:
-            raise Exception("No response from destination host")
+            raise discord.DiscordException("No response from destination host")
         
         # Check content size
         if resp.content_length > self.MAX_DL_SIZE:
@@ -378,6 +386,7 @@ class BaseCog(commands.Cog):
         
         # Download content
         data = await resp.read()
+        
         return io.BytesIO(data)
     
     async def rehost_image_to_discord(self, image_url: str=None) -> discord.Message:
@@ -629,3 +638,10 @@ class BaseCog(commands.Cog):
         if not msg:
             msg = f"**`{author}`** from **`{guild}`** downloaded **`{filename}`** from {url}"
         await self.send_text_message(ctx, msg, channel_id=self.DOWNLOAD_CHANNEL_ID)
+
+    async def check_downloads_permissions(self, *, message: str=None, add_msg: str=None) -> None:
+        msg = message if message else "Bot owner has disabled downloads!"
+        if add_msg:
+            msg += f" {add_msg}"
+        if not self.DOWNLOADS_ALLOWED:
+            raise PermissionError(msg)
