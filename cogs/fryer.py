@@ -1,12 +1,9 @@
 """
 Some frying methods in this module are based on https://github.com/asdvek/DeepFryBot,
-but modified to fit into a class structure, rather than being standalone functions.
+but modified to fit into an OO design.
 
 Original methods such as `add_text()` and `add_caption()` are added to provide
 a richer set of functionality than what DeepFryBot provides.
-
-# TODO: Make methods async
-#       Remove image_url from __init__. Should be passed into `fry()` instead.
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -169,12 +166,13 @@ class ImageFryer:
     
 
     def fry(self, emoji: str, text: str, caption: str) -> None:
-        interpret_as_none = ["-", " ", "", "None", "none"]
+        # User can skip an argument by using any of these values
+        is_none = ["-", " ", "", "None", "none", None]
         
         img = self.img
         
         # Add emojis __BEFORE__ changing contrast and adding noise
-        if emoji not in interpret_as_none:
+        if emoji not in is_none:
             img = self.add_emojis(img, emoji, 5)
         
         # Change contrast
@@ -184,11 +182,11 @@ class ImageFryer:
         img = self.add_noise(img, 1)
 
         # Add text
-        if text not in interpret_as_none:
+        if text not in is_none:
             img = self.add_text(img, text)
         
         # Add caption graphic
-        if caption not in interpret_as_none:
+        if caption not in is_none:
             img = self.add_caption(img, caption)
 
         jpg_copy = img.copy().convert("RGB")

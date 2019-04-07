@@ -15,26 +15,38 @@ class FryingCog(BaseCog):
     @commands.command(name="deepfry")
     async def deepfry(self,
                       ctx: commands.Context,
-                      image_url: str=None,
+                      url: str=None,
                       emoji: str=None,
                       text: str=None,
                       caption: str=None) -> None:
-        if not await self.is_img_url(image_url):
-            if image_url == "emojis":
+        """Deepfries an image"""
+        # Check if user requests help
+        if url in ["help", "h", "?"]:
+            if emoji == "emojis":
                 emojis = await ImageFryer.get_files_in_dir("emojis")
                 return await self.send_text_message(ctx, emojis)
-            elif image_url == "captions":
+            elif emoji == "captions":
                 captions = await ImageFryer.get_files_in_dir("captions")
                 return await self.send_text_message(ctx, emojis)
             else:
                 help_cmd = self.bot.get_command("help")
                 return await ctx.invoke(help_cmd, "frying")
+        
+        # Check if url or attachment is an image
+        if not await self.is_img_url(url):
+            return await ctx.send("URL or attachment must be an image file!")
 
+        # Use attachment URL as image URL if message has attachment
+        if ctx.message.attachments:
+            emoji, text, caption = url, emoji, text
+            url = ctx.message.attachments[0]
+
+        # I think we can remove this one
         if len(text) > 26:
             return await ctx.send("Text string cannot exceed 26 characters")
 
         try:
-            img = await self.download_from_url(ctx, image_url)
+            img = await self.download_from_url(ctx, url)
             fryer = ImageFryer(img)
             img = fryer.fry(emoji, text, caption)
         except Exception as e:
