@@ -345,6 +345,11 @@ class SoundCog(BaseCog):
             *args: Name of sound file to play. If len(args)>1, args are joined into
             single string separated by spaces.
         """
+        # Check if downloading is allowed
+        if ctx.invoked_with == "ytdl":
+            await self.check_downloads_permissions(add_msg=
+                "Use **`!play`** or **`!yt`** instead.")
+
         vc = ctx.voice_client
 
         if not vc:
@@ -375,7 +380,6 @@ class SoundCog(BaseCog):
             # Try to parse provided sound name
             try:
                 subdir, sound_name = await parse_sound_name(arg)
-
             # Attempt to suggest sound files with similar names if no results
             except:
                 embeds = await ctx.invoke(self.search, arg, rtn=True)
@@ -633,18 +637,17 @@ class SoundCog(BaseCog):
         
         Parameters
         ----------
-        ctx : commands.Context
+        ctx : `commands.Context`
             Discord Context object
-        url : str, optional
+        url : `str`, optional
             HTTP(s) URL of file. 
             If message has no attachment, command will raise
             exception if URL is None.
-        
-        Raises
-        ------
-        discord.DiscordException
-            [description]
         """
+
+        # Check if downloading is allowed
+        await self.check_downloads_permissions()
+        
         # Raise exception if message has no attachment and no URL was passed in
         if not ctx.message.attachments and not url:
             return await self.send_error_msg(ctx, "A file attachment or file URL is required!")
@@ -656,23 +659,29 @@ class SoundCog(BaseCog):
 
         # Download and save sound file
         try:
-            filename = await self._do_download_sound(ctx, url)
+            filename = await self._do_download_sound(ctx, url)        
+        
         except AttributeError:
             return await self.send_error_msg(ctx,
                 "Invalid URL. Must be a direct link to a file. "
-                "Example: http://example.com/file.mp3")
+                "Example: http://example.com/file.mp3")        
+        
         except ValueError:
             return await self.send_error_msg(ctx,
-                f"Invalid file type. Must be one of: **{FILETYPES}**")
+                f"Invalid file type. Must be one of: **{FILETYPES}**")        
+        
         except FileExistsError:
             return await self.send_error_msg(ctx, "File already exists")
+        
         else:
+            # Post download confirmation
             await ctx.send(f"Saved file **`{filename}`**")
-            await self.log_file_download(ctx, url=url, filename=filename)
+            
+            # Play downloaded sound if ctx.author is in a voice channel
             if hasattr(ctx.author.voice, "channel"):
                 await ctx.invoke(self.play, filename)
 
-    async def _do_download_sound(self, ctx, url: str) -> str:
+    async def _do_download_sound(self, ctx: commands.Context, url: str) -> str:
         """Attempts to download sound file from URL.
         
         Fails if file already exists or file is not a 
@@ -680,6 +689,8 @@ class SoundCog(BaseCog):
         
         Parameters
         ----------
+        ctx : `commands.Context`
+            Discord context
         url : `str`
             HTTP(s) URL of target file
         """       
@@ -700,9 +711,12 @@ class SoundCog(BaseCog):
         # Attempt to download file
         sound_file = await self.download_from_url(ctx, url)
 
-        
+        # Save file
         with open(filepath, "wb") as f:
             f.write(sound_file.getvalue())
+
+        # Log downloaded file
+        await self.log_file_download(ctx, url=url, filename=f"{filename}.{ext}")        
         
         return filename
 
@@ -720,14 +734,16 @@ class SoundCog(BaseCog):
         url : `str`, optional
             Optional HTTP(s) URL to sound file. 
             Can not be None if message has no attachment.
-        """
+        """     
         if ctx.message.attachments or url and any(
                 filetype in url for filetype in VALID_FILE_TYPES):
             cmd = self.bot.get_command("add_sound")
             await ctx.invoke(cmd, url)
+        
         elif url:
             cmd = self.bot.get_command("ytdl")
             await ctx.invoke(cmd, url)
+        
         else:
             raise discord.DiscordException("A URL or attached file is required!")
 
