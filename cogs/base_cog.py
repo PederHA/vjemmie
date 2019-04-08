@@ -334,9 +334,7 @@ class BaseCog(commands.Cog):
             Discord Context object
         error_msg : `str`
             Error message
-        
         """
-
         # List of error messages to ignore
         ignore = []
         if not any(x in error_msg for x in ignore):
@@ -413,7 +411,7 @@ class BaseCog(commands.Cog):
         
         return io.BytesIO(data)
     
-    async def rehost_image_to_discord(self, image_url: str=None) -> discord.Message:
+    async def rehost_image_to_discord(self, ctx: commands.Context, image_url: str=None) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
         
@@ -437,7 +435,7 @@ class BaseCog(commands.Cog):
             raise InvalidFiletype("Attempted to upload a non-image file")
 
         # Get file-like bytes stream (io.BytesIO)
-        file_bytes = await self.download_from_url(image_url)
+        file_bytes = await self.download_from_url(ctx, image_url)
 
         # Upload image
         f = discord.File(file_bytes, f"{file_name}.{ext}")

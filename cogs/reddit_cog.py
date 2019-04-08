@@ -652,7 +652,7 @@ class RedditCog(BaseCog):
         # Rehost image to discord CDN if image is hosted on Imgur
         # Discord has trouble embedding Imgur images
         if image_url and "imgur" in image_url:
-            msg = await self.rehost_image_to_discord(image_url)
+            msg = await self.rehost_image_to_discord(ctx, image_url)
             image_url = msg.attachments[0].url
 
         # Embed image if image URL is not None
