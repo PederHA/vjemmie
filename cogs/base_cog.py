@@ -523,6 +523,7 @@ class BaseCog(commands.Cog):
         return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
 
     async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
+        """Splits a string into `limit`-sized chunks. DEFAULT: 1024"""
         if not limit or limit > 1024: # NOTE: This shouldn't be hardcoded
             limit = self.CHAR_LIMIT
         _out = []
@@ -601,10 +602,12 @@ class BaseCog(commands.Cog):
             await ctx.send(embed=embed)
 
     async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> str:
+        """Reads local text file and sends contents to `ctx.channel`"""
         with open(path, "r", encoding=encoding) as f:
             return await self.send_text_message(ctx, f.read())
 
     def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> Union[str, int]:
+        """Generates a 24 bit hex color code."""
         phrase = str(phrase).encode()
         h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
         if as_int:
@@ -612,6 +615,7 @@ class BaseCog(commands.Cog):
         return h.hexdigest()
 
     async def get_filename_extension_from_url(self, url: str) -> tuple:
+        """Get filename and extension from a URL."""
         fname, extension = os.path.splitext(
             os.path.basename(urlsplit(url).path))
 
@@ -621,10 +625,12 @@ class BaseCog(commands.Cog):
         return fname, extension
 
     async def is_img_url(self, url: str) -> bool:
+        """Checks if a string is an HTTP/HTTPS URL to an image file"""
         return (urlparse(url).scheme in ["http", "https"] and
                 "."+url.rsplit(".", 1)[1] in self.IMAGE_EXTENSIONS)
 
     async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
+        """Sends text message to `ctx.channel` prepended with error-text."""
         await self.send_text_message(ctx, f"**ERROR:** {msg}")
 
     async def log_file_download(self,
@@ -633,6 +639,19 @@ class BaseCog(commands.Cog):
                                 url: str=None,
                                 filename: str=None,
                                 msg: str=None) -> None:
+        """Logs file download to log channel.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        url : `str`, optional
+            URL file was downloaded from
+        filename : `str`, optional
+            Filename
+        msg : `str`, optional
+            String to override default log message body with
+        """
         author = ctx.message.author
         guild = ctx.message.author.guild
         if not msg:
@@ -640,6 +659,21 @@ class BaseCog(commands.Cog):
         await self.send_text_message(ctx, msg, channel_id=self.DOWNLOAD_CHANNEL_ID)
 
     async def check_downloads_permissions(self, *, message: str=None, add_msg: str=None) -> None:
+        """Checks download permissions defined in `config.py`.
+        
+        Parameters
+        ----------
+        message : `str`, optional
+            Override base exception message
+        add_msg : `str`, optional
+            String to add to existing exception message
+        
+        Raises
+        ------
+        `PermissionError`
+            Raised if downloads are disabled in config
+        """
+
         msg = message if message else "Bot owner has disabled downloads!"
         if add_msg:
             msg += f" {add_msg}"
