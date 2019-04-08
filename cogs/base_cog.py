@@ -517,10 +517,11 @@ class BaseCog(commands.Cog):
         for chunk in chunks:
             await channel.send(chunk)
 
-    async def _split_string_to_chunks(self, text: str) -> List[str]:
+    async def _split_string_to_chunks(self, text: str, limit: int=None) -> List[str]:
         """Splits a string into (default: 1800) char long chunks."""
-        LIMIT = self.CHAR_LIMIT # Makes list comprehension easier to read
-        return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
+        if not limit or limit>self.CHAR_LIMIT:
+            limit = self.CHAR_LIMIT
+        return [text[i:i+limit] for i in range(0, len(text), limit)]
 
     async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
         """Splits a string into `limit`-sized chunks. DEFAULT: 1024
