@@ -207,3 +207,26 @@ class AdminCog(BaseCog):
         else:
             url = base_url.format(id=self.bot.user.id, permissions=66582848)
         await ctx.send(url)
+
+    @commands.command(name="react")
+    @is_admin()
+    async def react_to_message(self, 
+                               ctx: commands.Context, 
+                               message_id: int, 
+                               emoji: str,
+                               channel_id: int) -> None:
+        """Adds emoji reaction to a specific message posted in
+        `ctx.channel` or in a specific channel."""
+        # Get channel
+        channel = self.bot.get_channel(channel_id) if channel_id else ctx.channel
+        
+        # Iterate through 500 most recent messages
+        async for msg in channel.history(limit=500):
+            if msg.id == message_id:
+                return await msg.add_reaction(emoji)         
+        else:
+            return await ctx.send(
+                # Should improve wording of this message
+                f"No message with id {message_id} found or it is too old."
+                )
+        
