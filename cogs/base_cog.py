@@ -523,20 +523,30 @@ class BaseCog(commands.Cog):
         return [text[i:i+LIMIT] for i in range(0, len(text), LIMIT)]
 
     async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
-        """Splits a string into `limit`-sized chunks. DEFAULT: 1024"""
+        """Splits a string into `limit`-sized chunks. DEFAULT: 1024
+        
+        String is split into lines as denoted by newline char, then lines are
+        joined into n<=limit sized chunks, whereas `_split_string_to_chunks()` 
+        splits string into n<=limit chunks, ignoring any newline chars.
+        """
         if not limit or limit > 1024: # NOTE: This shouldn't be hardcoded
             limit = self.CHAR_LIMIT
-        _out = []
+        
         temp = ""
         for line in text.splitlines():
             l = f"{line}\n"
             if len(temp + l) > limit:
-                _out.append(temp)
+                yield temp
                 temp = ""
             temp += l
         else:
-            _out.append(temp)
-        return _out
+            if len(temp) > limit:
+                raise ValueError(
+                    "String does not have enough newline characters to split by!"
+                    )
+            if temp:
+                yield temp
+
 
     async def send_embed_message(self,
                                          ctx: commands.Context,
@@ -569,7 +579,8 @@ class BaseCog(commands.Cog):
         # Split text by line
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
-        text_fields = await self._split_string_by_lines(text, limit)
+        
+        text_fields = [tf async for tf in self._split_string_by_lines(text, limit)]
 
         if len(text_fields) > 1:
             embeds = [
