@@ -349,15 +349,27 @@ class BaseCog(commands.Cog):
         # Get formatted traceback
         traceback_msg = traceback.format_exc()
         await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
-    
-    async def download_from_url(self, ctx: commands.Context, url: str) -> io.BytesIO:
-        """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
+
+    async def get_aiohttp_session(self, ctx: commands.Context) -> aiohttp.ClientSession:
+        """Retrieves per-guild aiohttp.ClientSession session object. 
+        Session is created for the guild if it has no active sessions.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        
+        Raises
+        ------
+        PermissionError
+            Raised if downloads are disabled in `config.py`
         
         Returns
         -------
-        `io.BytesIO`
-            The downloaded contents of the URL
+        aiohttp.ClientSession
+            aiohttp session for guild
         """
+
         # Check if downloads are enabled in config. 
         if not self.DOWNLOADS_ALLOWED:
             raise PermissionError("Downloads are not allowed for this bot!")
@@ -372,7 +384,20 @@ class BaseCog(commands.Cog):
         # Create persistent client session for guild if none exists
         if not session:
             session = aiohttp.ClientSession()
-            self.bot.sessions[ctx.guild.id] = session  
+            self.bot.sessions[ctx.guild.id] = session
+        
+        return session
+
+    async def download_from_url(self, ctx: commands.Context, url: str) -> io.BytesIO:
+        """Downloads the contents of URL `url` and returns an `io.BytesIO` object.
+        
+        Returns
+        -------
+        `io.BytesIO`
+            The downloaded contents of the URL
+        """
+        # Get session
+        session = await self.get_aiohttp_session(ctx)
         
         # Check if host responds
         try:
