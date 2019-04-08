@@ -25,7 +25,7 @@ class FunCog(BaseCog):
         Select from  <thing1, thing2, ..., thinglast>
         """
         if args[0] in ["c", "channel"]:
-            to_roll = list(await self.get_users_in_voice(ctx))
+            to_roll = [user async for user in self.get_users_in_voice(ctx)]
         
         elif len(args)>1:
             to_roll = list(args)
