@@ -134,20 +134,19 @@ class BaseCog(commands.Cog):
 
     async def get_discord_color(self, color: Union[str, int]) -> discord.Color:
         """Returns a discord.Color object corresponding to a color specified
-        by name via string or as an integer value
+        by name as `str` or as a hexadecimal `int`.
         
         Parameters
         ----------
-        color : Union[str, int]
-            Color specified as string literal:
-                >>> get_discord_color("red")
-            Or as hexadecimal integer literal:
-               >>> get_discord_color(0x4a998a)
+        color : `Union[str, int]`
+            Example:
+            >>> get_discord_color("red")
+            >>> get_discord_color(0x4a998a)
         
         Raises
         ------
         discord.DiscordException
-            If discord.Color has no attribute with name `color`
+            If discord.Color has no classmethod with name `color`
         discord.DiscordException
             If type of argument `color` is neither `int` nor `str`
         
@@ -171,7 +170,7 @@ class BaseCog(commands.Cog):
             return discord.Color(color)
         
         else:
-            raise discord.DiscordException("Could not obtain color")
+            raise discord.DiscordException("Argument must be type(str) or type(int)")
 
     async def get_embed(self,
                         ctx: commands.Context,
