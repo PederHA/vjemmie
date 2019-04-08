@@ -20,7 +20,7 @@ from discord.ext import commands
 
 from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
-from ext.checks import is_admin
+from ext.checks import admins_only
 
 reddit = praw.Reddit(
     client_id=REDDIT_ID,
@@ -163,7 +163,7 @@ class RedditCog(BaseCog):
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
     @commands.command(name="remove_sub")
-    @is_admin()
+    @admins_only()
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
         """ADMIN ONLY: Remove <subreddit>
         
@@ -357,7 +357,7 @@ class RedditCog(BaseCog):
                     break
 
     @commands.command(name="remove_alias")
-    @is_admin()
+    @admins_only()
     async def remove_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """ADMIN ONLY: Remove alias for subreddit
         

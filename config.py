@@ -55,3 +55,10 @@ DOWNLOADS_DIR = SoundSubdir("downloads", ["dl", "downloaded", "download"])
 
 # Dynamic list of SoundSubdir instances. Import this one!
 SOUND_SUB_DIRS = [v for v in dict(locals()).values() if isinstance(v, SoundSubdir)]
+
+#///////////////////
+# Users           /
+#/////////////////
+
+# List of user IDs with highest privileges for bot commands
+OWNERS = [103890994440728576]

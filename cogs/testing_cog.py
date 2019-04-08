@@ -4,7 +4,7 @@ import discord
 import requests
 import shutil
 from cogs.base_cog import BaseCog
-from ext.checks import is_owner
+from ext.checks import owners_only
 import unicodedata
 
 class TestingCog(BaseCog):
@@ -42,7 +42,7 @@ class TestingCog(BaseCog):
         await ctx.send(out)
 
     @commands.command(name="dbg")
-    @is_owner()
+    @owners_only()
     async def dbg(self, ctx: commands.Context) -> None:
         breakpoint()
         print("yeah!")

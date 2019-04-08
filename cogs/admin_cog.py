@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
-from ext.checks import is_admin, load_blacklist, save_blacklist
+from ext.checks import admins_only, load_blacklist, save_blacklist
 
 
 class AdminCog(BaseCog):
@@ -31,7 +31,7 @@ class AdminCog(BaseCog):
         await self.send_log(f"Left guild {guild.name}")
     
     @commands.command(aliases=["change_activity"])
-    @is_admin()
+    @admins_only()
     async def ca(self, ctx: commands.Context, activity_name: Optional[str]=None) -> None:
         """Changes bot activity.
         
@@ -45,14 +45,14 @@ class AdminCog(BaseCog):
         await self.on_ready(activity_name=activity_name)
     
     @commands.command(name="serverlist")
-    @is_admin()
+    @admins_only()
     async def serverlist(self, ctx: commands.Context) -> None:
         """Sends a list of all guilds the bot is joined to."""
         guilds = "\n".join([guild.name for guild in self.bot.guilds])
         await self.send_embed_message(ctx, "Guilds", guilds)
 
     @commands.command(name="leave")
-    @is_admin()
+    @admins_only()
     async def leave(self, ctx: commands.Context, guild_id: int) -> None:
         """Attempts to leave a Discord Guild (server).
         
@@ -86,7 +86,7 @@ class AdminCog(BaseCog):
 
     @commands.command(name="announce",
                       aliases=["send_all", "broadcast"])
-    @is_admin()
+    @admins_only()
     async def sendtoall(self, ctx: commands.Context, *msg) -> None:
         """
         Attempts to send text message to every server the bot
@@ -111,7 +111,7 @@ class AdminCog(BaseCog):
 
 
     @commands.command(name="blacklist")
-    @is_admin()
+    @admins_only()
     async def add_to_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
         if member: # Proceed if discord.commands.MemberConverter returns a member
             blacklist = load_blacklist() # Get most recent version of blacklist
@@ -125,7 +125,7 @@ class AdminCog(BaseCog):
             await ctx.invoke(show_cmd, "blacklist")
 
     @commands.command(name="show")
-    @is_admin()
+    @admins_only()
     async def show_xlist(self, ctx: commands.Context, list_name: str) -> None:
         list_name = list_name.lower()
         out_list = None
@@ -140,7 +140,7 @@ class AdminCog(BaseCog):
         await ctx.send(out_msg)        
     
     @commands.command(name="unblacklist", aliases=["remove_blacklist", "rblacklist"])
-    @is_admin()
+    @admins_only()
     async def remove_from_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
         if member: # Proceed if discord.commands.MemberConverter returns a member
             blacklist = load_blacklist() # Get most recent version of blacklist
@@ -167,7 +167,7 @@ class AdminCog(BaseCog):
             await ctx.send(await self.make_codeblock(out_msg))
 
     @commands.command(name="timeout")
-    @is_admin()
+    @admins_only()
     async def timeout(self, ctx: commands.Context, member: commands.MemberConverter, duration_min: Union[int, float]=30) -> None:
         sleep_duration_sec = 60 * duration_min
         blacklist_cmd = self.bot.get_command("blacklist")
@@ -179,7 +179,7 @@ class AdminCog(BaseCog):
         await ctx.send(f"Timeout ended for {member.name}")
 
     @commands.command(name="delete_messages", aliases=["dlt"])
-    @is_admin()
+    @admins_only()
     async def delete_messages(self, 
                               ctx: commands.Context, 
                               member: Optional[str]=None,
@@ -199,7 +199,7 @@ class AdminCog(BaseCog):
         await ctx.send(f"```\nDeleted {n} message{s}```")
 
     @commands.command(name="invitelink")
-    @is_admin()
+    @admins_only()
     async def invitelink(self, ctx: commands.Context, full_rights: bool=False) -> None:
         base_url = "https://discordapp.com/api/oauth2/authorize?client_id={id}&scope=bot&permissions={permissions}"
         if full_rights:
@@ -209,7 +209,7 @@ class AdminCog(BaseCog):
         await ctx.send(url)
 
     @commands.command(name="react")
-    @is_admin()
+    @admins_only()
     async def react_to_message(self, 
                                ctx: commands.Context, 
                                message_id: int, 

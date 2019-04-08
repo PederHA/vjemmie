@@ -2,7 +2,9 @@ import json
 
 from discord.ext import commands
 
-owners = [103890994440728576]
+from config import DOWNLOADS_ALLOWED, OWNERS
+
+
 
 # Blacklist serialization functions
 def load_blacklist() -> list:
@@ -16,17 +18,18 @@ def save_blacklist(blacklist: list) -> None:
 
 
 # Decorator check
-def is_admin():
+def admins_only():
     def predicate(ctx):
         if hasattr(ctx.author, "guild_permissions"): # Disables privileged commands in PMs
-            return ctx.author.guild_permissions.administrator or ctx.author.id in owners
+            return ctx.author.guild_permissions.administrator or ctx.author.id in OWNERS
         return False
     return commands.check(predicate)
 
 
-def is_owner():
+def owners_only():
+    """Check if command invoker is in list of owners defined in config.py"""
     def predicate(ctx):
-        return ctx.message.author.id in owners
+        return ctx.message.author.id in OWNERS
     return commands.check(predicate)
 
 
@@ -42,19 +45,34 @@ def guild_predicate(ctx, guild_id):
     return False
 
 
-def is_pfm():
+def pfm_cmd():
+    """PFM guild decorator"""
     def predicate(ctx):
         return guild_predicate(ctx, 133332608296681472)
     return commands.check(predicate)
 
 
-def is_dgvgk():
+def dgvgk_cmd():
+    """DGVGK guild decorator"""
     def predicate(ctx):
         return guild_predicate(ctx, 178865018031439872)
     return commands.check(predicate)
 
 
-def is_test_server():
+def test_server_cmd():
+    """Test/dev guild decorator"""
     def predicate(ctx):
         return guild_predicate(ctx, 340921036201525248)
+    return commands.check(predicate)
+
+def download_cmd():
+    """Decorator for download commands"""
+    def predicate(ctx):
+        return ctx.cog.DOWNLOADS_ALLOWED
+    return commands.check(predicate)
+
+def disabled_cmd():
+    """Decorator to disable a command for _everyone_"""
+    def predicate(ctx):
+        return False
     return commands.check(predicate)

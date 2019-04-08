@@ -23,7 +23,7 @@ from discord.ext import commands
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
-from ext.checks import is_admin
+from ext.checks import admins_only
 from cogs.base_cog import BaseCog, InvalidFiletype
 
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR
@@ -278,7 +278,7 @@ class SoundCog(BaseCog):
         return player
 
     @commands.command(name="players")
-    @is_admin()
+    @admins_only()
     async def show_players(self, ctx: commands.Context) -> None:
         """ADMIN ONLY: Shows active Audio Players"""
         players = [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
@@ -289,7 +289,7 @@ class SoundCog(BaseCog):
             await ctx.send("No active audio players")
 
     @commands.command(name="played")
-    @is_admin()
+    @admins_only()
     async def times_played_session(self, ctx: commands.Context) -> None:
         """
         Displays current number of sounds played by guilds in the
@@ -427,7 +427,7 @@ class SoundCog(BaseCog):
         await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
 
     @commands.command(name="volume", aliases=["vol"])
-    @is_admin()
+    @admins_only()
     async def change_volume(self, ctx, *, vol: int):
         """Sets player volume (1-100)"""
         vc = ctx.voice_client
@@ -466,7 +466,7 @@ class SoundCog(BaseCog):
                                    f'requested by `{vc.source.requester}`')
 
     @commands.command(name="destroy", aliases=["quit"])
-    @is_admin()
+    @admins_only()
     async def destroy_player(self, ctx) -> None:
         vc = ctx.voice_client
 
@@ -748,7 +748,7 @@ class SoundCog(BaseCog):
             raise discord.DiscordException("A URL or attached file is required!")
 
     @commands.command(name="combine")
-    @is_admin()
+    @admins_only()
     async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
         """Combines two sound files
         
