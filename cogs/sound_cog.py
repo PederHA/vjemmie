@@ -190,7 +190,7 @@ class SoundDirectory:
                  path: str, 
                  color: Optional[Union[str, int]]=None) -> None:
         self.folder = folder
-        self.header = header if header else "General"
+        self.header = header
         self.aliases = aliases
         self.path = path
         self.color = color
