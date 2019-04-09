@@ -82,15 +82,12 @@ class FunCog(BaseCog):
 
         width, height = image.size
 
-        
-
         try:
             # Use my bad algorithm that fails about once every every 10000 attempts
             # for random resolutions 425-2000 * 425-2000
-            new_w, new_h = await self.smart_resize(image)
+            new_w, new_h = await self.smart_resize(width, height)
         except:
             # Fall back on brute force resizing if algorithm fails
-            print("failed")
             for i in range(1, 16, 1):
                 new_w, new_h = width//i, height//i
                 new_size = new_w * new_h
@@ -107,7 +104,7 @@ class FunCog(BaseCog):
         new_img.seek(0)
         return new_img
 
-    async def smart_resize(self, image) -> None:
+    async def smart_resize(self, width, height) -> None:
         """
         Spoiler alert: Not very smart, but better than brute-force 
         resizing every multiple of 1-16"""
@@ -131,8 +128,6 @@ class FunCog(BaseCog):
                     n -= 0.01
                     return await resize(width, height, target, n)
             return n
-
-        width, height = image.size
     
         new = width * height
         if new > TARGET_SIZE:
