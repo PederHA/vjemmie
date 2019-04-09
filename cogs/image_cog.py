@@ -1,17 +1,21 @@
 import io
 from itertools import zip_longest
 from typing import List, Tuple, Union
+from functools import partial
+import math
 
 import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
+import requests
 
 from ext.converters import MemberOrURLConverter
 from cogs.base_cog import BaseCog
+from botsecrets import REMOVEBG_API_KEY
 
 
 class ImageCog(BaseCog):
-    """Various commands for creating dank memes featuring a user's avatar.
+    """Image manipulation commands.
     """
     async def _composite_images(self,
                              ctx: commands.Context,
@@ -216,52 +220,52 @@ class ImageCog(BaseCog):
 
     @commands.command(name="fuckup", aliases=["nasa"])
     async def nasa(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/HcjIbpP.jpg"""
+        """Avatar: https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "nasa.jpg", (100, 100), (347, 403), user)
 
     @commands.command(name="northkorea", aliases=["nk"])
     async def northkorea(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/PiqzXNs.jpg"""
+        """Avatar: https://i.imgur.com/PiqzXNs.jpg"""
         await self._composite_images(ctx, "northkorea1.jpg", (295, 295), (712, 195), user)
 
     @commands.command(name="cancer", aliases=["cer"])
     async def cancer(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/vDtktIq.jpg"""
+        """Avatar: https://i.imgur.com/vDtktIq.jpg"""
         await self._composite_images(ctx, "cancer.jpg", (762, 740), (772, 680), user)
 
     @commands.command(name="mlady", aliases=["neckbeard"])
     async def mlady(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/2LQkErQ.png"""
+        """Avatar: https://i.imgur.com/2LQkErQ.png"""
         await self._composite_images(ctx, "mlady.png", (200, 200), (161, 101), user, template_overlay=True)
 
     @commands.command(name="loud", aliases=["loudest"])
     async def loud(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/y7y7MRt.jpg"""
+        """Avatar: https://i.imgur.com/y7y7MRt.jpg"""
         await self._composite_images(ctx, "loud.jpg", (190, 190), (556, 445), user)
 
     @commands.command(name="guys", aliases=["guyswant"])
     async def guys_only_want_one_thing(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/5oUe8VN.jpg"""
+        """Avatar: https://i.imgur.com/5oUe8VN.jpg"""
         await self._composite_images(ctx, "guyswant.jpg", (400, 400), (121, 347), user)
 
     @commands.command(name="furry")
     async def furry(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/Jq3uu02.png"""
+        """Avatar: https://i.imgur.com/Jq3uu02.png"""
         await self._composite_images(ctx, "furry.png", (230, 230), (26, 199), user, template_overlay=True)
 
     @commands.command(name="autism", aliases=["thirtyseven"])
     async def autism(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/HcjIbpP.jpg"""
+        """Avatar: https://i.imgur.com/HcjIbpP.jpg"""
         await self._composite_images(ctx, "autism.jpg", (303, 255), (0, 512), user)
 
     @commands.command(name="disabled")
     async def disabled(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/hZSghxu.jpg"""
+        """Avatar: https://i.imgur.com/hZSghxu.jpg"""
         await self._composite_images(ctx, "disabled.jpg", (320, 320), (736, 794), user)
 
     @commands.command(name="autism2")
     async def autism2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/6lxlqPk.jpg"""
+        """Avatar: https://i.imgur.com/6lxlqPk.jpg"""
         text_content = user.name if user else ctx.message.author.name
         text = {
             "content": text_content,
@@ -277,20 +281,119 @@ class ImageCog(BaseCog):
 
     @commands.command(name="fatfuck")
     async def fatfuck(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/Vbkfu4u.jpg"""
+        """Avatar: https://i.imgur.com/Vbkfu4u.jpg"""
         await self._composite_images(ctx, "fatfuck.jpg", (385, 385), (67, 0), user)
 
     @commands.command(name="saxophone")
     async def saxophone(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/Gfw036Q.png"""
+        """Avatar: https://i.imgur.com/Gfw036Q.png"""
         await self._composite_images(ctx, "saxophone.png", (366, 358), [(0, 0), (0, 361)], user, template_overlay=True)
 
     @commands.command(name="fingercircle")
     async def fingercircle(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/HnpJkvB.jpg"""
+        """Avatar: https://i.imgur.com/HnpJkvB.jpg"""
         await self._composite_images(ctx, "fingercircle.jpg", (251, 278), (317, 20), user)
     
     @commands.command(name="lordofthepit")
     async def lordofthepit(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/IRntn02.jpg"""
+        """Avatar: https://i.imgur.com/IRntn02.jpg"""
         await self._composite_images(ctx, "lordofthepit.jpg", (559, 410), (57, 110), user)
+
+    @commands.command(name="removebg")
+    async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
+        """Removes background from an image."""
+        if not image_url and not ctx.message.attachments:
+            raise discord.DiscordException("Message has no image URL or image attachment")
+        
+        if ctx.message.attachments:
+            image_url = ctx.message.attachments[0].url
+
+        # Download image from URL
+        img = await self.download_from_url(ctx, image_url)
+
+        # Resize image to sub 0.25 MP, so we only have to use 1 r.bg credit per API call
+        resized_img = await self._resize_img(img)
+        
+        def use_removebg_api(image) -> str:
+            response = requests.post(
+                'https://api.remove.bg/v1.0/removebg',
+                files={'image_file': image},
+                data={'size': 'auto'},
+                headers={'X-Api-Key': REMOVEBG_API_KEY},
+            )
+            if response.status_code == requests.codes.ok:
+                img_nobg = io.BytesIO(response.content)
+                img_nobg.seek(0)
+                return img_nobg
+
+        to_run = partial(use_removebg_api, resized_img)
+        img_nobg = await self.bot.loop.run_in_executor(None, to_run)
+        
+        if not img_nobg:
+            return await ctx.send("Could not remove background! Try again later.")
+
+        await ctx.send(file=discord.File(img_nobg, "nobg.png"))
+    
+    async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
+        image = Image.open(_img)
+
+        MAX_SIZE = 240_000 # 0.24 Megapixels
+
+        width, height = image.size
+
+        try:
+            # Use my bad algorithm that fails about once every every 10000 attempts
+            # for random resolutions 425-2000 * 425-2000
+            new_w, new_h = await self.smart_resize(width, height)
+        except:
+            # Fall back on brute force resizing if algorithm fails
+            for i in range(1, 16, 1):
+                new_w, new_h = width//i, height//i
+                new_size = new_w * new_h
+                if new_size > MAX_SIZE:
+                    continue
+                else:
+                    break
+            else:
+                raise Exception("Image is way, way, way too large")
+        
+        new_img = io.BytesIO()
+        image = image.resize((new_w, new_h), resample=Image.BICUBIC)
+        image.save(new_img, format="JPEG")
+        new_img.seek(0)
+        return new_img
+
+    async def smart_resize(self, width, height) -> None:
+        """
+        Spoiler alert: 
+        Not very smart, but better than brute-force resizing by dividing
+        by every whole number from 1-16"""
+        TARGET_SIZE = 240_000
+        max_diff = TARGET_SIZE * 0.02
+
+        async def almost_equal(img_size: int, target_size: int, threshold: int=math.ceil(max_diff/1000) * 1000) -> bool:
+            if img_size > target_size:
+                diff = img_size - target_size
+            else:
+                diff = target_size - img_size
+            return diff < threshold
+
+        async def resize(width, height, target, n=1):
+            new = width//n * height//n
+            if not await almost_equal(new, target) or new > target:
+                if new > target:
+                    n += 0.1
+                    return await resize(width, height, target, n)
+                if target > new:
+                    n -= 0.01
+                    return await resize(width, height, target, n)
+            return n
+    
+        new = width * height
+        if new > TARGET_SIZE:
+            _n = (new / TARGET_SIZE)
+            width, height = width*_n, height*_n
+        
+        n = await resize(width, height, TARGET_SIZE, n=1)
+
+        return int(abs(width//n)), int(abs(height//n))
