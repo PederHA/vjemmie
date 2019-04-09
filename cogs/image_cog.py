@@ -341,10 +341,12 @@ class ImageCog(BaseCog):
 
         width, height = image.size
 
+        # Do not scale down image size if image is smaller than 0.24 Megapixels
+        if width*height < MAX_SIZE:
+            return _img
+        
         try:
-            # Use my bad algorithm that fails about once every every 10000 attempts
-            # for random resolutions 425-2000 * 425-2000
-            new_w, new_h = await self.smart_resize(width, height)
+            new_w, new_h = await self.scale_down_img(width, height, MAX_SIZE)
         except:
             # Fall back on brute force resizing if algorithm fails
             for i in range(1, 16, 1):
@@ -363,37 +365,22 @@ class ImageCog(BaseCog):
         new_img.seek(0)
         return new_img
 
-    async def smart_resize(self, width, height) -> None:
-        """
-        Spoiler alert: 
-        Not very smart, but better than brute-force resizing by dividing
-        by every whole number from 1-16"""
-        TARGET_SIZE = 240_000
-        max_diff = TARGET_SIZE * 0.02
-
-        async def almost_equal(img_size: int, target_size: int, threshold: int=math.ceil(max_diff/1000) * 1000) -> bool:
-            if img_size > target_size:
-                diff = img_size - target_size
-            else:
-                diff = target_size - img_size
-            return diff < threshold
-
-        async def resize(width, height, target, n=1):
-            new = width//n * height//n
-            if not await almost_equal(new, target) or new > target:
+    async def scale_down_img(self, width, height, target) -> None:
+        """Scales down an image as close as possible to a target size"""
+        async def get_division_n(width, height, target) -> float:
+            n = 1
+            tries = 0
+            while True:
+                new = width//n * height//n
                 if new > target:
-                    n += 0.1
-                    return await resize(width, height, target, n)
-                if target > new:
-                    n -= 0.01
-                    return await resize(width, height, target, n)
-            return n
-    
-        new = width * height
-        if new > TARGET_SIZE:
-            _n = (new / TARGET_SIZE)
-            width, height = width*_n, height*_n
-        
-        n = await resize(width, height, TARGET_SIZE, n=1)
-
+                    n += 0.01
+                    continue
+                else:
+                    return n
+                tries +=1
+                if tries > 2000:
+                    # Completely arbitrary number, but lets us have an exit clause
+                    raise Exception("Fatal exception")
+       
+        n = await get_division_n(width, height, target)
         return int(abs(width//n)), int(abs(height//n))
