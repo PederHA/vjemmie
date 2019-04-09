@@ -37,3 +37,32 @@ class UserCog(BaseCog):
                     break
             else:
                 raise discord.DiscordException(f"No such category **{cog_name}**.")
+
+    @commands.command(name="invite", aliases=["get_invite"])
+    async def invitelink(self, ctx: commands.Context, priv_level: int=None) -> None:
+        """Get discord bot invite URL"""
+        base_url = "https://discordapp.com/api/oauth2/authorize?client_id={id}&scope=bot&permissions={permissions}"
+        
+        # Privilege levels {Lvl: (Name, Permission integer)}
+        # Dict[int, Tuple[str, int]]
+        levels = {
+            1: ("Minimal", 70642752),
+            2: ("Standard (Recommended)", 133557312),
+            3: ("Admin", 2146958839) 
+        }
+        
+        # Post help text if no priv level argument
+        if not priv_level:
+            lvls = "\n".join([f"**{k}**: {v[0]}" for k, v in levels.items()])
+            out_msg = f"Specify a privilege level:\n{lvls}"
+            await self.send_embed_message(ctx, f"!{ctx.invoked_with}", out_msg)
+            return await ctx.send(f"Type `!{ctx.invoked_with} <privilege level>`")
+        
+        lvl = levels.get(priv_level)
+        if not lvl:
+            return await ctx.send(f"{priv_level} is not a valid privilege level!")
+
+        permissions = lvl[1] # Permission integer
+        
+        url = base_url.format(id=self.bot.user.id, permissions=permissions)
+        await ctx.send(url)

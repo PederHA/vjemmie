@@ -198,16 +198,6 @@ class AdminCog(BaseCog):
         s = "s" if n>1 else ""
         await ctx.send(f"```\nDeleted {n} message{s}```")
 
-    @commands.command(name="invitelink")
-    @admins_only()
-    async def invitelink(self, ctx: commands.Context, full_rights: bool=False) -> None:
-        base_url = "https://discordapp.com/api/oauth2/authorize?client_id={id}&scope=bot&permissions={permissions}"
-        if full_rights:
-            url = base_url.format(id=self.bot.user.id, permissions=2146958839)
-        else:
-            url = base_url.format(id=self.bot.user.id, permissions=66582848)
-        await ctx.send(url)
-
     @commands.command(name="react")
     @admins_only()
     async def react_to_message(self, 
