@@ -217,7 +217,7 @@ class SoundCog(BaseCog):
         self.sub_dirs = [
                          SoundDirectory(
                          folder=subdir.folder,
-                         header=subdir.folder.capitalize(),
+                         header=subdir.folder.upper(),
                          aliases=subdir.aliases,
                          path=subdir.path,
                          color=self.generate_hex_color_code(subdir.folder))
