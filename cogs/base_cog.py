@@ -640,7 +640,7 @@ class BaseCog(commands.Cog):
         with open(path, "r", encoding=encoding) as f:
             return await self.send_text_message(ctx, f.read())
 
-    def generate_hex_color_code(self, phrase: str, as_int: bool=True) -> Union[str, int]:
+    def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
         """Generates a 24 bit hex color code."""
         phrase = str(phrase).encode()
         h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
