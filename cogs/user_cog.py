@@ -25,7 +25,8 @@ class UserCog(BaseCog):
                                    for cog in list(self.bot.cogs.values())
                                    if cog.cog_name not in self.DISABLE_HELP)
             await self.send_embed_message(ctx, "Categories", categories)
-            await ctx.send("Type `!help <category> (advanced)`")
+            await ctx.send("Type `!help <category> (advanced)` for a specific category.\n"
+                           "Or type `!commands` to show all available commands.")
         
         # Send help message for specific category
         else:
@@ -37,7 +38,19 @@ class UserCog(BaseCog):
                     break
             else:
                 raise discord.DiscordException(f"No such category **{cog_name}**.")
-
+    
+    @commands.command(name="commands")
+    async def show_commands(self, ctx:commands.Context) -> None:
+        l = []
+        for cog in self.bot.cogs.values():
+            if cog.cog_name in self.DISABLE_HELP:
+                continue
+            cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
+            l.append(f"{cog.cog_name}\n{cmds}")
+        out = "\n".join(l)   
+        await self.send_embed_message(ctx, "Commands", out, color="red")
+    
+    
     @commands.command(name="invite", aliases=["get_invite"])
     async def invitelink(self, ctx: commands.Context, priv_level: int=None) -> None:
         """Get discord bot invite URL"""
@@ -66,3 +79,4 @@ class UserCog(BaseCog):
         
         url = base_url.format(id=self.bot.user.id, permissions=permissions)
         await ctx.send(url)
+        
