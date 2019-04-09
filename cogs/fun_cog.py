@@ -106,8 +106,9 @@ class FunCog(BaseCog):
 
     async def smart_resize(self, width, height) -> None:
         """
-        Spoiler alert: Not very smart, but better than brute-force 
-        resizing every multiple of 1-16"""
+        Spoiler alert: 
+        Not very smart, but better than brute-force resizing by dividing
+        by every whole number from 1-16"""
         TARGET_SIZE = 240_000
         max_diff = TARGET_SIZE * 0.02
 
