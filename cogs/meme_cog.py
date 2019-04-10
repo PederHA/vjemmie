@@ -5,7 +5,7 @@ from cogs.base_cog import BaseCog, EmbedField
 class MemeCog(BaseCog):
     """Text meme commands"""
 
-    EMOJI = ":newspaper:"
+    EMOJI = ":spaghetti:"
 
     @commands.command(name="goodshit")
     async def goodshit(self, ctx: commands.Context) -> None:
