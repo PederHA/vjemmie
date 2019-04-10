@@ -14,9 +14,9 @@ from cogs.base_cog import BaseCog
 from botsecrets import REMOVEBG_API_KEY
 
 
-class ImageCog(BaseCog):
-    """Image manipulation commands.
-    """
+class AvatarCog(BaseCog):
+    """Create images featuring a user's avatar."""
+    
     async def _composite_images(self,
                              ctx: commands.Context,
                              template: str,

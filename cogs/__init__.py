@@ -13,17 +13,18 @@ from cogs.wowprogress_cog import WoWProgressCog
 from cogs.testing_cog import TestingCog
 from cogs.frying_cog import FryingCog
 from cogs.weather_cog import WeatherCog
-from cogs.image_cog import ImageCog
+from cogs.avatar_cog import AvatarCog
 from cogs.sound_cog import SoundCog
 from cogs.meme_cog import MemeCog
 from cogs.stats_cog import StatsCog
 from cogs.management_cog import ManagementCog
 
-# Private cogs. Delete this if you cloned the repo
+# Private cogs. You can delete this if you cloned the repo
 try:
     from cogs.war3_cog import War3Cog
     from cogs.pfm_cog import PFMCog
-except:
+except Exception as e:
+    print(e)
     pass
 
 # List of all cogs in the local namespace
