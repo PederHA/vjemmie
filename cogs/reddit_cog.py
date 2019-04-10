@@ -31,6 +31,7 @@ reddit = praw.Reddit(
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 class RedditCog(BaseCog):
+    """Reddit commands."""
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     

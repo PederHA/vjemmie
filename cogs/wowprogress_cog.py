@@ -8,8 +8,7 @@ import urllib.request
 from cogs.base_cog import BaseCog
 
 class WoWProgressCog(BaseCog):
-    """PUBG Bot Commands
-    """
+    """WoWProgress commands."""
 
     @commands.command(name="wp",
                       aliases=["wowp"],

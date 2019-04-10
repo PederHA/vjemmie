@@ -8,8 +8,7 @@ import urllib.request
 from cogs.base_cog import BaseCog
 
 class YouTubeCog(BaseCog):
-    """YouTube commands
-    """
+    """YouTube commands."""
     
     @commands.command(name='youtube',
                         aliases=['yt', 'utube'],

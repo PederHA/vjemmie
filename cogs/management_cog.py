@@ -1,12 +1,16 @@
-from discord.ext import commands
-import discord
-from cogs.base_cog import BaseCog
-from datetime import datetime
-from time import perf_counter, time
 import asyncio
-from collections import defaultdict
 import json
+from collections import defaultdict
+from datetime import datetime, timedelta
+from time import perf_counter, time
+
+import discord
+from discord.ext import commands
+
+from cogs.base_cog import BaseCog
 from cogs.sound_cog import AudioPlayer
+from ext.checks import admins_only, disabled_cmd
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -15,6 +19,7 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(o)
 
 class ManagementCog(BaseCog):
+    """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.START_TIME = datetime.now()
@@ -40,13 +45,40 @@ class ManagementCog(BaseCog):
 
         p_data["guild_name"] = str(self.bot.get_guild(gid))
         p_data["created_at"] = player.created_at
-        if player.current:
-            current_title = player.current.title
-            current_source = player.current.web_url if player.current.web_url else "Local file"
-        else:
-            current_title = None
-            current_source = None
-        p_data["current"] = current_title
-        p_data["source"] = current_source
+        p_data["current"] = player.current.web_url or "Local file" if player.current else None
+        p_data["source"] = player.current.title if player.current else None
 
         return p_data
+    
+    async def monitor_aiohttp_sessions(self) -> None:
+        while True:
+            await asyncio.sleep(60)
+            
+            if not hasattr(self.bot, "sessions"):
+                continue
+
+    @commands.command(name="reacts")
+    @admins_only()
+    @disabled_cmd()    
+    async def react_messages(self, ctx) -> None:
+        #while True:
+        last_hour = datetime.now() - timedelta(hours=2) # Some timezone fuckery means we have to do 2 here
+
+        for guild in self.bot.guilds:
+            for channel in guild.text_channels:
+                async for msg in channel.history(after=last_hour):
+                    if msg.reactions:
+                        reactions = [reaction for reaction in msg.reactions if reaction.count>1]
+                        if len(reactions)>=3:
+                            for reaction in reactions:
+                                await msg.add_reaction(reaction.emoji)
+
+        #after = datetime.now() - timedelta(hours=24)
+        #channel = self.bot.get_channel(133332608296681472)
+        #async for msg in channel.history(limit=500, after=after):
+        #    if msg.reactions:
+        #        reactions = [reaction for reaction in msg.reactions if reaction.count>1]
+        #        if len(reactions)>=3:
+        #            for reaction in reactions:
+        #                await msg.add_reaction(reaction.emoji)
+

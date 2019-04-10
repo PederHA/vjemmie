@@ -14,7 +14,8 @@ from botsecrets import REMOVEBG_API_KEY
 import requests
 
 
-class FunCog(BaseCog): 
+class FunCog(BaseCog):
+    """Commands that don't fit into any other categories."""
     @commands.command(name='roll',
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')
@@ -36,3 +37,38 @@ class FunCog(BaseCog):
         choice = random.choice(to_roll)
         
         await ctx.send(choice)
+    
+    @commands.command(name="braille")
+    async def braille(self, ctx: commands.Context, *text: str) -> None:
+        char_map = {
+            'a': '⠁',
+            'b': '⠃',
+            'c': '⠉',
+            'd': '⠙',
+            'e': '⠑',
+            'f': '⠋',
+            'g': '⠛',
+            'h': '⠓',
+            'i': '⠊',
+            'j': '⠚',
+            'k': '⠅',
+            'l': '⠇',
+            'm': '⠍',
+            'n': '⠝',
+            'o': '⠕',
+            'p': '⠏',
+            'q': '⠟',
+            'r': '⠗',
+            's': '⠎',
+            't': '⠞',
+            'u': '⠥',
+            'v': '⠧',
+            'x': '⠭',
+            'y': '⠽',
+            'z': '⠵',
+            'w': '⠺',
+            " ": " "
+        }
+        translation = str.maketrans(char_map)
+        text = " ".join(text).lower()
+        await ctx.send(text.translate(translation))

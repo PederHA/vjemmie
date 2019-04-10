@@ -8,13 +8,12 @@ from cogs.base_cog import BaseCog
 
 class WeatherCog(BaseCog):
     """
-    Holds various weather commands, with data obtained
-    via the met.no weather API.
+    Weather data commands.
     """
     
     @commands.command()
     async def weather(self, ctx: commands.Context, loc: str) -> None:
-        """!weather <location>"""
+        """Get the current temperature and wind speed for a location."""
         # Instantiate Nominatim geopy object
         geolocator = Nominatim(user_agent="VJEMMIE")
         

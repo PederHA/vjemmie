@@ -9,8 +9,7 @@ from cogs.base_cog import BaseCog
 
 
 class PUBGCog(BaseCog):
-    """PUBG Bot Commands
-    """
+    """PUBG commands"""
     
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"

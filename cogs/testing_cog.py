@@ -1,18 +1,19 @@
-from discord.ext import commands
-import discord
-
-import requests
-import shutil
-from cogs.base_cog import BaseCog
-from ext.checks import owners_only
 import unicodedata
 
+import discord
+import requests
+from discord.ext import commands
+
+from cogs.base_cog import BaseCog
+from ext.checks import owners_only
+
+
 class TestingCog(BaseCog):
-    """Testing Bot Commands
-    """
+    """Unstable/bad/temporary commands"""
     
     @commands.command(name="emojis")
     async def emojis(self, ctx:commands.Context, emoji: str, *message) -> None:
+        """Replace spaces with a given emoji."""
         msg = list(message)
         msg.append("")
         msg.insert(0, "")
@@ -20,6 +21,7 @@ class TestingCog(BaseCog):
 
     @commands.command(name="sheriff")
     async def sheriff(self, ctx: commands.Context, emoji: str) -> None:
+        """Make a sheriff out of emojis."""
         out = """
         \n⁯⁯⁯⁯ 
 ⠀ ⠀ ⠀    🤠
@@ -46,4 +48,3 @@ class TestingCog(BaseCog):
     async def dbg(self, ctx: commands.Context) -> None:
         breakpoint()
         print("yeah!")
-        

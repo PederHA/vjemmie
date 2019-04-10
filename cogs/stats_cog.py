@@ -7,6 +7,7 @@ import json
 
 
 class StatsCog(BaseCog):
+    """Commands and methods for gathering bot statistics."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.START_TIME = datetime.now()
@@ -53,6 +54,6 @@ class StatsCog(BaseCog):
         # Post active players
         if out:
             for gname, o in out:
-                await self.send_embed_message(ctx, gname, o)
+                await self.send_embed_message(ctx, gname, o, footer=False)
         else:
             await ctx.send("No active audio players")

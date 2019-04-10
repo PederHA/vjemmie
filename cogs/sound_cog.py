@@ -190,7 +190,7 @@ class SoundDirectory:
                  path: str, 
                  color: Optional[Union[str, int]]=None) -> None:
         self.folder = folder
-        self.header = header
+        self.header = header # This attribute is honestly pretty terrible
         self.aliases = aliases
         self.path = path
         self.color = color
@@ -207,7 +207,7 @@ class SoundDirectory:
 
 
 class SoundCog(BaseCog):
-    """Cog for the soundboard feature"""
+    """Soundboard commands"""
     YTDL_MAXSIZE = 10000000 # 10 MB
 
     def __init__(self, bot: commands.Bot) -> None:

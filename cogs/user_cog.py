@@ -7,6 +7,7 @@ from cogs.base_cog import BaseCog
 
 
 class UserCog(BaseCog):
+    """Help commands."""
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
         self.bot.remove_command('help')
@@ -37,7 +38,7 @@ class UserCog(BaseCog):
                     await cog._get_cog_commands(ctx, simple)
                     break
             else:
-                raise discord.DiscordException(f"No such category **{cog_name}**.")
+                raise discord.DiscordException(f"No such ategory **{cog_name}**.")
     
     @commands.command(name="commands")
     async def show_commands(self, ctx:commands.Context) -> None:
