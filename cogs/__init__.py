@@ -11,7 +11,7 @@ from cogs.reddit_cog import RedditCog
 from cogs.user_cog import UserCog
 from cogs.wowprogress_cog import WoWProgressCog
 from cogs.testing_cog import TestingCog
-from cogs.frying_cog import FryingCog
+from cogs.image_cog import ImageCog
 from cogs.weather_cog import WeatherCog
 from cogs.avatar_cog import AvatarCog
 from cogs.sound_cog import SoundCog

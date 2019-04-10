@@ -8,9 +8,8 @@ from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
 import traceback
 from cogs.base_cog import BaseCog
 
-class FryingCog(BaseCog):
-    """Cog for deep frying images
-    """
+class ImageCog(BaseCog):
+    """Image manipulation commands."""
 
     @commands.command(name="deepfry")
     async def deepfry(self,
