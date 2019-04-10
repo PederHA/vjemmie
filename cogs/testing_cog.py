@@ -14,9 +14,17 @@ class TestingCog(BaseCog):
     EMOJI = ":robot:"
     
     @commands.command(name="emojis")
-    async def emojis(self, ctx:commands.Context, emoji: str, *message) -> None:
+    async def emojis(self, ctx:commands.Context, emoji: str=None, *text: str) -> None:
         """Replace spaces with a given emoji."""
-        msg = list(message)
+        if not emoji:
+            return await ctx.send("Emoji is a required argument")
+        
+        if not text:
+            return await ctx.send("Text is a required argument")
+        
+        msg = list(text)
+        # Append and prepend empty strings in order for 
+        # str.join() to add emoji to beginning and end of text
         msg.append("")
         msg.insert(0, "")
         await ctx.send(emoji.join(msg))
