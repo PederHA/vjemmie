@@ -178,7 +178,8 @@ class BaseCog(commands.Cog):
                         fields: Optional[list]=None,
                         image_url: str=None,
                         color: Union[str, int]=None,
-                        timestamp: bool=True) -> discord.Embed:
+                        timestamp: bool=True,
+                        inline: bool=True) -> discord.Embed:
         """Constructs a discord.Embed object.
         
         Parameters
@@ -201,6 +202,8 @@ class BaseCog(commands.Cog):
         timestamp : `bool`, optional
             Display timestamp on footer. Has no effect if 
             param `footer=False`
+        inline : `bool`, optional
+            Display embed fields inline.
         
         Returns
         -------
@@ -216,7 +219,7 @@ class BaseCog(commands.Cog):
         
         if fields:
             for field in fields:
-                embed.add_field(name=field.name, value=field.value)
+                embed.add_field(name=field.name, value=field.value, inline=inline)
         
         if image_url:
             embed.set_image(url=image_url)
@@ -712,3 +715,19 @@ class BaseCog(commands.Cog):
             msg += f" {add_msg}"
         if not self.DOWNLOADS_ALLOWED:
             raise PermissionError(msg)
+        
+    async def get_cogs(self, *, all_cogs: bool=False) -> list:
+        """Returns list of cogs, sorted by name. Optionally includes
+        cogs hidden by `BaseCog.DISABLE_HELP`.
+        
+        NOTE
+        ----
+        I might remove the `all_cogs` parameter and fully respect that
+        disabled means disabled.
+        """
+        filtering = [] if all_cogs else self.DISABLE_HELP
+        return sorted([
+                        cog for cog in self.bot.cogs.values() 
+                        if cog.cog_name not in filtering
+                       ],
+                    key=lambda c: c.cog_name)
