@@ -74,16 +74,21 @@ class ImageFryer:
             return c*(1+np.random.random(1)[0]*factor-factor/2)
         return img.point(noise)
     
-    def add_emojis(self, img: Image.Image, emoji_name:str, max: int):
+    def add_emojis(self, img: Image.Image, emoji_name:str, limit: int=5):
         # create a temporary copy if img
         tmp = img.copy()
         default_emoji = 'b'
+        minimum_limit = 2
+        
+        if limit < minimum_limit:
+            limit = minimum_limit
+        
         try:
             emoji = Image.open(f'deepfryer/images/emojis/{emoji_name.lower()}.png')
         except:
             emoji = Image.open(f"deepfryer/images/emojis/{default_emoji}.png")
-        for i in range(1, randint(max-2,max)):
-            # add laughing emoji to random coordinates
+        for i in range(0, randint(minimum_limit,limit)):
+            # add selected emoji to random image coordinates
             coord = np.random.random(2)*np.array([img.width, img.height])
             resized = emoji.copy()
             size = int((img.width/10)*(np.random.random(1)[0]+1))
@@ -173,10 +178,10 @@ class ImageFryer:
         
         # Add emojis __BEFORE__ changing contrast and adding noise
         if emoji not in is_none:
-            img = self.add_emojis(img, emoji, 5)
+            img = self.add_emojis(img, emoji)
         
         # Change contrast
-        img = self.change_contrast(img, 100)
+        img = self.change_contrast(img, level=100)
         
         # Add noise
         img = self.add_noise(img, 1)
