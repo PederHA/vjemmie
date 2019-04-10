@@ -45,23 +45,6 @@ class ImageFryer:
             fname, ext = _file.split(".")
             out.append(fname)
         return "\n".join(out)
-                    
-    
-    @staticmethod
-    def format_output(list_of_items: Iterable, item_type: str) -> str:
-        """
-        Formats an iterable, and creates a markdown multi-line code block
-        in which every item in the iterable is placed on separate lines.
-
-        Returns a string containing said multi-line code block.
-        """
-        output = "```"
-        output += f"Available {item_type}:\n\n"
-        for item in list_of_items:
-            output += f"{item}\n"
-        else:
-            output += "```"
-        return output
 
     def change_contrast(self, img: Image.Image, level:int=115) -> Image.Image:
         factor = (259 * (level + 255)) / (255 * (259 - level))
@@ -170,7 +153,7 @@ class ImageFryer:
         return out
     
 
-    def fry(self, emoji: str, text: str, caption: str) -> None:
+    def fry(self, emoji: str, text: str, caption: str) -> Image.Image:
         # User can skip an argument by using any of these values
         is_none = ["-", " ", "", "None", "none", None]
         
