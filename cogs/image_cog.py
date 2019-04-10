@@ -38,14 +38,14 @@ class ImageCog(BaseCog):
                 help_cmd = self.bot.get_command("help")
                 return await ctx.invoke(help_cmd, "frying")
         
-        # Check if url or attachment is an image
-        if not await self.is_img_url(url):
-            return await ctx.send("URL or attachment must be an image file!")
-
         # Use attachment URL as image URL if message has attachment
         if ctx.message.attachments:
             emoji, text, caption = url, emoji, text
-            url = ctx.message.attachments[0]
+            url = ctx.message.attachments[0].url
+        
+        # Check if url or attachment is an image
+        if not await self.is_img_url(url):
+            return await ctx.send("URL or attachment must be an image file!")
 
         try:
             img = await self.download_from_url(ctx, url)
