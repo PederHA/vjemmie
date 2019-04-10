@@ -50,13 +50,17 @@ class ImageCog(BaseCog):
         try:
             img = await self.download_from_url(ctx, url)
             fryer = ImageFryer(img)
-            img = fryer.fry(emoji, text, caption)
+            fried_img = fryer.fry(emoji, text, caption)
         except Exception as e:
             exc = traceback.format_exc()
             await self.log_error(ctx, exc)
             return await ctx.send("An unknown error occured.")
         else:
-            await ctx.send(file=discord.File(img, filename="deepfried.jpeg"))
+            msg = await self.upload_bytes_obj_to_discord(fried_img, "deepfried.jpg")
+            image_url = msg.attachments[0].url
+            
+            embed = await self.get_embed(ctx, image_url=image_url)
+            await ctx.send(embed=embed)
     
     @commands.command(name="removebg")
     async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
