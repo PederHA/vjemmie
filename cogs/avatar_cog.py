@@ -1,17 +1,13 @@
 import io
 from itertools import zip_longest
 from typing import List, Tuple, Union
-from functools import partial
-import math
 
 import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
-import requests
 
-from ext.converters import MemberOrURLConverter
 from cogs.base_cog import BaseCog
-from botsecrets import REMOVEBG_API_KEY
+from ext.converters import MemberOrURLConverter
 
 
 class AvatarCog(BaseCog):
@@ -298,89 +294,3 @@ class AvatarCog(BaseCog):
     async def lordofthepit(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """Avatar: https://i.imgur.com/IRntn02.jpg"""
         await self._composite_images(ctx, "lordofthepit.jpg", (559, 410), (57, 110), user)
-
-    @commands.command(name="removebg")
-    async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
-        """Removes background from an image."""
-        if not image_url and not ctx.message.attachments:
-            raise discord.DiscordException("Message has no image URL or image attachment")
-        
-        if ctx.message.attachments:
-            image_url = ctx.message.attachments[0].url
-
-        # Download image from URL
-        img = await self.download_from_url(ctx, image_url)
-
-        # Resize image to sub 0.25 MP, so we only have to use 1 r.bg credit per API call
-        resized_img = await self._resize_img(img)
-        
-        def use_removebg_api(image) -> str:
-            response = requests.post(
-                'https://api.remove.bg/v1.0/removebg',
-                files={'image_file': image},
-                data={'size': 'auto'},
-                headers={'X-Api-Key': REMOVEBG_API_KEY},
-            )
-            if response.status_code == requests.codes.ok:
-                img_nobg = io.BytesIO(response.content)
-                img_nobg.seek(0)
-                return img_nobg
-
-        to_run = partial(use_removebg_api, resized_img)
-        img_nobg = await self.bot.loop.run_in_executor(None, to_run)
-        
-        if not img_nobg:
-            return await ctx.send("Could not remove background! Try again later.")
-
-        await ctx.send(file=discord.File(img_nobg, "nobg.png"))
-    
-    async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
-        image = Image.open(_img)
-
-        MAX_SIZE = 240_000 # 0.24 Megapixels
-
-        width, height = image.size
-
-        # Do not scale down image size if image is smaller than 0.24 Megapixels
-        if width*height < MAX_SIZE:
-            return _img
-        
-        try:
-            new_w, new_h = await self.scale_down_img(width, height, MAX_SIZE)
-        except:
-            # Fall back on brute force resizing if algorithm fails
-            for i in range(1, 16, 1):
-                new_w, new_h = width//i, height//i
-                new_size = new_w * new_h
-                if new_size > MAX_SIZE:
-                    continue
-                else:
-                    break
-            else:
-                raise Exception("Image is way, way, way too large")
-        
-        new_img = io.BytesIO()
-        image = image.resize((new_w, new_h), resample=Image.BICUBIC)
-        image.save(new_img, format="JPEG")
-        new_img.seek(0)
-        return new_img
-
-    async def scale_down_img(self, width, height, target) -> None:
-        """Scales down an image as close as possible to a target size"""
-        async def get_division_n(width, height, target) -> float:
-            n = 1
-            tries = 0
-            while True:
-                new = width//n * height//n
-                if new > target:
-                    n += 0.01
-                    continue
-                else:
-                    return n
-                tries +=1
-                if tries > 2000:
-                    # Completely arbitrary number, but lets us have an exit clause
-                    raise Exception("Fatal exception")
-       
-        n = await get_division_n(width, height, target)
-        return int(abs(width//n)), int(abs(height//n))
