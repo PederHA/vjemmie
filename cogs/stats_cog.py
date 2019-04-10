@@ -4,6 +4,7 @@ from cogs.base_cog import BaseCog
 from datetime import datetime
 from time import perf_counter, time
 import json
+from ext.checks import owners_only
 
 
 class StatsCog(BaseCog):
@@ -34,6 +35,7 @@ class StatsCog(BaseCog):
                        f"{up_fmt(seconds, 's')}")
 
     @commands.command(name="get_players")
+    @owners_only()
     async def get_players(self, ctx) -> None:
         sound_cog = self.bot.get_cog("SoundCog")
         players = sound_cog.players
