@@ -18,7 +18,7 @@ class FunCog(BaseCog):
     """Commands that don't fit into any other categories."""
 
     EMOJI = ":game_die:"
-    
+
     @commands.command(name='roll',
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')
@@ -29,7 +29,7 @@ class FunCog(BaseCog):
     @commands.command(name='random')
     async def roll2(self, ctx: commands.Context, *args) -> None:
         """
-        Select from  <thing1, thing2, ..., thinglast>
+        Select from  <item1, item2, ..., itemlast>
         """
         if args[0] in ["c", "channel"]:
             to_roll = [user async for user in self.get_users_in_voice(ctx)]
