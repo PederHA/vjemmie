@@ -10,6 +10,8 @@ from cogs.base_cog import BaseCog
 class YouTubeCog(BaseCog):
     """YouTube commands."""
     
+    EMOJI = ":tv:"
+
     @commands.command(name='youtube',
                         aliases=['yt', 'utube'],
                         description='YouTube search that returns top result for search query.')                       

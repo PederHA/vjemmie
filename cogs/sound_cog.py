@@ -208,6 +208,9 @@ class SoundDirectory:
 
 class SoundCog(BaseCog):
     """Soundboard commands"""
+
+    EMOJI = ":speaker:"
+
     YTDL_MAXSIZE = 10000000 # 10 MB
 
     def __init__(self, bot: commands.Bot) -> None:

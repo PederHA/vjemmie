@@ -10,6 +10,8 @@ from cogs.base_cog import BaseCog
 class WoWProgressCog(BaseCog):
     """WoWProgress commands."""
 
+    EMOJI = ":wheelchair:"
+
     @commands.command(name="wp",
                       aliases=["wowp"],
                       description="Searches WoWprogress for a given guild name, and returns top result.")

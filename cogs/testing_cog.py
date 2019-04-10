@@ -10,6 +10,8 @@ from ext.checks import owners_only
 
 class TestingCog(BaseCog):
     """Unstable/bad/temporary commands"""
+
+    EMOJI = ":robot:"
     
     @commands.command(name="emojis")
     async def emojis(self, ctx:commands.Context, emoji: str, *message) -> None:

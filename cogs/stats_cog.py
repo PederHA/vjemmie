@@ -8,6 +8,9 @@ import json
 
 class StatsCog(BaseCog):
     """Commands and methods for gathering bot statistics."""
+
+    EMOJI = ":chart_with_upwards_trend:"
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.START_TIME = datetime.now()

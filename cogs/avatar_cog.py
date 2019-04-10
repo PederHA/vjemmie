@@ -13,6 +13,8 @@ from ext.converters import MemberOrURLConverter
 class AvatarCog(BaseCog):
     """Create images featuring a user's avatar."""
     
+    EMOJI = ":person_frowning:"
+
     async def _composite_images(self,
                              ctx: commands.Context,
                              template: str,

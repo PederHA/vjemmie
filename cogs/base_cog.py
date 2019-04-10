@@ -56,6 +56,9 @@ class BaseCog(commands.Cog):
     EMBED_CHAR_LIMIT = 1000
     EMBED_FILL_CHAR = "\xa0"
 
+    # Style info for help categories
+    EMOJI = ":question:"
+    
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.add_help_command()

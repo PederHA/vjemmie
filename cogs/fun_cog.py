@@ -16,6 +16,9 @@ import requests
 
 class FunCog(BaseCog):
     """Commands that don't fit into any other categories."""
+
+    EMOJI = ":game_die:"
+    
     @commands.command(name='roll',
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')

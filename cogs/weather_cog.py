@@ -11,6 +11,8 @@ class WeatherCog(BaseCog):
     Weather data commands.
     """
     
+    EMOJI = ":umbrella:"
+
     @commands.command()
     async def weather(self, ctx: commands.Context, loc: str) -> None:
         """Get the current temperature and wind speed for a location."""

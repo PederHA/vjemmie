@@ -8,6 +8,7 @@ from cogs.base_cog import BaseCog
 
 class UserCog(BaseCog):
     """Help commands."""
+
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
         self.bot.remove_command('help')
@@ -20,34 +21,36 @@ class UserCog(BaseCog):
         if simple in ["n", "-", "advanced"]:
             simple = "advanced"
         
-        # Send message listing all possible !help categories
-        if not cog_name:
-            categories = "\n".join(cog.cog_name
-                                   for cog in list(self.bot.cogs.values())
-                                   if cog.cog_name not in self.DISABLE_HELP)
-            await self.send_embed_message(ctx, "Categories", categories)
-            await ctx.send("Type `!help <category> (advanced)` for a specific category.\n"
-                           "Or type `!commands` to show all available commands.")
-        
-        # Send help message for specific category
-        else:
-            cog_name = cog_name.lower()
-            for cog in self.bot.cogs.values():
-                if cog_name == cog.cog_name.lower() and cog_name not in self.DISABLE_HELP:
+        cogs = await self.get_cogs()
 
-                    await cog._get_cog_commands(ctx, simple)
-                    break
+        # Send help message for specific category
+        if cog_name:
+            cog_name = cog_name.lower()
+            for cog in cogs:
+                if cog_name == cog.cog_name.lower():
+                    return await cog._get_cog_commands(ctx, simple)
             else:
-                raise discord.DiscordException(f"No such ategory **{cog_name}**.")
-    
+                raise discord.DiscordException(f"No such category **{cog_name}**.")
+        
+        # Send message listing all possible !help categories if no category
+
+        # Make an embed field for each cog
+        fields = [self.EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs]
+        embed = await self.get_embed(ctx, fields=fields, inline=False)
+        
+        # Send embeds
+        await ctx.send(embed=embed)
+        
+        # Send !help usage instructions
+        await ctx.send("Type `!help <category> (advanced)` for a specific category.\n"
+                        "Or type `!commands` to show all available commands.")
+
     @commands.command(name="commands")
     async def show_commands(self, ctx:commands.Context) -> None:
         l = []
-        for cog in self.bot.cogs.values():
-            if cog.cog_name in self.DISABLE_HELP:
-                continue
+        for cog in await self.get_cogs():
             cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
-            l.append(f"{cog.cog_name}\n{cmds}")
+            l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
         out = "\n".join(l)   
         await self.send_embed_message(ctx, "Commands", out, color="red")
     

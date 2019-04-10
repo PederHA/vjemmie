@@ -11,6 +11,8 @@ from cogs.base_cog import BaseCog
 class PUBGCog(BaseCog):
     """PUBG commands"""
     
+    EMOJI = "<:pubghelm:565522877902749726>"
+
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"
     )

@@ -5,6 +5,8 @@ from cogs.base_cog import BaseCog, EmbedField
 class MemeCog(BaseCog):
     """Text meme commands"""
 
+    EMOJI = ":newspaper:"
+
     @commands.command(name="goodshit")
     async def goodshit(self, ctx: commands.Context) -> None:
         await self.read_send_file(ctx, "memes/txt/goodshit.txt")

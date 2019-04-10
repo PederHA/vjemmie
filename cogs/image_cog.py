@@ -16,6 +16,8 @@ from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 class ImageCog(BaseCog):
     """Image manipulation commands."""
 
+    EMOJI = ":camera:"
+
     @commands.command(name="deepfry")
     async def deepfry(self,
                       ctx: commands.Context,

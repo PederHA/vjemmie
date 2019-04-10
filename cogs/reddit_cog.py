@@ -32,6 +32,9 @@ RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"],
 
 class RedditCog(BaseCog):
     """Reddit commands."""
+
+    EMOJI = "<:leddit:565523334276841498>"
+
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     
