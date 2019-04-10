@@ -138,7 +138,7 @@ class ImageFryer:
         lines = textwrap.wrap(text_string, width=(tmp.width//26.5))
         
         if len(lines) > 2:
-            raise ValueError("Some error about text string being too long")
+            raise ValueError("Text string is too long!")
 
         
         # Draw text, limited to 2 lines

@@ -9,7 +9,7 @@ from PIL import Image
 
 from botsecrets import REMOVEBG_API_KEY
 from cogs.base_cog import BaseCog
-from cogs.fryer import ImageFryer
+from deepfryer.fryer import ImageFryer
 from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 
 
