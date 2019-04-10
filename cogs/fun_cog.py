@@ -5,6 +5,7 @@ import io
 from pprint import pprint
 from functools import partial
 import math
+from typing import Union
 
 import discord
 from discord.ext import commands
@@ -22,8 +23,20 @@ class FunCog(BaseCog):
     @commands.command(name='roll',
                       aliases=['dice'],
                       description='Random roll. Provide number argument to specify range (1-100 default).')
-    async def roll(self, ctx: commands.Context, lower: int=0, upper: int=100) -> None:
-        """!roll <range>"""      
+    async def roll(self, ctx: commands.Context, lower: Union[int, str]=0, upper: Union[int, str]=100) -> None:
+        """!roll 0-<high> or <low> <high>"""
+        type_err = "Upper and lower range must be integers!"
+        
+        if isinstance(lower, str) and "-" in lower:
+            lower, upper = lower.split("-")
+            try:
+                lower, upper = int(lower), int(upper)
+            except ValueError:
+                return await ctx.send(type_err)
+        
+        if isinstance(lower, str) or isinstance(upper, str):
+            return await ctx.send(type_err)
+        
         await ctx.send(random.randint(lower, upper))
             
     @commands.command(name='random')
