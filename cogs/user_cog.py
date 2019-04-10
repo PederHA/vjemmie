@@ -36,7 +36,7 @@ class UserCog(BaseCog):
 
         # Make an embed field for each cog
         fields = [self.EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs]
-        embed = await self.get_embed(ctx, fields=fields, inline=False)
+        embed = await self.get_embed(ctx, title="CATEGORIES", fields=fields, inline=False)
         
         # Send embeds
         await ctx.send(embed=embed)
