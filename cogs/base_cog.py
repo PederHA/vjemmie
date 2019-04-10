@@ -32,9 +32,7 @@ class FileSizeError(Exception):
     """File Size too small or too large"""
 
 class BaseCog(commands.Cog):
-    """
-    Base Cog from which all other cogs are subclassed.
-    """
+    """Base Cog from which all other cogs are subclassed."""
 
     # Cogs to ignore when creating !help commands
     DISABLE_HELP = DISABLE_HELP
@@ -470,7 +468,7 @@ class BaseCog(commands.Cog):
 
         return msg # Could do return await.channel.send(), but I think this is more self documenting
 
-    async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple") -> None:
+    async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple", *, rtn: bool=False) -> None:
         """Sends an embed listing all commands belonging the cog.
 
         The method compiles a list of commands defined by the invoking cog,
@@ -508,7 +506,8 @@ class BaseCog(commands.Cog):
         
         if not _out_str:
             return await self.send_error_msg(ctx, "Cog has no commands!")
-
+        if rtn:
+            return _out_str
         await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
 
     async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
