@@ -58,7 +58,7 @@ class BaseCog(commands.Cog):
 
     # Style info for help categories
     EMOJI = ":question:"
-    
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.add_help_command()
@@ -512,9 +512,11 @@ class BaseCog(commands.Cog):
         
         if not _out_str:
             return await self.send_error_msg(ctx, "Cog has no commands!")
+        
         if rtn:
             return _out_str
-        await self.send_embed_message(ctx, f"{self.cog_name} commands", _out_str)
+        
+        await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", _out_str)
 
     async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
         """
