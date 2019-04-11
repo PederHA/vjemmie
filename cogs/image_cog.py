@@ -60,12 +60,8 @@ class ImageCog(BaseCog):
             await self.log_error(ctx, exc)
             return await ctx.send("An unknown error occured.")
         else:
-            # Upload fried image
-            msg = await self.upload_bytes_obj_to_discord(fried_img, "deepfried.jpg")
-            image_url = msg.attachments[0].url
-            
-            # Send message with uploaded image
-            embed = await self.get_embed(ctx, image_url=image_url)
+            # Upload fried image and get embed
+            embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
             await ctx.send(embed=embed)
     
     @commands.command(name="removebg")

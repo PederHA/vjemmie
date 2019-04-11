@@ -89,12 +89,8 @@ class AvatarCog(BaseCog):
         background.save(file_like_obj, format="PNG")
         file_like_obj.seek(0) # Seek to byte 0, so discord.File can use BytesIO.read()
 
-        # Upload image to discord and get url
-        msg = await self.upload_bytes_obj_to_discord(file_like_obj, "out.png")
-        image_url = msg.attachments[0].url
-        
-        # Send embeded image
-        embed = await self.get_embed(ctx, image_url=image_url)
+        # Upload image to discord and get embed
+        embed = await self.get_embed_from_img_upload(ctx, file_like_obj, "out.png")
         await ctx.send(embed=embed)
     
     async def _resize_paste(self, 
