@@ -1,6 +1,7 @@
 import io
 import traceback
 from functools import partial
+from typing import Optional
 
 import discord
 import requests
@@ -83,7 +84,7 @@ class ImageCog(BaseCog):
         # Resize image to sub 0.25 MP, so we only have to use 1 r.bg credit per API call
         resized_img = await self._resize_img(img)
         
-        def use_removebg_api(image) -> str:
+        def use_removebg_api(image) -> Optional[io.BytesIO]:
             response = requests.post(
                 'https://api.remove.bg/v1.0/removebg',
                 files={'image_file': image},
@@ -95,13 +96,16 @@ class ImageCog(BaseCog):
                 img_nobg.seek(0)
                 return img_nobg
 
+        # Upload image to remove.bg and receive no-bg version of image
         to_run = partial(use_removebg_api, resized_img)
         img_nobg = await self.bot.loop.run_in_executor(None, to_run)
         
         if not img_nobg:
             return await ctx.send("Could not remove background! Try again later.")
 
-        await ctx.send(file=discord.File(img_nobg, "nobg.png"))
+        embed = await self.get_embed_from_img_upload(ctx, img_nobg, "nobg.png")
+        await ctx.send(embed=embed)
+
     
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
