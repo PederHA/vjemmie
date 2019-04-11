@@ -36,7 +36,7 @@ IMAGE_CHANNEL_ID = 549649397420392567 # Image rehosting channel
 LOG_CHANNEL_ID = 340921036201525248 # Error logging channel
 DOWNLOAD_CHANNEL_ID = 563312629045788692 # Download logging channel
 AUTHOR_MENTION = "<@103890994440728576>" # Creates an @BOT_AUTHOR mention. Replace with own ID
-
+GUILD_HISTORY_CHANNEL = 565674480660119592 # Joining/leaving guilds
 
 #///////////////////
 # Soundboard      /
