@@ -299,7 +299,7 @@ class SoundCog(BaseCog):
         current bot session
         """
         out = "\n".join([f"{self.bot.get_guild(k)}: {v}" for k, v in self.played_count.items()])
-        await self.send_text_message(ctx, out)
+        await self.send_text_message(out, ctx)
 
     @commands.command(name="connect", aliases=["join"])
     async def connect(self, ctx, *, channel: discord.VoiceChannel=None):

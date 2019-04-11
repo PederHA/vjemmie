@@ -667,7 +667,7 @@ class RedditCog(BaseCog):
         # Send plain text otherwise
         else:
             # Break up text posts into 1800 char long chunks
-            await self.send_text_message(ctx, out_text)
+            await self.send_text_message(out_text, ctx)
 
     def _get_commands(self, cmd: RedditCommand) -> str:
         """

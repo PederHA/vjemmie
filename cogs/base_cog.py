@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
-                    MAX_DL_SIZE)
+                    MAX_DL_SIZE, GUILD_HISTORY_CHANNEL)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -44,6 +44,7 @@ class BaseCog(commands.Cog):
     IMAGE_CHANNEL_ID = IMAGE_CHANNEL_ID
     LOG_CHANNEL_ID = LOG_CHANNEL_ID
     DOWNLOAD_CHANNEL_ID = DOWNLOAD_CHANNEL_ID
+    GUILD_HISTORY_CHANNEL = GUILD_HISTORY_CHANNEL
     AUTHOR_MENTION = AUTHOR_MENTION
 
     # Download options
@@ -246,7 +247,7 @@ class BaseCog(commands.Cog):
             else:
                 yield member.name
 
-    async def send_log(self, msg: str) -> None:
+    async def send_log(self, msg: str, *, channel_id: int=None) -> None:
         """Sends log message to log channel
         
         Parameters
@@ -254,12 +255,15 @@ class BaseCog(commands.Cog):
         msg : `str`
             String to send as message to log channel
         """
-        try:
-            await self.send_text_message(ctx, msg, channel_id=self.LOG_CHANNEL_ID)
+        if not channel_id:
+            channel_id = self.LOG_CHANNEL_ID
+
+        try:     
+            await self.send_text_message(msg, channel_id=channel_id)
         except discord.Forbidden:
-            print(f"Insufficient permissions for channel {self.LOG_CHANNEL_ID}.")
+            print(f"Insufficient permissions for channel {channel_id}.")
         except discord.HTTPException:
-            print(f"Failed to send message to channel {self.LOG_CHANNEL_ID}.")
+            print(f"Failed to send message to channel {channel_id}.")
 
     async def log_error(self, ctx: commands.Context, error_msg: str) -> None:
         """Logs command exception to log channel
@@ -275,11 +279,11 @@ class BaseCog(commands.Cog):
         """
 
         # Send traceback
-        await self.send_text_message(ctx, error_msg, channel_id=self.LOG_CHANNEL_ID)
+        await self.send_text_message(error_msg, channel_id=self.LOG_CHANNEL_ID)
         
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
-        await self.send_text_message(ctx, cause_of_error, channel_id=self.LOG_CHANNEL_ID)
+        await self.send_text_message(cause_of_error, channel_id=self.LOG_CHANNEL_ID)
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
@@ -518,11 +522,15 @@ class BaseCog(commands.Cog):
         
         await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", _out_str)
 
-    async def send_text_message(self, ctx: commands.Context, text: str, *, channel_id: Optional[int]=None) -> None:
+    async def send_text_message(self, 
+                                text: str,     
+                                ctx: Optional[commands.Context]=None,
+                                *,
+                                channel_id: Optional[int]=None) -> None:
         """
         Sends an arbitrarily long string as one or more messages to a channel.
         String is split into multiple messages if length of string exceeds 
-        text message character limit.
+        Discord text message character limit.
         
         Parameters
         ----------
@@ -534,10 +542,18 @@ class BaseCog(commands.Cog):
             Optional channel ID if target channel is not part of the context.
         """
         # Obtain channel
+        if ctx:
+            channel = ctx.message.channel
+        elif channel_id:
+            channel = self.bot.get_channel(channel_id)
+        else:
+            raise Exception('"ctx" or "channel_id" must be specified')
+        
         if channel_id:
             channel = self.bot.get_channel(channel_id)
         else:
-            channel = ctx.message.channel
+            channel = ctx.message.channel # TODO: remove this!
+
 
         # Split string into chunks
         chunks = await self._split_string_to_chunks(text)
@@ -645,7 +661,7 @@ class BaseCog(commands.Cog):
     async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> str:
         """Reads local text file and sends contents to `ctx.channel`"""
         with open(path, "r", encoding=encoding) as f:
-            return await self.send_text_message(ctx, f.read())
+            return await self.send_text_message(f.read(), ctx)
 
     def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
         """Generates a 24 bit hex color code."""
@@ -672,7 +688,7 @@ class BaseCog(commands.Cog):
 
     async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
         """Sends text message to `ctx.channel` prepended with error-text."""
-        await self.send_text_message(ctx, f"**ERROR:** {msg}")
+        await self.send_text_message(f"**ERROR:** {msg}", ctx)
 
     async def log_file_download(self,
                                 ctx: commands.Context,
@@ -697,7 +713,7 @@ class BaseCog(commands.Cog):
         guild = ctx.message.author.guild
         if not msg:
             msg = f"**`{author}`** from **`{guild}`** downloaded **`{filename}`** from {url}"
-        await self.send_text_message(ctx, msg, channel_id=self.DOWNLOAD_CHANNEL_ID)
+        await self.send_text_message(msg, channel_id=self.DOWNLOAD_CHANNEL_ID)
 
     async def check_downloads_permissions(self, *, message: str=None, add_msg: str=None) -> None:
         """Checks download permissions defined in `config.py`.
@@ -715,7 +731,7 @@ class BaseCog(commands.Cog):
             Raised if downloads are disabled in config
         """
 
-        msg = message if message else "Bot owner has disabled downloads!"
+        msg = message or "Bot owner has disabled downloads!"
         if add_msg:
             msg += f" {add_msg}"
         if not self.DOWNLOADS_ALLOWED:

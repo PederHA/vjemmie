@@ -24,12 +24,12 @@ class AdminCog(BaseCog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Called when bot joins a guild."""
-        await self.send_log(f"Joined guild {guild.name}")
+        await self.send_log(f"Joined guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Called when bot leaves a guild."""
-        await self.send_log(f"Left guild {guild.name}")
+        await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
     
     @commands.command(aliases=["change_activity"])
     @admins_only()

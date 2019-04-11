@@ -10,6 +10,7 @@ from PIL import Image
 from botsecrets import REMOVEBG_API_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
+from ext.checks import owners_only
 from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 
 
@@ -30,10 +31,10 @@ class ImageCog(BaseCog):
         if url in ["help", "h", "?"]:
             if emoji == "emojis":
                 emojis = await ImageFryer.get_files_in_dir("emojis")
-                return await self.send_text_message(ctx, emojis)
+                return await self.send_text_message(emojis, ctx)
             elif emoji == "captions":
                 captions = await ImageFryer.get_files_in_dir("captions")
-                return await self.send_text_message(ctx, emojis)
+                return await self.send_text_message(emojis, ctx)
             else:
                 help_cmd = self.bot.get_command("help")
                 return await ctx.invoke(help_cmd, "frying")
@@ -48,7 +49,9 @@ class ImageCog(BaseCog):
             return await ctx.send("URL or attachment must be an image file!")
 
         try:
+            # Download image
             img = await self.download_from_url(ctx, url)
+            # Deepfry
             fryer = ImageFryer(img)
             fried_img = fryer.fry(emoji, text, caption)
         except Exception as e:
@@ -56,13 +59,16 @@ class ImageCog(BaseCog):
             await self.log_error(ctx, exc)
             return await ctx.send("An unknown error occured.")
         else:
+            # Upload fried image
             msg = await self.upload_bytes_obj_to_discord(fried_img, "deepfried.jpg")
             image_url = msg.attachments[0].url
             
+            # Send message with uploaded image
             embed = await self.get_embed(ctx, image_url=image_url)
             await ctx.send(embed=embed)
     
     @commands.command(name="removebg")
+    @owners_only()
     async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
         """Removes background from an image."""
         if not image_url and not ctx.message.attachments:
