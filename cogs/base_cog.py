@@ -752,3 +752,26 @@ class BaseCog(commands.Cog):
                         if cog.cog_name not in filtering
                        ],
                     key=lambda c: c.cog_name)
+
+    async def get_embed_from_img_upload(self,
+                                        ctx: commands.Context,
+                                        to_upload: Union[io.BytesIO, str], 
+                                        filename: Optional[str]=None
+                                        ) -> discord.Embed:
+        if isinstance(to_upload, str):
+            if not self.is_img_url(to_upload):
+                raise Exception("String must be URL to an image file!")
+            
+            msg = await self.rehost_image_to_discord(ctx, to_upload)
+            url = msg.attachments[0].url
+            _fname, ext = self.get_filename_extension_from_url(url)
+            filename = f"{_fname}.{ext}"
+        
+        elif isinstance(to_upload, io.BytesIO):
+            if not filename:
+                raise ValueError("A filename is required for bytes object uploads!")
+            msg = await self.upload_bytes_obj_to_discord(to_upload, filename)
+            url = msg.attachments[0].url
+        
+        embed = await self.get_embed(ctx, image_url=url)
+        return embed
