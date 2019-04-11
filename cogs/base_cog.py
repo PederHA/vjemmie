@@ -760,7 +760,7 @@ class BaseCog(commands.Cog):
                                         ) -> discord.Embed:
         if isinstance(to_upload, str):
             if not self.is_img_url(to_upload):
-                raise Exception("String must be URL to an image file!")
+                raise ValueError("String must be URL to an image file!")
             
             msg = await self.rehost_image_to_discord(ctx, to_upload)
             url = msg.attachments[0].url
@@ -768,8 +768,8 @@ class BaseCog(commands.Cog):
             filename = f"{_fname}.{ext}"
         
         elif isinstance(to_upload, io.BytesIO):
-            if not filename:
-                raise ValueError("A filename is required for bytes object uploads!")
+            if not filename: 
+                raise TypeError("A filename is required for bytes object uploads!")
             msg = await self.upload_bytes_obj_to_discord(to_upload, filename)
             url = msg.attachments[0].url
         
