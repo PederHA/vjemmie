@@ -81,9 +81,9 @@ class ImageCog(BaseCog):
 
     @commands.command(name="nuke")
     @owners_only()
-    async def nuke_image(self, ctx: commands.Context, url: str=None) -> None:
+    async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
         """Pretty bad image nuking command."""
-        img = await ctx.invoke(self.deepfry, url, nuke=True)
+        img = await ctx.invoke(self.deepfry, url, *args, nuke=True)
         # Remove any message attachments after first round of frying
         ctx.message.attachments = []
         for i in range(3):
