@@ -44,9 +44,14 @@ class ImageCog(BaseCog):
         
         # Use attachment URL as image URL if message has attachment
         if ctx.message.attachments:
-            emoji, text, caption = url, emoji, text
-            url = ctx.message.attachments[0].url
-        
+            if not nuke:
+                # shift arguments 1 param right if image is supplied as attachment
+                # Example: !deepfry b "ye boi" top10animebetrayals. 
+                # Attachment replaces URL arg, and the 3 first arguments are treated as emoji, text & caption
+                emoji, text, caption = url, emoji, text
+            url = ctx.message.attachments[0].url 
+
+
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
             return await ctx.send("URL or attachment must be an image file!")
@@ -76,9 +81,11 @@ class ImageCog(BaseCog):
 
     @commands.command(name="nuke")
     @owners_only()
-    async def nuke_image(self, ctx: commands.Context, url: str) -> None:
+    async def nuke_image(self, ctx: commands.Context, url: str=None) -> None:
         """Pretty bad image nuking command."""
         img = await ctx.invoke(self.deepfry, url, nuke=True)
+        # Remove any message attachments after first round of frying
+        ctx.message.attachments = []
         for i in range(3):
             img = await ctx.invoke(self.deepfry, img, nuke=True)
         else:
