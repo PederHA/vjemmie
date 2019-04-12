@@ -6,7 +6,7 @@ Original methods such as `add_text()` and `add_caption()` are added to provide
 a richer set of functionality than what DeepFryBot provides.
 """
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 from random import randint
 import requests
@@ -172,6 +172,10 @@ class ImageFryer:
         # Add caption graphic
         if caption not in is_none:
             img = self.add_caption(img, caption)
+        
+        # Effects
+        # sharpen
+        img = img.filter(ImageFilter.SHARPEN)
         
         jpg_copy = img.copy().convert("RGB")
 
