@@ -5,18 +5,19 @@ but modified to fit into an OO design.
 Original methods such as `add_text()` and `add_caption()` are added to provide
 a richer set of functionality than what DeepFryBot provides.
 """
-from typing import Union
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import numpy as np
-from random import randint
-import requests
-import shutil
-from os import listdir
-from typing import Iterable
-import textwrap
-from utils.exceptions import WordExceededLimit, NonImgURL, InvalidURL
-import math
 import io
+import math
+import shutil
+import textwrap
+from os import listdir
+from random import randint
+from typing import Iterable, Union
+
+import numpy as np
+import requests
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 
 
 class ImageFryer:
@@ -31,13 +32,7 @@ class ImageFryer:
     @staticmethod
     async def get_files_in_dir(category: str) -> str:
         """
-        This method was repurposed to work with an "all" filter, which lists
-        both emojis and captions. To make this happen using the existing
-        functionality of the method, a sort of hacky band-aid fix was put
-        in place. It looks ugly, but it works for now.
-
-        At the moment, this method suffers from god-awful variable names, 
-        which might make its logic confusing at first glance.
+        Lists files in a deepfryer subdirectory. 
         """
         HIDDEN = ["effects", "psd"]
         categories = [d for d in listdir("deepfryer/images") if d not in HIDDEN]
@@ -178,10 +173,11 @@ class ImageFryer:
         if caption not in is_none:
             img = self.add_caption(img, caption)
         
-        # Effects
+        # Effects (more to come)
         # sharpen
         img = img.filter(ImageFilter.SHARPEN)
         
+        # Create JPEG copy of image
         jpg_copy = img.copy().convert("RGB")
 
         # Create io.BytesIO file-like bytestream
@@ -194,6 +190,3 @@ class ImageFryer:
         rtn_img.seek(0)
         
         return rtn_img
-        
-
-
