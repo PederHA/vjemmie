@@ -134,7 +134,7 @@ class AudioPlayer:
         self.volume = 1
         self.current = None
 
-        self.timeout_duration = 60
+        self.timeout_duration = 60.0
 
         ctx.bot.loop.create_task(self.player_loop())
 
