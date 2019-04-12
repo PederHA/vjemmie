@@ -27,6 +27,7 @@ class ImageCog(BaseCog):
                       emoji: str=None,
                       text: str=None,
                       caption: str=None,
+                      *,
                       nuke: bool=False
                       ) -> Optional[discord.Embed]:
         """Deepfries an image"""
