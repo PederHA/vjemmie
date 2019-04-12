@@ -54,7 +54,8 @@ class ImageCog(BaseCog):
             img = await self.download_from_url(ctx, url)
             # Deepfry
             fryer = ImageFryer(img)
-            fried_img = fryer.fry(emoji, text, caption)
+            to_run = partial(fryer.fry, emoji, text, caption)
+            fried_img = await self.bot.loop.run_in_executor(None, to_run)
         except Exception as e:
             exc = traceback.format_exc()
             await self.log_error(ctx, exc)
