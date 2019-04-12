@@ -130,6 +130,7 @@ class ImageCog(BaseCog):
         
         new_img = io.BytesIO()
         image = image.resize((new_w, new_h), resample=Image.BICUBIC)
+        image = image.convert("RGB")
         image.save(new_img, format="JPEG")
         new_img.seek(0)
         return new_img
