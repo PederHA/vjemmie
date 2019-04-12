@@ -230,7 +230,12 @@ class AvatarCog(BaseCog):
     @commands.command(name="mlady", aliases=["neckbeard"])
     async def mlady(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/2LQkErQ.png"""
-        await self._composite_images(ctx, "mlady.png", (200, 200), (161, 101), user, template_overlay=True)
+        await self._composite_images(ctx, "mlady.png", (275, 275), (86, 78), user, template_overlay=True)
+    
+    @commands.command(name="mlady2", aliases=["neckbeard2"])
+    async def mlady2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
+        """https://i.imgur.com/2LQkErQ.png"""
+        await self._composite_images(ctx, "mlady2.png", (200, 200), (161, 101), user, template_overlay=True)
 
     @commands.command(name="loud", aliases=["loudest"])
     async def loud(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
