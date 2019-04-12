@@ -58,8 +58,6 @@ class ImageFryer:
         return img.point(noise)
     
     def add_emojis(self, img: Image.Image, emoji_name:str, limit: int=5):
-        # create a temporary copy if img
-        tmp = img.copy()
         default_emoji = 'b'
         minimum_limit = 2
         
@@ -76,15 +74,14 @@ class ImageFryer:
             resized = emoji.copy()
             size = int((img.width/10)*(np.random.random(1)[0]+1))
             resized.thumbnail((size, size), Image.ANTIALIAS)
-            tmp.paste(resized, (int(coord[0]), int(coord[1])), resized)
-        return tmp
+            img.paste(resized, (int(coord[0]), int(coord[1])), resized)
+        return img
 
     def add_caption(self, img: Image.Image, caption_name: str) -> Image.Image:
         """
         Adds a user-defined graphic on the bottom of the base image,
         that is stretched to fit the width of the image
         """
-        tmp = img.copy()
         try:
             caption = Image.open(f'deepfryer/images/captions/{caption_name}.png')
         except:
@@ -100,8 +97,8 @@ class ImageFryer:
             resized.thumbnail((size, size), Image.ANTIALIAS)
             
             # Paste resized caption to coordinates
-            tmp.paste(resized, (int(coord[0]), int(coord[1])), resized)
-            return tmp
+            img.paste(resized, (int(coord[0]), int(coord[1])), resized)
+            return img
     
     def add_text(self, img: Image.Image, text_string: str) -> Image.Image:
         """
@@ -114,16 +111,16 @@ class ImageFryer:
             and its background to obscure parts of the image.
         """
 
-        tmp = img.copy().convert("RGBA")
+        img = img.convert("RGBA")
 
         # Create image to draw text on
-        txt = Image.new("RGBA", tmp.size, (255,255,255,0))
-        fnt = ImageFont.truetype(".deepfryer/fonts/LiberationSans-Regular.ttf", tmp.height//8)         
+        txt = Image.new("RGBA", img.size, (255,255,255,0))
+        fnt = ImageFont.truetype(".deepfryer/fonts/LiberationSans-Regular.ttf", img.height//8)         
         d = ImageDraw.Draw(txt)
         
         # Split text into lines
         # Each character is aproximately 26 pixels
-        lines = textwrap.wrap(text_string, width=(tmp.width//26.5))
+        lines = textwrap.wrap(text_string, width=(img.width//26.5))
         
         if len(lines) > 2:
             raise ValueError("Text string is too long!")
@@ -139,19 +136,18 @@ class ImageFryer:
                 line_count += 1
 
         # Get size of text
-        coords = ((tmp.width, 0),(0, (tmp.height//6.4)*line_count))
+        coords = ((img.width, 0),(0, (img.height//6.4)*line_count))
         
         # Draw white background for text
-        white_bg = Image.new("RGBA", tmp.size, (255,255,255,0))
+        white_bg = Image.new("RGBA", img.size, (255,255,255,0))
         image_caption_box = ImageDraw.Draw(white_bg)
         image_caption_box.rectangle(coords, fill="white", outline="white")
 
         # Composite text, background & base image
         text_box = Image.alpha_composite(white_bg, txt)
-        out = Image.alpha_composite(tmp, text_box)
+        out = Image.alpha_composite(img, text_box)
         
         return out
-    
 
     def fry(self, emoji: str, text: str, caption: str) -> Image.Image:
         # User can skip an argument by using any of these values
@@ -176,7 +172,7 @@ class ImageFryer:
         # Add caption graphic
         if caption not in is_none:
             img = self.add_caption(img, caption)
-
+        
         jpg_copy = img.copy().convert("RGB")
 
         # Create io.BytesIO file-like bytestream
