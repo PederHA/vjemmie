@@ -23,8 +23,10 @@ class ImageFryer:
     def __init__(self, image: Union[io.BytesIO, Image.Image]):
         if isinstance(image, io.BytesIO):
             self.img = Image.open(image)
-        else:
+        elif isinstance(image, Image.Image):
             self.img = image
+        else:
+            raise TypeError('Argument "Image" must be type <io.BytesIO> or <Image.Image>')
     
     @staticmethod
     async def get_files_in_dir(category: str) -> str:
