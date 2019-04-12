@@ -26,7 +26,9 @@ class ImageCog(BaseCog):
                       url: str=None,
                       emoji: str=None,
                       text: str=None,
-                      caption: str=None) -> None:
+                      caption: str=None,
+                      nuke: bool=False
+                      ) -> Optional[discord.Embed]:
         """Deepfries an image"""
         # Check if user requests help
         if url in ["help", "h", "?"]:
@@ -46,12 +48,15 @@ class ImageCog(BaseCog):
             url = ctx.message.attachments[0].url
         
         # Check if url or attachment is an image
-        if not await self.is_img_url(url):
+        if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
             return await ctx.send("URL or attachment must be an image file!")
 
         try:
-            # Download image
-            img = await self.download_from_url(ctx, url)
+            # Download image if url if not a file-like object
+            if not isinstance(url, io.BytesIO):
+                img = await self.download_from_url(ctx, url)
+            else:
+                img = url
             # Deepfry
             fryer = ImageFryer(img)
             to_run = partial(fryer.fry, emoji, text, caption)
@@ -61,10 +66,27 @@ class ImageCog(BaseCog):
             await self.log_error(ctx, exc)
             return await ctx.send("An unknown error occured.")
         else:
+            # Return Image.Image object if nuking
+            if nuke:
+                return fried_img
+            
             # Upload fried image and get embed
             embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
             await ctx.send(embed=embed)
-    
+
+    @commands.command(name="nuke")
+    @owners_only()
+    async def nuke_image(self, ctx: commands.Context, url: str) -> None:
+        """Pretty bad image nuking command."""
+        img = await ctx.invoke(self.deepfry, url, nuke=True)
+        for i in range(3):
+            img = await ctx.invoke(self.deepfry, img, nuke=True)
+        else:
+            # Finally send image on last round of deepfrying
+            await ctx.invoke(self.deepfry, img)
+
+
+
     @commands.command(name="removebg")
     @owners_only()
     async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:

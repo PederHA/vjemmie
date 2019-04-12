@@ -5,7 +5,7 @@ but modified to fit into an OO design.
 Original methods such as `add_text()` and `add_caption()` are added to provide
 a richer set of functionality than what DeepFryBot provides.
 """
-
+from typing import Union
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 from random import randint
@@ -20,8 +20,11 @@ import io
 
 
 class ImageFryer:
-    def __init__(self, image: io.BytesIO):
-        self.img = Image.open(image)
+    def __init__(self, image: Union[io.BytesIO, Image.Image]):
+        if isinstance(image, io.BytesIO):
+            self.img = Image.open(image)
+        else:
+            self.img = image
     
     @staticmethod
     async def get_files_in_dir(category: str) -> str:
