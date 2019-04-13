@@ -45,17 +45,15 @@ class ImageCog(BaseCog):
         
         # Use attachment URL as image URL if message has attachment
         if ctx.message.attachments:
-            if not nuke:
-                # shift arguments 1 param right if image is supplied as attachment
-                # Example: !deepfry b "ye boi" top10animebetrayals. 
-                # Attachment replaces URL arg, and the 3 first arguments are treated as emoji, text & caption
-                emoji, text, caption = url, emoji, text
+            # shift arguments 1 param right if image is supplied as attachment
+            # Example: !deepfry b "ye boi" top10animebetrayals. 
+            # Attachment replaces URL arg, and the 3 first arguments are treated as emoji, text & caption
+            emoji, text, caption = url, emoji, text
             url = ctx.message.attachments[0].url 
-
 
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
-            return await ctx.send("URL or attachment must be an image file!")
+            raise ValueError("URL or attachment must be an image file!")
 
         try:
             # Download image if url if not a file-like object
@@ -81,7 +79,6 @@ class ImageCog(BaseCog):
             await ctx.send(embed=embed)
 
     @commands.command(name="nuke")
-    @owners_only()
     async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
         """Pretty bad image nuking command."""
         img = await ctx.invoke(self.deepfry, url, *args, nuke=True)
