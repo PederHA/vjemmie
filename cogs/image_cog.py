@@ -114,21 +114,9 @@ class ImageCog(BaseCog):
 
         # Resize image to sub 0.25 MP, so we only have to use 1 r.bg credit per API call
         resized_img = await self._resize_img(img)
-        
-        def use_removebg_api(image) -> Optional[io.BytesIO]:
-            response = requests.post(
-                'https://api.remove.bg/v1.0/removebg',
-                files={'image_file': image},
-                data={'size': 'auto'},
-                headers={'X-Api-Key': REMOVEBG_API_KEY},
-            )
-            if response.status_code == requests.codes.ok:
-                img_nobg = io.BytesIO(response.content)
-                img_nobg.seek(0)
-                return img_nobg
 
         # Upload image to remove.bg and receive no-bg version of image
-        to_run = partial(use_removebg_api, resized_img)
+        to_run = partial(self._use_removebg_api, resized_img)
         img_nobg = await self.bot.loop.run_in_executor(None, to_run)
         
         if not img_nobg:
@@ -136,7 +124,19 @@ class ImageCog(BaseCog):
 
         embed = await self.get_embed_from_img_upload(ctx, img_nobg, "nobg.png")
         await ctx.send(embed=embed)
-  
+    
+    def _use_removebg_api(self, image) -> Optional[io.BytesIO]:
+        response = requests.post(
+            'https://api.remove.bg/v1.0/removebg',
+            files={'image_file': image},
+            data={'size': 'auto'},
+            headers={'X-Api-Key': REMOVEBG_API_KEY},
+        )
+        if response.status_code == requests.codes.ok:
+            img_nobg = io.BytesIO(response.content)
+            img_nobg.seek(0)
+            return img_nobg  
+    
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
 
