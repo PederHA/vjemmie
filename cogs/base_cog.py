@@ -328,6 +328,7 @@ class BaseCog(commands.Cog):
 
         await self._unknown_error(ctx, error_msg)
 
+    # UNFINISHED
     async def parse_error(self, error: BaseException) -> None:
         if isinstance(error.original, PermissionError):
             return error.original.args[0]
@@ -593,7 +594,6 @@ class BaseCog(commands.Cog):
             if temp:
                 yield temp
 
-
     async def send_embed_message(self,
                                          ctx: commands.Context,
                                          header: str,
@@ -658,10 +658,10 @@ class BaseCog(commands.Cog):
         for embed in embeds:
             await ctx.send(embed=embed)
 
-    async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> str:
+    async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> None:
         """Reads local text file and sends contents to `ctx.channel`"""
         with open(path, "r", encoding=encoding) as f:
-            return await self.send_text_message(f.read(), ctx)
+            await self.send_text_message(f.read(), ctx)
 
     def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
         """Generates a 24 bit hex color code."""
@@ -688,7 +688,6 @@ class BaseCog(commands.Cog):
                 any(("."+url.rsplit(".", 1)[1].lower()).startswith(ext) 
                 for ext in self.IMAGE_EXTENSIONS)
                 )
-
 
     async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
         """Sends text message to `ctx.channel` prepended with error-text."""
