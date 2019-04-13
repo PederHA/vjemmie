@@ -15,7 +15,7 @@ from typing import Iterable, Union
 
 import numpy as np
 import requests
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageEnhance
 
 from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 
@@ -176,6 +176,11 @@ class ImageFryer:
         # Effects (more to come)
         # sharpen
         img = img.filter(ImageFilter.SHARPEN)
+
+        # Saturation
+        saturation = ImageEnhance.Color(img)
+        img = saturation.enhance(1.1)
+
         
         # Create JPEG copy of image
         jpg_copy = img.copy().convert("RGB")
