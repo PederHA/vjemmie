@@ -78,19 +78,26 @@ class ImageCog(BaseCog):
             embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
             await ctx.send(embed=embed)
 
-    @commands.command(name="nuke")
+    @commands.command(name="nuke", aliases=["blackhole"])
     async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
         """Pretty bad image nuking command."""
         img = await ctx.invoke(self.deepfry, url, *args, nuke=True)
-        # Remove any message attachments after first round of frying
+        # Remove any message attachments after first pass of frying
         ctx.message.attachments = []
-        for i in range(3):
+
+        # Determine number of deepfry passes
+        if ctx.invoked_with == "nuke":
+            passes = 3
+        elif ctx.invoked_with == "blackhole":
+            passes = 7
+        else:
+            passes = 3 # Or some other default value TBD
+        
+        for i in range(passes):
             img = await ctx.invoke(self.deepfry, img, nuke=True)
         else:
-            # Finally send image on last round of deepfrying
+            # Finally send image on last pass of deepfrying
             await ctx.invoke(self.deepfry, img)
-
-
 
     @commands.command(name="removebg")
     @owners_only()
@@ -129,8 +136,7 @@ class ImageCog(BaseCog):
 
         embed = await self.get_embed_from_img_upload(ctx, img_nobg, "nobg.png")
         await ctx.send(embed=embed)
-
-    
+  
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
 
