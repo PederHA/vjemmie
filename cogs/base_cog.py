@@ -683,8 +683,12 @@ class BaseCog(commands.Cog):
 
     async def is_img_url(self, url: str) -> bool:
         """Checks if a string is an HTTP/HTTPS URL to an image file"""
-        return (urlparse(url).scheme in ["http", "https"] and
-                "."+url.rsplit(".", 1)[1] in self.IMAGE_EXTENSIONS)
+        return (
+                urlparse(url).scheme in ["http", "https"] and
+                any(("."+url.rsplit(".", 1)[1].lower()).startswith(ext) 
+                for ext in self.IMAGE_EXTENSIONS)
+                )
+
 
     async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
         """Sends text message to `ctx.channel` prepended with error-text."""
