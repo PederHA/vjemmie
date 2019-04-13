@@ -18,6 +18,7 @@ from cogs.sound_cog import SoundCog
 from cogs.meme_cog import MemeCog
 from cogs.stats_cog import StatsCog
 from cogs.management_cog import ManagementCog
+from cogs.test_cog import TestCog
 
 # Private cogs. You can delete this if you cloned the repo
 try:
