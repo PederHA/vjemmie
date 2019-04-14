@@ -550,12 +550,6 @@ class BaseCog(commands.Cog):
             channel = self.bot.get_channel(channel_id)
         else:
             raise Exception('"ctx" or "channel_id" must be specified')
-        
-        if channel_id:
-            channel = self.bot.get_channel(channel_id)
-        else:
-            channel = ctx.message.channel # TODO: remove this!
-
 
         # Split string into chunks
         chunks = await self._split_string_to_chunks(text)
@@ -762,6 +756,8 @@ class BaseCog(commands.Cog):
                                         to_upload: Union[io.BytesIO, str], 
                                         filename: Optional[str]=None
                                         ) -> discord.Embed:
+        # TODO: singledispatch?
+        
         if isinstance(to_upload, str):
             if not self.is_img_url(to_upload):
                 raise ValueError("String must be URL to an image file!")
@@ -776,6 +772,9 @@ class BaseCog(commands.Cog):
                 raise TypeError("A filename is required for bytes object uploads!")
             msg = await self.upload_bytes_obj_to_discord(to_upload, filename)
             url = msg.attachments[0].url
+        
+        else:
+            raise TypeError('Argument "to_upload" must be type <io.BytesIO> or <str>')
         
         embed = await self.get_embed(ctx, image_url=url)
         return embed
