@@ -750,11 +750,10 @@ class BaseCog(commands.Cog):
         I might remove the `all_cogs` parameter and fully respect that
         disabled means disabled.
         """
-        filtering = False if all_cogs else self.DISABLE_HELP
+        filtering = True if all_cogs else False
         return sorted([
                         cog for cog in self.bot.cogs.values() 
-                        if not cog.DISABLE_HELP
-                        #if cog.cog_name not in filtering
+                        if cog.DISABLE_HELP in [False, filtering]
                        ],
                     key=lambda c: c.cog_name)
 
