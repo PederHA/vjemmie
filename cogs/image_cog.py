@@ -28,9 +28,36 @@ class ImageCog(BaseCog):
                       text: str=None,
                       caption: str=None,
                       *,
-                      nuke: bool=False
-                      ) -> Optional[discord.Embed]:
-        """Deepfries an image"""
+                      rtn: bool=False
+                      ) -> Optional[Image.Image]:
+        """Deepfries an image.
+        
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        url : `str`, optional
+            Image URL
+        emoji : `str`, optional
+            Name of emoji to add to random coordinates on image
+        text : `str`, optional
+            Text to add to top of image
+        caption : `str`, optional
+            Name of caption image to add to bottom of image
+        rtn : `bool`, optional
+            Return fried image instead of posting it to ctx.channel
+        
+        Raises
+        ------
+        ValueError
+            Raised if ctx.message has no image URL or image attachment
+        
+        Returns
+        -------
+        `Optional[Image.Image]`
+            Fried image returned if argument rtn==True
+        """
+
         # Check if user requests help
         if url in ["help", "h", "?"]:
             if emoji == "emojis":
@@ -71,7 +98,7 @@ class ImageCog(BaseCog):
             return await ctx.send("An unknown error occured.")
         else:
             # Return Image.Image object if nuking
-            if nuke:
+            if rtn:
                 return fried_img
             
             # Upload fried image and get embed
@@ -81,7 +108,7 @@ class ImageCog(BaseCog):
     @commands.command(name="nuke", aliases=["blackhole"])
     async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
         """Pretty bad image nuking command."""
-        img = await ctx.invoke(self.deepfry, url, *args, nuke=True)
+        img = await ctx.invoke(self.deepfry, url, *args, rtn=True)
         # Remove any message attachments after first pass of frying
         ctx.message.attachments = []
 
@@ -94,7 +121,7 @@ class ImageCog(BaseCog):
             passes = 3 # Or some other default value TBD
         
         for i in range(passes):
-            img = await ctx.invoke(self.deepfry, img, nuke=True)
+            img = await ctx.invoke(self.deepfry, img, rtn=True)
         else:
             # Finally send image on last pass of deepfrying
             await ctx.invoke(self.deepfry, img)
@@ -135,8 +162,8 @@ class ImageCog(BaseCog):
         if response.status_code == requests.codes.ok:
             img_nobg = io.BytesIO(response.content)
             img_nobg.seek(0)
-            return img_nobg  
-    
+            return img_nobg
+   
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
 

@@ -5,6 +5,10 @@ import asyncio
 
 
 class TestCog(BaseCog):
+    """Automated tests. Pretty shit"""
+    
+    DISABLE_HELP = True
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.verbose = False

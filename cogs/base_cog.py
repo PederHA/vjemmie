@@ -13,7 +13,7 @@ import discord
 import requests
 from discord.ext import commands
 
-from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, DISABLE_HELP,
+from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, #DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
                     MAX_DL_SIZE, GUILD_HISTORY_CHANNEL)
 
@@ -35,7 +35,7 @@ class BaseCog(commands.Cog):
     """Base Cog from which all other cogs are subclassed."""
 
     # Cogs to ignore when creating !help commands
-    DISABLE_HELP = DISABLE_HELP
+    DISABLE_HELP = False
 
     # Valid image extensions to post to a Discord channel
     IMAGE_EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
@@ -75,7 +75,8 @@ class BaseCog(commands.Cog):
         return f"{size_mb} MB"
 
     def add_help_command(self) -> None:
-        if self.cog_name not in self.DISABLE_HELP:
+        #if self.cog_name not in self.DISABLE_HELP:
+        if not self.DISABLE_HELP:
             cmd_coro = self._get_cog_commands
             cmd = commands.command(name=self.cog_name)(cmd_coro)
             self.bot.add_command(cmd)
@@ -749,10 +750,11 @@ class BaseCog(commands.Cog):
         I might remove the `all_cogs` parameter and fully respect that
         disabled means disabled.
         """
-        filtering = [] if all_cogs else self.DISABLE_HELP
+        filtering = False if all_cogs else self.DISABLE_HELP
         return sorted([
                         cog for cog in self.bot.cogs.values() 
-                        if cog.cog_name not in filtering
+                        if not cog.DISABLE_HELP
+                        #if cog.cog_name not in filtering
                        ],
                     key=lambda c: c.cog_name)
 

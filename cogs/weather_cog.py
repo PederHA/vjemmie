@@ -15,7 +15,7 @@ class WeatherCog(BaseCog):
 
     @commands.command()
     async def weather(self, ctx: commands.Context, loc: str) -> None:
-        """Get the current temperature and wind speed for a location."""
+        """Get temperature and wind speed for a location."""
         # Instantiate Nominatim geopy object
         geolocator = Nominatim(user_agent="VJEMMIE")
         

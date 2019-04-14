@@ -31,11 +31,10 @@ class UserCog(BaseCog):
                     return await cog._get_cog_commands(ctx, simple)
             else:
                 raise discord.DiscordException(f"No such category **{cog_name}**.")
-        
+          
         # Send message listing all possible !help categories if no category
-
         # Make an embed field for each cog
-        fields = [self.EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs]
+        fields = [self.EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs if cog.__doc__]
         embed = await self.get_embed(ctx, title="CATEGORIES", fields=fields, inline=False)
         
         # Send embeds

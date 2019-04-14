@@ -17,6 +17,8 @@ from ext.checks import dgvgk_cmd
 
 
 class War3Cog(BaseCog):
+    DISABLE_HELP = True
+    
     """Warcraft 3 custom game commands."""
     def __init__(self, bot: commands.Bot, replays_folder: str=None) -> None:
         super().__init__(bot)

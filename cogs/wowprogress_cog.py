@@ -11,6 +11,7 @@ class WoWProgressCog(BaseCog):
     """WoWProgress commands."""
 
     EMOJI = ":wheelchair:"
+    DISABLE_HELP = True
 
     @commands.command(name="wp",
                       aliases=["wowp"],

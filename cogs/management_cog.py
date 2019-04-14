@@ -19,6 +19,8 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(o)
 
 class ManagementCog(BaseCog):
+    DISABLE_HELP = True
+    
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)

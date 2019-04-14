@@ -10,6 +10,8 @@ from ext.checks import admins_only, load_blacklist, save_blacklist
 
 
 class AdminCog(BaseCog):
+    DISABLE_HELP = True
+    
     """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
     async def on_ready(self, *, activity_name: Optional[str]=None) -> None:

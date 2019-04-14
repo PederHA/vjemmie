@@ -11,7 +11,8 @@ class YouTubeCog(BaseCog):
     """YouTube commands."""
     
     EMOJI = ":tv:"
-
+    DISABLE_HELP = True
+    
     @commands.command(name='youtube',
                         aliases=['yt', 'utube'],
                         description='YouTube search that returns top result for search query.')                       

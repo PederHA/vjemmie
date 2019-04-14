@@ -15,8 +15,6 @@ INSERT_STUFF_HERE = None
 # Cogs            /
 #/////////////////
 
-# Add cogs to disable !help message for. Makes cogs "unlisted".
-DISABLE_HELP = ["Admin", "Cod", "Weather", "YouTube", "War3", "Management"]
 
 
 #///////////////////
