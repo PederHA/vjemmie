@@ -153,7 +153,7 @@ class ImageFryer:
         # User can skip an argument by using any of these values
         is_none = ["-", " ", "", "None", "none", None]
         
-        img = self.img
+        img = self.img.copy().convert("RGB")
         
         # Add emojis __BEFORE__ changing contrast and adding noise
         if emoji not in is_none:
