@@ -20,7 +20,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 class ManagementCog(BaseCog):
     DISABLE_HELP = True
-    
+
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
@@ -83,4 +83,35 @@ class ManagementCog(BaseCog):
         #        if len(reactions)>=3:
         #            for reaction in reactions:
         #                await msg.add_reaction(reaction.emoji)
+    
+    @commands.command(name="cogs", aliases=["get_cogs"])
+    @admins_only() 
+    async def get_cogs_status(self, ctx) -> None:
+        # TODO: This method could probably be split into 3 methods
+        # 
+        # 1. Retrieves enabled & disabled list
+        # 2. Formats lists and posts to ctx.channel
+        # 3. Writes cog status to file
+
+        disabled = []
+        enabled = []
+        
+        for cog in await self.get_cogs(all_cogs=True):
+            l = disabled if cog.DISABLE_HELP else enabled
+            l.append(cog.cog_name)
+        
+        e_out = "**Enabled:**\n" + "\n".join(enabled)
+        d_out = "**Disabled:**\n" + "\n".join(disabled)
+        out = f"{e_out}\n\n{d_out}"
+        
+        await self.send_text_message(out, ctx)
+
+        out_dict = {
+                "enabled": enabled,
+                "disabled": disabled
+                }
+        
+        # We're gonna risk blocking here B-)
+        with open("db/cogs.json", "w") as f:
+            json.dump(out_dict, f, indent=4)
 
