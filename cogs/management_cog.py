@@ -3,9 +3,12 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import perf_counter, time
+from typing import Tuple, List
+from functools import partial
 
 import discord
 from discord.ext import commands
+import aiofiles
 
 from cogs.base_cog import BaseCog
 from cogs.sound_cog import AudioPlayer
@@ -87,31 +90,35 @@ class ManagementCog(BaseCog):
     @commands.command(name="cogs", aliases=["get_cogs"])
     @admins_only() 
     async def get_cogs_status(self, ctx) -> None:
-        # TODO: This method could probably be split into 3 methods
-        # 
-        # 1. Retrieves enabled & disabled list
-        # 2. Formats lists and posts to ctx.channel
-        # 3. Writes cog status to file
+        """Not sure why I made this but w/e. Might be useful."""
+        # Get cogs help status
+        enabled, disabled = await self._get_cogs_by_help_status()
 
-        disabled = []
+        # Send message
+        e_out = "**Enabled:**\n" + "\n".join(enabled)
+        d_out = "**Disabled:**\n" + "\n".join(disabled)
+        out = f"{e_out}\n\n{d_out}"  
+        await self.send_text_message(out, ctx)
+
+        # Log cog help status to drive
+        to_run = partial(self._dump_cogs, enabled, disabled)
+        await self.bot.loop.run_in_executor(None, to_run)
+
+    
+    async def _get_cogs_by_help_status(self) -> Tuple[List[str]]:   
         enabled = []
+        disabled = []
         
         for cog in await self.get_cogs(all_cogs=True):
             l = disabled if cog.DISABLE_HELP else enabled
             l.append(cog.cog_name)
         
-        e_out = "**Enabled:**\n" + "\n".join(enabled)
-        d_out = "**Disabled:**\n" + "\n".join(disabled)
-        out = f"{e_out}\n\n{d_out}"
-        
-        await self.send_text_message(out, ctx)
+        return enabled, disabled
 
+    def _dump_cogs(self, enabled, disabled) -> None:
         out_dict = {
                 "enabled": enabled,
                 "disabled": disabled
                 }
-        
-        # We're gonna risk blocking here B-)
         with open("db/cogs.json", "w") as f:
             json.dump(out_dict, f, indent=4)
-
