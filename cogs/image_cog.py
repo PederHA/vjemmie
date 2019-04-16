@@ -28,11 +28,11 @@ class ImageCog(BaseCog):
             args and args[0] in ["help", "hlep", "?", "info"]
             ):
             out_str = (
-                "**Required:** `-url` <url> or an attached image"
+                "**Required:** `-url` <url> ***OR*** an attached image"
                 "\n**Optional:** `-text` `-emoji` `-caption`"
-                "\n\nType `!deepfry -list <emoji/caption>` to see available emojis/captions"
+                "\n\nType `!deepfry -list <emojis/captions>` to see available emojis/captions"
                 )
-            return await self.send_embed_message(ctx, ctx.invoked_with, out_str)
+            return await self.send_embed_message(ctx, f"!{ctx.invoked_with}", out_str)
         
         parser = argparse.ArgumentParser()
         
@@ -48,11 +48,14 @@ class ImageCog(BaseCog):
         
         # Post list of emojis/captions if -list argument
         if a.list:
-            if a.list in ["emojis", "captions"]:
+            try:
                 out = await ImageFryer.get_files_in_dir(a.list)
-                return await self.send_embed_message(ctx, a.list.capitalize(), out)
+            except FileNotFoundError:
+                return await ctx.send(f"No such category `{a.list}`")
             else:
-                return await ctx.send(f"No such category `{a.list}`") 
+                return await self.send_embed_message(ctx, a.list.capitalize(), out)
+
+                 
         
         # If no -url argument, check if message has an attachment
         if not a.url:
@@ -61,6 +64,7 @@ class ImageCog(BaseCog):
                     "Message must have a `-url` argument or an image attachment!"
                     )
             else:
+                # Use URL of attachment
                 a.url = ctx.message.attachments[0].url
         
         return await self._deepfry(ctx, 
@@ -140,7 +144,11 @@ class ImageCog(BaseCog):
         
         # Initial frying, returns an Image.Image object
         img = await ctx.invoke(self.deepfry, *args, rtn=True)
-
+        
+        # Abort if !deepfry returns None
+        if not img:
+            return
+        
         for i in range(passes):
             img = await self._deepfry(ctx, img, rtn=True)
         else:
