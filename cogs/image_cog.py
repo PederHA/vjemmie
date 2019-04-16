@@ -2,6 +2,7 @@ import io
 import traceback
 from functools import partial
 from typing import Optional
+import argparse
 
 import discord
 import requests
@@ -11,7 +12,7 @@ from PIL import Image
 from botsecrets import REMOVEBG_API_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
-from ext.checks import owners_only
+from ext.checks import owners_only, pfm_cmd
 from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
 
 
@@ -21,13 +22,51 @@ class ImageCog(BaseCog):
     EMOJI = ":camera:"
 
     @commands.command(name="deepfry")
-    async def deepfry(self,
+    async def deepfry(self, ctx: commands.Context, *args, rtn=False) -> None: 
+        if (
+            not ctx.message.attachments and not args or 
+            args and args[0] in ["help", "hlep", "?", "info"]
+            ):
+            out_str = (
+                "**Required:** `-url` <url> or an attached image"
+                "\n**Optional:** `-text` `-emoji` `-caption`"
+                "\n\nType `!deepfry list <emoji/caption>` to see available emojis/captions"
+                )
+            return await self.send_embed_message(ctx, ctx.invoked_with, out_str)
+        
+        parser = argparse.ArgumentParser()
+        
+        parser.add_argument("-url", default=None, type=str) 
+        parser.add_argument("-text", default=None, type=str)
+        parser.add_argument("-emoji", default=None, type=str)
+        parser.add_argument("-caption", default=None, type=str)
+
+        a = parser.parse_known_args(args=args)[0]    
+        
+        if not a.url:
+            if not ctx.message.attachments:
+                raise AttributeError(
+                    "Message must have a `-url` argument or an image attachment!"
+                    )
+            else:
+                a.url = ctx.message.attachments[0].url
+        
+        img = await self._deepfry(ctx, 
+                            url=a.url, 
+                            emoji=a.emoji, 
+                            text=a.text, 
+                            caption=a.caption, 
+                            rtn=rtn)
+        if rtn:
+            return img
+    
+    async def _deepfry(self,
                       ctx: commands.Context,
                       url: str=None,
                       emoji: str=None,
                       text: str=None,
                       caption: str=None,
-                      *,
+                      *args,
                       rtn: bool=False
                       ) -> Optional[Image.Image]:
         """Deepfries an image.
@@ -70,14 +109,6 @@ class ImageCog(BaseCog):
                 help_cmd = self.bot.get_command("help")
                 return await ctx.invoke(help_cmd, "frying")
         
-        # Use attachment URL as image URL if message has attachment
-        if ctx.message.attachments:
-            # shift arguments 1 param right if image is supplied as attachment
-            # Example: !deepfry b "ye boi" top10animebetrayals. 
-            # Attachment replaces URL arg, and the 3 first arguments are treated as emoji, text & caption
-            emoji, text, caption = url, emoji, text
-            url = ctx.message.attachments[0].url 
-
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
             raise ValueError("URL or attachment must be an image file!")
@@ -105,26 +136,30 @@ class ImageCog(BaseCog):
             embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
             await ctx.send(embed=embed)
 
-    @commands.command(name="nuke", aliases=["blackhole"])
-    async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
-        """Pretty bad image nuking command."""
-        img = await ctx.invoke(self.deepfry, url, *args, rtn=True)
-        # Remove any message attachments after first pass of frying
-        ctx.message.attachments = []
-
-        # Determine number of deepfry passes
-        if ctx.invoked_with == "nuke":
-            passes = 3
-        elif ctx.invoked_with == "blackhole":
-            passes = 7
-        else:
-            passes = 3 # Or some other default value TBD
+    @commands.command(name="nuke")
+    async def nuke(self, ctx: commands.Context, *args, passes: int=3) -> None:
+        """Deeper frying. Same arguments as `!deepfry`"""
         
+        # Initial frying, returns an Image.Image object
+        img = await ctx.invoke(self.deepfry, *args, rtn=True)
+
         for i in range(passes):
-            img = await ctx.invoke(self.deepfry, img, rtn=True)
+            img = await self._deepfry(ctx, img, rtn=True)
         else:
             # Finally send image on last pass of deepfrying
-            await ctx.invoke(self.deepfry, img)
+            await self._deepfry(ctx, img)
+    
+    # I somehow couldn't get subcommands to work? This will do in the meantime
+    @commands.command(name="blackhole")
+    async def blackhole(self, ctx: commands.Context, *args) -> None:
+        """Even deeper frying."""
+        await ctx.invoke(self.nuke, *args, passes=7)        
+
+    @commands.command(name="quantum")
+    @owners_only()
+    async def quantum(self, ctx: commands.Context, *args) -> None:
+        """ADMIN ONLY: Deepest frying."""
+        await ctx.invoke(self.nuke, *args, passes=20)
 
     @commands.command(name="removebg")
     @owners_only()
@@ -215,3 +250,46 @@ class ImageCog(BaseCog):
        
         n = await get_division_n(width, height, target)
         return int(abs(width//n)), int(abs(height//n))
+
+    # Bad implementation of user-defined number of deepfry passes for !nuke
+    
+    #@commands.command(name="nuke", aliases=["blackhole"])
+    #async def nuke_image(self, ctx: commands.Context, url: str=None, *args) -> None:
+    #    """Pretty bad image nuking command."""
+    #    # Try to look for an integer in args
+    #    passes = 0
+    #    args = list(args)
+    #    
+    #    if url.isdigit():
+    #        passes = int(url)
+    #        if args:
+    #            url = args.pop(0)
+    #    else:
+    #        for arg in args:
+    #            try:
+    #                passes = int(arg)
+    #            except:
+    #                continue
+    #            else:
+    #                args.remove(arg)
+    #                break
+#
+    #    # Determine number of deepfry passes
+    #    if not passes:
+    #        if ctx.invoked_with == "nuke":
+    #            passes = 3
+    #        elif ctx.invoked_with == "blackhole":
+    #            passes = 7
+    #        else:
+    #            passes = 3 # Or some other default value TBD
+    #    
+    #    # Initial frying, returns an Image.Image object
+    #    img = await ctx.invoke(self.deepfry, url, *args, rtn=True)        
+    #    # Remove any message attachments after first pass of frying
+    #    ctx.message.attachments = []    
+#
+    #    for i in range(passes):
+    #        img = await ctx.invoke(self.deepfry, img, rtn=True)
+    #    else:
+    #        # Finally send image on last pass of deepfrying
+    #        await ctx.invoke(self.deepfry, img)
