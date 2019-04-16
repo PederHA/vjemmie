@@ -30,19 +30,31 @@ class ImageCog(BaseCog):
             out_str = (
                 "**Required:** `-url` <url> or an attached image"
                 "\n**Optional:** `-text` `-emoji` `-caption`"
-                "\n\nType `!deepfry list <emoji/caption>` to see available emojis/captions"
+                "\n\nType `!deepfry -list <emoji/caption>` to see available emojis/captions"
                 )
             return await self.send_embed_message(ctx, ctx.invoked_with, out_str)
         
         parser = argparse.ArgumentParser()
         
+        # Add possible user arguments to parser
         parser.add_argument("-url", default=None, type=str) 
         parser.add_argument("-text", default=None, type=str)
         parser.add_argument("-emoji", default=None, type=str)
         parser.add_argument("-caption", default=None, type=str)
+        parser.add_argument("-list", default=None, type=str)
 
+        # Parse only arguments defined above
         a = parser.parse_known_args(args=args)[0]    
         
+        # Post list of emojis/captions if -list argument
+        if a.list:
+            if a.list in ["emojis", "captions"]:
+                out = await ImageFryer.get_files_in_dir(a.list)
+                return await self.send_embed_message(ctx, a.list.capitalize(), out)
+            else:
+                return await ctx.send(f"No such category `{a.list}`") 
+        
+        # If no -url argument, check if message has an attachment
         if not a.url:
             if not ctx.message.attachments:
                 raise AttributeError(
@@ -51,14 +63,13 @@ class ImageCog(BaseCog):
             else:
                 a.url = ctx.message.attachments[0].url
         
-        img = await self._deepfry(ctx, 
+        return await self._deepfry(ctx, 
                             url=a.url, 
                             emoji=a.emoji, 
                             text=a.text, 
                             caption=a.caption, 
                             rtn=rtn)
-        if rtn:
-            return img
+
     
     async def _deepfry(self,
                       ctx: commands.Context,
@@ -96,19 +107,6 @@ class ImageCog(BaseCog):
         `Optional[Image.Image]`
             Fried image returned if argument rtn==True
         """
-
-        # Check if user requests help
-        if url in ["help", "h", "?"]:
-            if emoji == "emojis":
-                emojis = await ImageFryer.get_files_in_dir("emojis")
-                return await self.send_text_message(emojis, ctx)
-            elif emoji == "captions":
-                captions = await ImageFryer.get_files_in_dir("captions")
-                return await self.send_text_message(emojis, ctx)
-            else:
-                help_cmd = self.bot.get_command("help")
-                return await ctx.invoke(help_cmd, "frying")
-        
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
             raise ValueError("URL or attachment must be an image file!")
