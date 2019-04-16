@@ -150,13 +150,11 @@ class ImageFryer:
         return out
 
     def fry(self, emoji: str, text: str, caption: str) -> Image.Image:
-        # User can skip an argument by using any of these values
-        is_none = ["-", " ", "", "None", "none", None]
-        
+        # Copy image instance attribute and convert to RGB palette
         img = self.img.copy().convert("RGB")
         
         # Add emojis __BEFORE__ changing contrast and adding noise
-        if emoji not in is_none:
+        if emoji:
             img = self.add_emojis(img, emoji)
         
         # Change contrast
@@ -166,11 +164,11 @@ class ImageFryer:
         img = self.add_noise(img, 1)
 
         # Add text
-        if text not in is_none:
+        if text:
             img = self.add_text(img, text)
         
         # Add caption graphic
-        if caption not in is_none:
+        if caption:
             img = self.add_caption(img, caption)
         
         # Effects (more to come)
