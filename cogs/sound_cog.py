@@ -598,7 +598,7 @@ class SoundCog(BaseCog):
 
         elif text in ["languages", "lang", "options"]:
             langs = [f"{lang_long}: {lang_short}" for lang_long, lang_short in valid_langs.items()]
-            output = await self.format_output(langs, item_type="languages") # should be item_name/category smh
+            output = await self.format_output(langs, item_name="languages")
             await ctx.send(output)
             return
 
