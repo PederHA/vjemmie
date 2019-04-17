@@ -81,7 +81,7 @@ class BaseCog(commands.Cog):
             cmd = commands.command(name=self.cog_name)(cmd_coro)
             self.bot.add_command(cmd)
 
-    async def format_output(self, items: Iterable, *, formatting: str="", item_type: str=None, enum: bool=False) -> str:
+    async def format_output(self, items: Iterable[str], *, formatting: str="", item_name: str=None, enum: bool=False) -> str:
         """
         Creates a multi-line codeblock in markdown formatting
         listing items in iterable `items` on separate lines.
@@ -95,7 +95,7 @@ class BaseCog(commands.Cog):
         ----------
         items : `Iterable`
             Iterable of strings to format
-        item_type : `str`, optional
+        item_name : `str`, optional
             Description of items in iterable. Default: None
         enum : `bool`, optional
             Adds index number next to each item listing. Default: False
@@ -226,12 +226,11 @@ class BaseCog(commands.Cog):
             for field in fields:
                 embed.add_field(name=field.name, value=field.value, inline=inline)
         
-        if image_url:
+        if image_url and await self.is_img_url(image_url):
             embed.set_image(url=image_url)
         
         if color:
-            _color = await self.get_discord_color(color)
-            embed.color = _color
+            embed.color = await self.get_discord_color(color)
         
         return embed
 
@@ -288,10 +287,6 @@ class BaseCog(commands.Cog):
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
-
-        This method is added to every bot command by 
-        `BaseCog._add_error_handlers()` with the exception
-        of those commands that define their own error handlers.
 
         Parameters
         ----------
@@ -368,12 +363,12 @@ class BaseCog(commands.Cog):
         
         Raises
         ------
-        PermissionError
+        `PermissionError`
             Raised if downloads are disabled in `config.py`
         
         Returns
         -------
-        aiohttp.ClientSession
+        `aiohttp.ClientSession`
             aiohttp session for guild
         """
 
@@ -573,30 +568,43 @@ class BaseCog(commands.Cog):
             limit = self.CHAR_LIMIT
         return [text[i:i+limit] for i in range(0, len(text), limit)]
 
-    async def _split_string_by_lines(self, text: str, limit: int=None) -> List[str]:
+    async def _split_string_by_lines(self, text: str, limit: int=None) -> Iterator[str]:
         """Splits a string into `limit`-sized chunks. DEFAULT: 1024
         
         String is split into lines as denoted by newline char, then lines are
         joined into n<=limit sized chunks, whereas `_split_string_to_chunks()` 
         splits string into n<=limit chunks, ignoring any newline chars.
         """
-        if not limit or limit > 1024: # NOTE: This shouldn't be hardcoded
-            limit = self.CHAR_LIMIT
+        # NOTE: 
+        # This looks ugly, but is way more efficient than appending to a string
+        # and checking string length on every iteration of the loop
         
-        temp = ""
+        if not limit or limit > self.EMBED_CHAR_LIMIT:
+            limit = self.EMBED_CHAR_LIMIT
+        
+        chunk = [] # List t to append
+        n_lines = 0 # Number of lines
+        chunk_len = 0 # Size of current chunk
+        join_lines = lambda l: "\n".join(l)
+
         for line in text.splitlines():
-            l = f"{line}\n"
-            if len(temp + l) > limit:
-                yield temp
-                temp = ""
-            temp += l
+            l_len = len(line)   
+            if chunk_len + l_len > limit - n_lines: # Account for newline chars
+                yield join_lines(chunk)
+                chunk = []
+                chunk_len = 0
+                n_lines = 0
+            chunk.append(line)
+            n_lines += 1
+            chunk_len += l_len
+        
         else:
-            if len(temp) > limit:
+            if chunk_len > limit:
                 raise ValueError(
                     "String does not have enough newline characters to split by!"
                     )
-            if temp:
-                yield temp
+            if chunk:
+                yield join_lines(chunk)
 
     async def send_embed_message(self,
                                          ctx: commands.Context,
@@ -826,5 +834,4 @@ class BaseCog(commands.Cog):
             raise TypeError('Argument "to_upload" must be type <io.BytesIO> or <str>')
         
         # Create discord Embed object using obtained URL of image
-        embed = await self.get_embed(ctx, image_url=url)
-        return embed
+        return await self.get_embed(ctx, image_url=url)
