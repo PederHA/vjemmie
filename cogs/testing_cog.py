@@ -56,5 +56,6 @@ class TestingCog(BaseCog):
     @commands.command(name="dbg")
     @owners_only()
     async def dbg(self, ctx: commands.Context) -> None:
+        """Drop into debugger for TestingCog."""
         breakpoint()
         print("yeah!")

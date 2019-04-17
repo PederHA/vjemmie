@@ -64,8 +64,7 @@ class PUBGCog(BaseCog):
         }
 
         # Get PUBG map
-        map_ = map_.lower()
-        pubgmap = MAPS.get(map_)
+        pubgmap = MAPS.get(map_.lower())
 
         # Raise exception if map cannot be found
         if not pubgmap:
