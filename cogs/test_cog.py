@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 from cogs.base_cog import BaseCog
 import asyncio
+from unittest.mock import Mock
 
 
 class TestCog(BaseCog):
@@ -12,31 +13,29 @@ class TestCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.verbose = False
+        self.pfix = self.bot.command_prefix
     
     @commands.command(name="verbose")
     async def toggle_verbose(self, ctx: commands.Context) -> None:
         self.verbose = not self.verbose
         await ctx.send(f"Test terminal output is now {'enabled' if self.verbose else 'disabled'}")
     
-    @commands.command(name="run_tests", aliases=["test"])
+    @commands.command(name="run_tests", aliases=["runtest"])
     async def run_tests(self, ctx: commands.Context) -> None:
         for command in self.get_commands():
-            if command.name in ["run_tests", "verbose"]:
+            if not command.name.startswith("test_"):
                 continue
             await ctx.invoke(command)
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         cmd_n, raise_exc, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
+        
         ctx = kwargs.pop("ctx", None)
         assert_true = kwargs.pop("assert_true", None)
         
-        if self.verbose:
-            print(f"""testing "{cmd_n}" with args: {_args}\tkwargs: {_kwargs}""", end="")
-            if ctx and ctx.message.attachments:
-                print(f"and attachment {ctx.message.attachments[0].url}")
-            else:
-                print()
-        
+        # Show args & kwargs if verbose is enabled
+        a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
+
         try:
             if ctx:
                 await ctx.invoke(coro_or_cmd, *args, **kwargs)
@@ -45,17 +44,18 @@ class TestCog(BaseCog):
         except:
             if raise_exc:
                 raise
-            print(f""""{cmd_n}" failed on {_args} {_kwargs}""")   
+            msg = f"{cmd_n} {a_kw} failed!"
         else:
-            if self.verbose:
-                print(f""""{cmd_n}({_args}, {_kwargs})" passed! OK""")           
+            msg = f"{cmd_n} {a_kw} passed! OK" 
+        finally:
+            print(msg)
     
     async def _get_test_attrs(self, coro_or_cmd, *args, **kwargs) -> tuple:
         # Get coroutine or command's name
         try:
             coro_or_cmd_name = coro_or_cmd.__func__.__name__
         except:
-            coro_or_cmd_name = coro_or_cmd.name
+            coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.name}"
         
         # Whether to raise test assertion errors or not
         raise_exc = kwargs.pop("raise_exc", False)        
@@ -84,7 +84,10 @@ class TestCog(BaseCog):
             "https://i.imgur.com/Gfw036Q.png",
             "https://i.imgur.com/Gfw036Q.PNG",
             "https://i.imgur.com/Gfw036Q.png?yeboi=True",
-            "https://cdn.discordapp.com/attachments/348610981204590593/566394515347341312/caust.PNG"
+            "https://cdn.discordapp.com/attachments/348610981204590593/566394515347341312/caust.PNG",
+            "https://images-ext-2.discordapp.net/external/"
+            "UfCviSx8c0rnOwqMbm_63jZ9t97IQ6zoDdjo7I7iHbU/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/"
+            "103890994440728576/88b28f8e3afff899e4958646736d8e7e.webp",
         ]
         
         for url in urls:
@@ -98,16 +101,12 @@ class TestCog(BaseCog):
         url = "https://cdn.discordapp.com/attachments/560503336013529091/566615384808095754/Gfw036Q.png"
         
         # Test command with URL argument
-        print("Testing !deepfry with URL.")
-        await self.test_command(ctx, deepfry_cmd, url)        
+        print(f"Testing {self.pfix}deepfry with URL.")
+        await self.test_command(ctx, deepfry_cmd, "-url", url)        
 
+        # Sleep between image uploads to be nice to Discord
         await asyncio.sleep(5)
-
-        # Create attachment object
-        class FakeState:
-            http = None
-            def __init__(self, *args, **kwargs) -> None:
-                pass   
+ 
         
         attachment = discord.Attachment(
             data={
@@ -119,12 +118,12 @@ class TestCog(BaseCog):
                 "url": url,
                 "width": 720
             },
-            state=FakeState()
+            state=Mock(http=None)
             )
         
         # Attach attachment to ctx.message
         ctx.message.attachments.append(attachment)
         
         # Test with message attachment
-        print("Testing !deepfry with attachment.")
+        print(f"Testing {self.pfix}deepfry with attachment.")
         await self.test_command(ctx, deepfry_cmd)
