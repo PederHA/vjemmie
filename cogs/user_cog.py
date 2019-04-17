@@ -1,3 +1,4 @@
+from contextlib import suppress
 from random import randint
 
 import discord
@@ -48,8 +49,10 @@ class UserCog(BaseCog):
     async def show_commands(self, ctx:commands.Context) -> None:
         l = []
         for cog in await self.get_cogs():
-            cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
-            l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
+            # Ignore cogs returning no commands due to failed checks or lack of commands
+            with suppress(AttributeError):
+                cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
+                l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
         out = "\n".join(l)   
         await self.send_embed_message(ctx, "Commands", out, color="red")
     
@@ -82,4 +85,3 @@ class UserCog(BaseCog):
         
         url = base_url.format(id=self.bot.user.id, permissions=permissions)
         await ctx.send(url)
-        
