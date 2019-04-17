@@ -508,8 +508,17 @@ class BaseCog(commands.Cog):
         _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
         
         # Get commands as string of command names + descriptions, separated by newlines
-        _out_str = "" 
+        _out_str = ""
         for command in _commands:
+            # Hide commands that fail for current context
+            check_failed = False
+            for check in command.checks:
+                if not check(ctx):
+                    check_failed = True
+                    break
+            if check_failed:
+                continue
+            
             if simple:
                 cmd_name = command.name.ljust(20,"\xa0")
             else:
