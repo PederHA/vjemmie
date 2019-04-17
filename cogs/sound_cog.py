@@ -322,9 +322,10 @@ class SoundCog(BaseCog):
         vc = ctx.voice_client
 
         # If bot is restarted while connected, it can sometimes get "stuck" in a channel
+        # in a state where any attempts to play sound is unsuccessful
         if not vc and self.bot.user.id in [user.id for user in channel.members]:
-            await channel.connect()
-            await ctx.invoke(self.stop)
+            await channel.connect() # Try to connect
+            await ctx.invoke(self.stop) # Immediately issue !stop command, removing bot user from channel
 
         if vc:
             if vc.channel.id == channel.id:
@@ -568,7 +569,7 @@ class SoundCog(BaseCog):
 
         upcoming = list(islice(player.queue._queue, 0, 5))
 
-        out_msg = "\n".join(f'**`{up["title"]}`**' for up in upcoming)
+        out_msg = "\n".join(f'{idx}. **`{up["title"]}`**' for idx, up in enumerate(upcoming, 1))
 
         await self.send_embed_message(ctx, "Queue", out_msg, color="red")
 
