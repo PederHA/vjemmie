@@ -101,19 +101,21 @@ class PUBGCog(BaseCog):
             squad = default_squad
 
         # Get players from ctx.author's voice channel
-        elif players[0] in ["channel", "c", "ch", "chanel"]:
-            squad = await self.get_squad_from_channel(ctx)
-            if len(squad)==0:
+        elif len(players) == 1 and players[0] in ["channel", "c", "ch", "chanel"]:
+            try:
+                squad = [user for user in await self.get_users_in_voice(ctx)]
+            except AttributeError:
                 return await ctx.send(
                     f"Must be connected to a voice channel to use `{players[0]}` argument."
                 )
-            elif len(squad)==1:
-                return await ctx.send(
-                    "Only 1 user is connected to the voice channel. Crate cannot be rolled."
-                )
-       
+            else:
+                if len(squad) < 2:
+                    return await ctx.send(
+                        "A minimum number of 2 people is required!"
+                        )                    
+      
        # At least 2 players must be specified 
-        elif len(players) < 2:
+        elif len(players) == 1:
             return await ctx.send("Can't roll crate for 1 player.")
         
         else:
@@ -181,16 +183,3 @@ class PUBGCog(BaseCog):
             msg += f"{player}:{name_spc} {gun} {equipment}\n"
         msg += "```"
         return msg
-
-    async def get_squad_from_channel(self, ctx) -> list:
-        """
-        Get members from voice channel. Ignores users in blacklist.
-        """
-        squad_list = []
-        try:
-            for member in ctx.message.author.voice.channel.members:
-                if not member.voice.self_deaf:
-                    squad_list.append(member.name)
-        except AttributeError:
-            pass # This error will be handled by `crate` method. 
-        return squad_list
