@@ -22,7 +22,8 @@ class ImageCog(BaseCog):
     EMOJI = ":camera:"
 
     @commands.command(name="deepfry")
-    async def deepfry(self, ctx: commands.Context, *args, rtn=False) -> None: 
+    async def deepfry(self, ctx: commands.Context, *args, rtn=False) -> None:
+        "Deepfries an image. `!deepfry help` for usage info."
         if (
             not ctx.message.attachments and not args or 
             args and args[0] in ["help", "hlep", "?", "info"]
@@ -53,11 +54,9 @@ class ImageCog(BaseCog):
             except FileNotFoundError:
                 return await ctx.send(f"No such category `{a.list}`")
             else:
-                return await self.send_embed_message(ctx, a.list.capitalize(), out)
-
-                 
+                return await self.send_embed_message(ctx, a.list.capitalize(), out)      
         
-        # If no -url argument, check if message has an attachment
+        # Check if message has an attachment if no -url argument
         if not a.url:
             if not ctx.message.attachments:
                 raise AttributeError(
@@ -140,7 +139,7 @@ class ImageCog(BaseCog):
 
     @commands.command(name="nuke")
     async def nuke(self, ctx: commands.Context, *args, passes: int=3) -> None:
-        """Deeper frying. Same arguments as `!deepfry`"""
+        """Deeper frying."""
         
         # Initial frying, returns an Image.Image object
         img = await ctx.invoke(self.deepfry, *args, rtn=True)
