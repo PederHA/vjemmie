@@ -480,7 +480,7 @@ class BaseCog(commands.Cog):
 
         return msg # Could do return await.channel.send(), but I think this is more self documenting
 
-    async def _get_cog_commands(self, ctx: commands.Context, output_style: str="simple", *, rtn: bool=False) -> None:
+    async def _get_cog_commands(self, ctx: commands.Context, simple: bool=True, *, rtn: bool=False) -> None:
         """Sends an embed listing all commands belonging the cog.
 
         The method compiles a list of commands defined by the invoking cog,
@@ -500,10 +500,7 @@ class BaseCog(commands.Cog):
         simple : `bool`, optional
             Defines whether the command listing should display calling
             signatures or not. (the default is True, which ommits signatures)
-        """
-        # Toggle simple/advanced output
-        simple = True if output_style == "simple" else False
-        
+        """  
         # Get commands for current cog
         _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
         
@@ -524,8 +521,8 @@ class BaseCog(commands.Cog):
             if simple:
                 cmd_name = command.name.ljust(20,"\xa0")
             else:
-                cmd_name = command.signature.ljust(35,"\xa0")
-            _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
+                cmd_name = f"{command.name} {command.signature}".ljust(35, "\xa0")
+            _out_str += f"`!{cmd_name}:`{command.short_doc}\n"
         
         if not _out_str:
             raise AttributeError("Cog has no commands!")

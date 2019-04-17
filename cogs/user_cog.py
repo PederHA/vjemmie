@@ -15,12 +15,12 @@ class UserCog(BaseCog):
         self.bot.remove_command('help')
 
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])
-    async def send_help(self, ctx: commands.Context, cog_name: str=None, simple: str="simple"):
+    async def send_help(self, ctx: commands.Context, cog_name: str=None, simple: str="y"):
         """Sends information about a specific cog's commands"""
         
         # Enable advanced !help output
         if simple in ["n", "-", "advanced"]:
-            simple = "advanced"
+            simple = False
         
         cogs = await self.get_cogs()
 
