@@ -510,6 +510,7 @@ class BaseCog(commands.Cog):
         # Get commands as string of command names + descriptions, separated by newlines
         _out_str = ""
         for command in _commands:
+            
             # Hide commands that fail for current context
             check_failed = False
             for check in command.checks:
@@ -519,6 +520,7 @@ class BaseCog(commands.Cog):
             if check_failed:
                 continue
             
+            # Show/hide command signature (displays aliases, args, etc.)
             if simple:
                 cmd_name = command.name.ljust(20,"\xa0")
             else:
@@ -526,7 +528,8 @@ class BaseCog(commands.Cog):
             _out_str += f"`!{cmd_name}:`\xa0\xa0\xa0\xa0{command.short_doc}\n"
         
         if not _out_str:
-            return await self.send_error_msg(ctx, "Cog has no commands!")
+            raise AttributeError("Cog has no commands!")
+
         
         if rtn:
             return _out_str
