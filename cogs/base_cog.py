@@ -668,7 +668,7 @@ class BaseCog(commands.Cog):
             await self.send_text_message(f.read(), ctx)
 
     def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
-        """Generates a 24 bit hex color code."""
+        """Generates a 24 bit hex color code from a user-defined phrase."""
         phrase = str(phrase).encode()
         h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
         if as_int:
@@ -765,25 +765,66 @@ class BaseCog(commands.Cog):
                                         to_upload: Union[io.BytesIO, str], 
                                         filename: Optional[str]=None
                                         ) -> discord.Embed:
-        # TODO: singledispatch?
+        """Uploads an image to Discord from a URL or a file-like object 
+        and returns a `discord.Embed` object.
         
+        Parameters
+        ----------
+        ctx : `commands.Context`
+            Discord context
+        to_upload : `Union[io.BytesIO, str]`
+            Image to upload
+        filename : `Optional[str]`, optional
+            Filename + extension of image. 
+            Mandatory if `to_upload` is a file-like object.
+        
+        Raises
+        ------
+        `ValueError`
+            Raised if URL cannot be recognized as an image URL.
+        `TypeError`
+            Raised if `to_upload` is a file-like object and 
+            filename is None.
+        `ValueError`
+            Raised if `filename` does not contain a file extension.
+        `TypeError`
+            Raised if `to_upload` is neither type `str` nor `io.BytesIO`.
+        
+        Returns
+        -------
+        `discord.Embed`
+            Discord embed object.
+        """
         if isinstance(to_upload, str):
+            # String must be an image URL
             if not self.is_img_url(to_upload):
                 raise ValueError("String must be URL to an image file!")
             
+            # Upload image to bot's image rehosting channel
             msg = await self.rehost_image_to_discord(ctx, to_upload)
             url = msg.attachments[0].url
-            _fname, ext = self.get_filename_extension_from_url(url)
-            filename = f"{_fname}.{ext}"
-        
+
         elif isinstance(to_upload, io.BytesIO):
+            # Check if filename is passed in
             if not filename: 
-                raise TypeError("A filename is required for bytes object uploads!")
+                raise TypeError(
+                    "A filename is required for bytes object uploads!"
+                    )
+            
+            # Check if filename contains name of file and extension
+            fname, ext = os.path.splitext(filename)
+            if not ext:
+                raise ValueError(
+                    "Filename must contain name of file and extension, e.g. 'image.jpeg'"
+                    )    
+            
+            # Upload image and get URL from resulting bot message
             msg = await self.upload_bytes_obj_to_discord(to_upload, filename)
             url = msg.attachments[0].url
         
         else:
             raise TypeError('Argument "to_upload" must be type <io.BytesIO> or <str>')
         
+        # Create discord Embed object using obtained URL of image
         embed = await self.get_embed(ctx, image_url=url)
         return embed
