@@ -13,7 +13,7 @@ import aiohttp
 import discord
 import requests
 from discord.ext import commands
-commands.Cog
+
 
 from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, #DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
@@ -62,7 +62,7 @@ class BaseCog(commands.Cog):
     # Style info for help categories
     EMOJI = ":question:"
 
-    # Directories and files neccessary for cog
+    # Directories and files necessary for cog
     DIRS = []
     FILES = []
 
