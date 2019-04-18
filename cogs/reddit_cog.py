@@ -34,6 +34,14 @@ class RedditCog(BaseCog):
     """Reddit commands."""
 
     EMOJI = "<:leddit:565523334276841498>"
+    
+    DIRS = [
+        "db/reddit"
+    ]
+    FILES = [
+        "db/reddit/subs.json",
+        "db/reddit/nsfw_whitelist.json"
+    ]
 
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
@@ -54,7 +62,7 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        self.setup()
+        #self.setup()
 
         # Load subreddits
         self.subs = self.load_subs()
@@ -70,22 +78,17 @@ class RedditCog(BaseCog):
         # NSFW Whitelist
         self._NSFW_WHITELIST = recordclass("CachedList", "contents modified_at", defaults=[None, None])()
 
-    def setup(self) -> None:
-        paths = [
-            "db/reddit"
-        ]
-        for path in paths:
-            if not Path(path).exists():
-                os.makedirs(path)
-    
     def load_subs(self) -> dict:
         with open("db/reddit/subs.json", "r") as f:
             _subs = json.load(f)
+            if not _subs:
+                return dict()
             return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
 
     def dump_subs(self) -> None:
         with open("db/reddit/subs.json", "w") as f:
-            json.dump(self.subs, f, indent=4)
+            if self.subs:
+                json.dump(self.subs, f, indent=4)
 
     @property
     def NSFW_WHITELIST(self):

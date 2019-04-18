@@ -7,11 +7,13 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Iterable, Iterator, List, Optional, Union
 from urllib.parse import urlparse, urlsplit
+from pathlib import Path
 
 import aiohttp
 import discord
 import requests
 from discord.ext import commands
+commands.Cog
 
 from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, #DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
@@ -60,10 +62,24 @@ class BaseCog(commands.Cog):
     # Style info for help categories
     EMOJI = ":question:"
 
+    # Directories and files neccessary for cog
+    DIRS = []
+    FILES = []
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.add_help_command()
+        self.setup()
 
+    def setup(self) -> None:
+        for directory in self.DIRS:
+            if not Path(directory).exists():
+                os.makedirs(directory)
+        for _f in self.FILES:
+            if not Path(_f).exists():
+                with open(_f, "w") as f:
+                    if _f.endswith("json"):
+                        f.write("[]")
     @property
     def cog_name(self) -> str:
         cog_name = self.__class__.__name__

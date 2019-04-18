@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 from time import perf_counter, time
 from typing import Tuple, List
 from functools import partial
+from pathlib import Path
 
 import discord
 from discord.ext import commands
-import aiofiles
 
 from cogs.base_cog import BaseCog
 from cogs.sound_cog import AudioPlayer
@@ -23,12 +23,19 @@ class DateTimeEncoder(json.JSONEncoder):
 
 class ManagementCog(BaseCog):
     DISABLE_HELP = True
+    FILES = [
+        "out/audioplayers.json",
+    ]
+    DIRS = [
+        "out"
+    ]
 
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.START_TIME = datetime.now()
         self.bot.loop.create_task(self.monitor_players())
+        
 
     async def monitor_players(self) -> None:
         sound_cog = self.bot.get_cog("SoundCog")
