@@ -136,8 +136,8 @@ class BaseCog(commands.Cog):
             formatting = ""
 
         output = f"```{formatting}\n"
-        if item_type is not None:
-            output += f"Available {item_type}:\n\n"
+        if item_name is not None:
+            output += f"Available {item_name}:\n\n"
         idx = ""
         for i, item in enumerate(items, 1):
             if enum:
