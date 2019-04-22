@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from collections import defaultdict
 from datetime import datetime
 from contextlib import suppress
+from time import time
 
 import discord
 import gtts
@@ -580,10 +581,6 @@ class SoundCog(BaseCog):
     async def texttospeech(self, ctx: commands.Context, text: str, language: str="en", filename: Optional[str]=None) -> None:
         """Text-to-speech
         """
-        help_str = ("2 arguments required: "
-                                "`text` "
-                                "`language` "
-                                "\nType `!tts lang` for more information about available languages.")
 
         # gTTS exception handling.
         # The language list keeps breaking between versions.
@@ -598,28 +595,38 @@ class SoundCog(BaseCog):
             return await self.send_error_msg(ctx, "Text for TTS is a required argument.")
 
         elif text in ["languages", "lang", "options"]:
-            langs = [f"{lang_long}: {lang_short}" for lang_long, lang_short in valid_langs.items()]
-            output = await self.format_output(langs, item_name="languages")
-            await ctx.send(output)
+            _langs = [
+                    f"`{lang_short}`{self.EMBED_FILL_CHAR*(8-len(lang_short))}"
+                    f"{lang_long}" for lang_short, lang_long in valid_langs.items()
+                    ]
+            langs = "\n".join(_langs)
+            await self.send_embed_message(ctx, "Code\tLanguage", langs, keep_header=True)
             return
 
         # Get tts object
         tts = gtts.gTTS(text=text, lang=language)
 
-        # Get filename
+        await ctx.trigger_typing()
+        
+        def check_filename(filename: str) -> bool:
+            if len(filename) < 4:
+                raise ValueError("Filename is too short! Minimum 4 characters is required.")
+            if Path(f"sounds/tts/{filename}.mp3").exists():
+                raise FileExistsError(f"File with name {filename} already exists")
+
+        # Check argument to param filename
         if filename:
-            sound_name = sanitize_filename(filename)
-        # Generate filename from first word of `text`
+            sound_name = sanitize_filename(filename)    
+        # Use first word of text if no filename
         else:
             sound_name = sanitize_filename(text.split(" ")[0])
 
-        # Use `text` as filename if automatically generated filename is too short
-        if len(sound_name) <= 4 and text >= sound_name:
-            sound_name = sanitize_filename(text)
-        
-        # Check if filename already exists
-        if Path(f"sounds/tts/{sound_name}.mp3").exists():
-            raise FileExistsError(f"File with name {sound_name} already exists")
+        # Check filename. If filename is taken or invalid, generate filename from text    
+        try:
+            check_filename(sound_name)
+        except:
+            # First 10 chars - spaces + int(timestamp)
+            sound_name = sanitize_filename(f"{text.replace(' ', '')[:10]}_{int(time())}")
 
         # Save mp3 file
         to_run = partial(tts.save, f"sounds/tts/{sound_name}.mp3")
