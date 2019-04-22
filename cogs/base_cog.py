@@ -72,9 +72,11 @@ class BaseCog(commands.Cog):
         self.setup()
 
     def setup(self) -> None:
+        # Create required directories
         for directory in self.DIRS:
             if not Path(directory).exists():
                 os.makedirs(directory)
+        # Create required files
         for _f in self.FILES:
             if not Path(_f).exists():
                 with open(_f, "w") as f:
@@ -623,15 +625,17 @@ class BaseCog(commands.Cog):
                 yield join_lines(chunk)
 
     async def send_embed_message(self,
-                                         ctx: commands.Context,
-                                         header: str,
-                                         text: str,
-                                         limit: int=None,
-                                         *,
-                                         color: Union[str, int]=None,
-                                         return_embeds: bool=False,
-                                         footer: bool=True,
-                                         timestamp: bool=True) -> Optional[List[discord.Embed]]:
+                                 ctx: commands.Context,
+                                 header: str,
+                                 text: str,
+                                 limit: int=None,
+                                 *,
+                                 color: Union[str, int]=None,
+                                 footer: bool=True,
+                                 timestamp: bool=True,
+                                 keep_header: bool=False,
+                                 return_embeds: bool=False
+                                 ) -> Optional[List[discord.Embed]]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
         ctx.channel.
@@ -646,9 +650,19 @@ class BaseCog(commands.Cog):
             Text included in embed field(s)
         limit : `int`, optional
             Character limit. Cannot exceed 1024.
+        footer : `bool`, optional
+            Show footer on final message.
+            Enabled by default.
+        timestamp : `bool`, optional
+            Show timestamp. 
+            Enabled by default.
+        keep_header : `bool`, optional
+            Show header on every embed message. 
+            Disabled by default.
         return_embeds : `bool`, optional
-            If True, returns chunked message as list of 
+            Return chunked message as list of 
             embed objects instead of sending them to ctx.channel.
+            Disabled by default.
         """
         # Split text by line
         if not limit or limit > self.EMBED_CHAR_LIMIT:
@@ -657,15 +671,16 @@ class BaseCog(commands.Cog):
         text_fields = [tf async for tf in self._split_string_by_lines(text, limit)]
 
         if len(text_fields) > 1:
+            h = header if keep_header else "_"
             embeds = [
                 # Include header but no footer on first message
                 await self.get_embed(ctx, fields=[EmbedField(header, field)], footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, fields=[EmbedField("_", field)], footer=footer, timestamp=timestamp, color=color)
+                await self.get_embed(ctx, fields=[EmbedField(h, field)], footer=footer, timestamp=timestamp, color=color)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
-                await self.get_embed(ctx, fields=[EmbedField("_", field)], footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, fields=[EmbedField(h, field)], footer=False, timestamp=False, color=color)
                 for field in text_fields]
         else:
             # Create normal embed with title and footer if text is not chunked
