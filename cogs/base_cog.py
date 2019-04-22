@@ -726,11 +726,12 @@ class BaseCog(commands.Cog):
 
     async def is_img_url(self, url: str) -> bool:
         """Checks if a string is an HTTP/HTTPS URL to an image file"""
+        p = urlparse(url)
         return (
-                parsed_url.scheme in ["http", "https"] and
-                any(("."+url.rsplit(".", 1)[1].lower()).startswith(ext) 
+                p.scheme in ["http", "https"] and
+                any(p.path.lower().endswith(ext) 
                 for ext in self.IMAGE_EXTENSIONS) and
-                not url.endswith(parsed_url.hostname)
+                not url.endswith(p.hostname)
                 )
 
     async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
