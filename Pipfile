@@ -14,9 +14,9 @@ pillow = "*"
 geopy = "*"
 pynacl = "*"
 trueskill = "*"
-"72eb2aa" = {file = "https://github.com/Rapptz/discord.py/archive/rewrite.zip"}
 pathvalidate = "*"
 recordclass = "*"
+discord = "*"
 
 [dev-packages]
 pylint = "*"
