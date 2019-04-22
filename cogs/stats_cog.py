@@ -17,7 +17,7 @@ class StatsCog(BaseCog):
         self.START_TIME = datetime.now()
 
     @commands.command(name="uptime")
-    async def bot_uptime(self, ctx: commands.Context) -> None:
+    async def uptime(self, ctx: commands.Context) -> None:
         up = datetime.now() - self.START_TIME
         days = up.days
         hours, remainder = divmod(up.seconds, 3600)
