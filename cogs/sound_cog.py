@@ -14,6 +14,7 @@ from typing import Iterator, Optional, Tuple, DefaultDict, Dict, Union, List
 from urllib.parse import urlparse
 from collections import defaultdict
 from datetime import datetime
+from contextlib import suppress
 
 import discord
 import gtts
@@ -619,21 +620,19 @@ class SoundCog(BaseCog):
         # Check if filename already exists
         if Path(f"sounds/tts/{sound_name}.mp3").exists():
             raise FileExistsError(f"File with name {sound_name} already exists")
-        
 
         # Save mp3 file
-        tts.save(f"sounds/tts/{sound_name}.mp3")
+        to_run = partial(tts.save, f"sounds/tts/{sound_name}.mp3")
+        await self.bot.loop.run_in_executor(None, to_run)
 
         # Confirm creation of file
         await ctx.send(f'Sound created: **{sound_name}**')
 
         # Try to play created sound file in author's voice channel afterwards
-        try:
-            if ctx.message.author.voice.channel is not None:
+        with suppress(AttributeError):
+            if ctx.message.author.voice.channel:
                 cmd  = self.bot.get_command('play')
                 await ctx.invoke(cmd, sound_name)
-        except AttributeError:
-            pass
 
     @commands.command(name="add_sound")
     async def add_sound(self, ctx: commands.Context, url: str=None) -> None:
