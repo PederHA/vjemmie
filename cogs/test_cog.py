@@ -31,7 +31,8 @@ class TestCog(BaseCog):
         cmd_n, raise_exc, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
         
         ctx = kwargs.pop("ctx", None)
-        assert_true = kwargs.pop("assert_true", None)
+        assertion = kwargs.pop("assertion", None)
+        
         
         # Show args & kwargs if verbose is enabled
         a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
@@ -40,7 +41,7 @@ class TestCog(BaseCog):
             if ctx:
                 await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
-                assert await coro_or_cmd(*args, **kwargs)
+                assert await coro_or_cmd(*args, **kwargs) == assertion
         except:
             if raise_exc:
                 raise
@@ -66,7 +67,7 @@ class TestCog(BaseCog):
 
         return coro_or_cmd_name, raise_exc, _args, _kwargs      
     
-    async def test_coro_true(self, coro, *args, **kwargs) -> None:
+    async def test_coro(self, coro, *args, **kwargs) -> None:
         return await self._do_test(coro, *args, **kwargs)
  
     async def test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:    
@@ -89,10 +90,19 @@ class TestCog(BaseCog):
             "UfCviSx8c0rnOwqMbm_63jZ9t97IQ6zoDdjo7I7iHbU/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/"
             "103890994440728576/88b28f8e3afff899e4958646736d8e7e.webp",
         ]
-        
+        invalid_urls = [
+            "example.com/img.jpg",
+            "image.png",
+            "http://example.com/image",
+            "http://img.jpg"
+        ]
+
         for url in urls:
-            await self.test_coro_true(self.is_img_url, url)
-  
+            await self.test_coro(self.is_img_url, url, assertion=True)
+        
+        for i_url in invalid_urls:
+            await self.test_coro(self.is_img_url, i_url, assertion=False)
+        
     @commands.command(name="test_deepfry")
     async def test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
