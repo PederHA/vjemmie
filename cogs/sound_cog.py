@@ -483,7 +483,7 @@ class SoundCog(BaseCog):
 
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
-    @commands.cooldown(rate=1, per=300, type=commands.BucketType.user)
+    @commands.cooldown(rate=1, per=10, type=commands.BucketType.user)
     async def soundlist(self, ctx: commands.Context, category: Optional[str]=None) -> None:
         """Lists all available sound files
         
@@ -509,6 +509,7 @@ class SoundCog(BaseCog):
             await ctx.send(
                 f"Specify a category.\nType **`!{ctx.invoked_with}`** + {categories}"
             )
+            self.reset_command_cooldown(ctx)
             return
 
         # Directory names are all lowercase
