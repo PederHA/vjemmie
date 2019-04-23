@@ -302,7 +302,7 @@ class BaseCog(commands.Cog):
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
         await self.send_text_message(cause_of_error, channel_id=self.LOG_CHANNEL_ID)
-
+    
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
 
@@ -522,6 +522,7 @@ class BaseCog(commands.Cog):
             signatures or not. (the default is True, which ommits signatures)
         """  
         # Get commands for current cog
+        # NOTE: Replace with walk_commands() to get subcommands?
         _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
         
         # Get commands as string of command names + descriptions, separated by newlines
@@ -534,7 +535,7 @@ class BaseCog(commands.Cog):
                 if not check(ctx):
                     check_failed = True
                     break
-            if check_failed:
+            if check_failed or command.hidden:
                 continue
             
             # Show/hide command signature (displays aliases, args, etc.)
