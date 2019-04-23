@@ -20,7 +20,7 @@ class ImageCog(BaseCog):
     """Image manipulation commands."""
 
     EMOJI = ":camera:"
-
+    
     @commands.command(name="deepfry")
     async def deepfry(self, ctx: commands.Context, *args, rtn=False) -> None:
         "Deepfries an image. `!deepfry help` for usage info."
@@ -154,7 +154,6 @@ class ImageCog(BaseCog):
             # Finally send image on last pass of deepfrying
             await self._deepfry(ctx, img)
     
-    # I somehow couldn't get subcommands to work? This will do in the meantime
     @commands.command(name="blackhole")
     async def blackhole(self, ctx: commands.Context, *args) -> None:
         """Even deeper frying."""
@@ -167,10 +166,12 @@ class ImageCog(BaseCog):
         await ctx.invoke(self.nuke, *args, passes=20)
 
     @commands.command(name="removebg")
+    @commands.cooldown(rate=1, per=300, type=commands.BucketType.user)
     @owners_only()
     async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
         """Removes background from an image."""
         if not image_url and not ctx.message.attachments:
+            self.reset_command_cooldown(ctx)
             raise discord.DiscordException("Message has no image URL or image attachment")
         
         if ctx.message.attachments:
