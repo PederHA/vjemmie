@@ -28,7 +28,7 @@ from youtube_dl import YoutubeDL
 from ext.checks import admins_only
 from cogs.base_cog import BaseCog, InvalidFiletype
 
-from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR
+from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -561,7 +561,8 @@ class SoundCog(BaseCog):
             await ctx.send("No results")
 
     @commands.command(name="queue")
-    async def show_queue(self, ctx) -> None:
+    async def show_queue(self, ctx: commands.Context) -> None:
+        """Display soundboard queue."""
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
@@ -585,7 +586,7 @@ class SoundCog(BaseCog):
         """
 
         # gTTS exception handling.
-        # The language list keeps breaking between versions.
+        # The language list has a tendency to break, and requires an update of the gTTS library
         try:
             valid_langs = gtts.lang.tts_langs()
         except:
@@ -612,9 +613,9 @@ class SoundCog(BaseCog):
         
         def check_filename(filename: str) -> bool:
             if len(filename) < 4:
-                raise ValueError("Filename is too short! Minimum 4 characters is required.")
-            if Path(f"sounds/tts/{filename}.mp3").exists():
-                raise FileExistsError(f"File with name {filename} already exists")
+                raise ValueError
+            if Path(f"{TTS_DIR}/{filename}.mp3").exists():
+                raise FileExistsError
 
         # Check argument to param filename
         if filename:
@@ -626,16 +627,30 @@ class SoundCog(BaseCog):
         # Check filename. If filename is taken or invalid, generate filename from text    
         try:
             check_filename(sound_name)
-        except:
+        except Exception as e:
+            # I could do except ValueError, except FileExistsError etc.
+            # But I cba defining a func or lambda for the unique filename
+            # generation, so we'll just use isinstance
+            msg = ""
+            if isinstance(e, ValueError):
+                if filename: # Only display this error if a filename is given
+                    msg = f"Filename {filename} is too short. Minimum 4 characters is required."
+            elif isinstance(e, FileExistsError):
+                msg = f"A file with name **`{filename}`** already exists."
+            else:
+                raise
+            if msg:
+                msg +=  " A unique filename will be generated instead."
+                await ctx.send(msg)
             # First 10 chars - spaces + int(timestamp)
             sound_name = sanitize_filename(f"{text.replace(' ', '')[:10]}_{int(time())}")
 
         # Save mp3 file
-        to_run = partial(tts.save, f"sounds/tts/{sound_name}.mp3")
+        to_run = partial(tts.save, f"{TTS_DIR}/{sound_name}.mp3")
         await self.bot.loop.run_in_executor(None, to_run)
 
         # Confirm creation of file
-        await ctx.send(f'Sound created: **{sound_name}**')
+        await ctx.send(f'TTS file created: **`{sound_name}`**')
 
         # Try to play created sound file in author's voice channel afterwards
         with suppress(AttributeError):
