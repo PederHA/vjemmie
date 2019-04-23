@@ -56,6 +56,7 @@ class FunCog(BaseCog):
     
     @commands.command(name="braille")
     async def braille(self, ctx: commands.Context, *text: str) -> None:
+        """Braille transliteration."""
         char_map = {
             'a': '⠁',
             'b': '⠃',

@@ -47,6 +47,7 @@ class UserCog(BaseCog):
 
     @commands.command(name="commands")
     async def show_commands(self, ctx:commands.Context) -> None:
+        """Display all bot commands."""
         l = []
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
