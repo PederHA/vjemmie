@@ -16,6 +16,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import discord
 import praw
+from prawcore.exceptions import Forbidden
 from discord.ext import commands
 
 from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
@@ -645,8 +646,15 @@ class RedditCog(BaseCog):
             post_limit = self.POST_LIMITS.get(time, 25)
 
         # Get list of Reddit posts from a given subreddit
-        posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
-
+        try:
+            posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
+        except Forbidden:
+            return await self.send_error_msg(
+                ctx,
+                f"Cannot retrieve **r/{subreddit}** submissions! " 
+                "Subreddit might be quarantined."
+                )
+        
         # Select a random post from list of posts
         while True:
             post = await self._get_random_reddit_post(posts)
