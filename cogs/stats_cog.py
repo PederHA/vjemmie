@@ -4,8 +4,13 @@ from cogs.base_cog import BaseCog
 from datetime import datetime
 from time import perf_counter, time
 import json
-from ext.checks import owners_only
 
+from itertools import islice
+
+from github import Github
+
+from ext.checks import owners_only
+from botsecrets import GITHUB_TOKEN
 
 class StatsCog(BaseCog):
     """Commands and methods for gathering bot statistics."""
@@ -15,6 +20,7 @@ class StatsCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.START_TIME = datetime.now()
+        self.github = Github(GITHUB_TOKEN)
 
     @commands.command(name="uptime")
     async def uptime(self, ctx: commands.Context) -> None:
@@ -62,3 +68,21 @@ class StatsCog(BaseCog):
                 await self.send_embed_message(ctx, gname, o, footer=False)
         else:
             await ctx.send("No active audio players")
+
+    @commands.command(name="commits")
+    async def git_commits(self, ctx: commands.Context) -> None:
+        # Get repo
+        repo = self.github.get_repo("PederHA/vjemmie")
+
+        # Only retrieve 5 most recent commits 
+        commits = list(islice(repo.get_commits(), 5))
+        
+        # Format commit hash + message
+        out_commits = "\n".join(
+            [
+            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message}"
+            for commit in commits
+            ]
+        )
+
+        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)

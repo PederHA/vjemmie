@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ca220a3ada4de64d060a0296631efd58f491951aca964dc26290e6327da41cb9"
+            "sha256": "41c9cc48d3b45fcc22986b16d52859122225d9671571384d6a4b86bc8e4c4ff9"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -124,6 +124,13 @@
                 "sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"
             ],
             "version": "==7.0"
+        },
+        "deprecated": {
+            "hashes": [
+                "sha256:2f293eb0eee34b1fcf3da530fe8fc4b0d71d43ddc2dc78e2ffb444b6c0868557",
+                "sha256:749f6cdcfbdc3f79258f8154bad43fced95adc632c337675d0385959895894bc"
+            ],
+            "version": "==1.2.5"
         },
         "discord": {
             "hashes": [
@@ -298,6 +305,20 @@
             ],
             "version": "==2.19"
         },
+        "pygithub": {
+            "hashes": [
+                "sha256:2ce91d4990efbfb7a0a1abd06e2106a3998a4a5810a4bdd3c1b6be5499918e9b"
+            ],
+            "index": "pypi",
+            "version": "==1.43.7"
+        },
+        "pyjwt": {
+            "hashes": [
+                "sha256:5c6eca3c2940464d106b99ba83b00c6add741c9becaec087fb7ccdefea71350e",
+                "sha256:8d59a976fb773f3e6a39c85636357c4f0e242707394cadadd9814f5cbaa20e96"
+            ],
+            "version": "==1.7.1"
+        },
         "pynacl": {
             "hashes": [
                 "sha256:05c26f93964373fc0abe332676cb6735f0ecad27711035b9472751faa8521255",
@@ -421,6 +442,12 @@
                 "sha256:f1414e6cbcea8d22843e7eafdfdfae3dd1aba41d1945f6ca66e4806c07c4f454"
             ],
             "version": "==6.0"
+        },
+        "wrapt": {
+            "hashes": [
+                "sha256:4aea003270831cceb8a90ff27c4031da6ead7ec1886023b80ce0dfe0adf61533"
+            ],
+            "version": "==1.11.1"
         },
         "xmltodict": {
             "hashes": [
