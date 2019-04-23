@@ -483,6 +483,7 @@ class SoundCog(BaseCog):
 
     @commands.command(name="soundlist",
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
+    @commands.cooldown(rate=1, per=300, type=commands.BucketType.user)
     async def soundlist(self, ctx: commands.Context, category: Optional[str]=None) -> None:
         """Lists all available sound files
         
