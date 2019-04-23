@@ -325,7 +325,14 @@ class BaseCog(commands.Cog):
         # Check if error stems from lack of privileges
         if isinstance(error, commands.CheckFailure):
             return await ctx.send("Insufficient privileges to perform command!")
-
+        
+        # Ignore cooldown exceptions
+        if isinstance(error, commands.CommandOnCooldown):
+            return await ctx.send(
+                f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
+                f"Try again in {error.retry_after:.2f}s")
+            #return await ctx.send(f"{error.args[0]}")
+        
         if hasattr(error, "original"):
             return await self.send_error_msg(ctx, error.original.args[0])
 
@@ -868,3 +875,7 @@ class BaseCog(commands.Cog):
         
         # Create discord Embed object using obtained URL of image
         return await self.get_embed(ctx, image_url=url)
+
+    def reset_command_cooldown(self, ctx: commands.Context) -> None:
+        cmd = self.bot.get_command(ctx.invoked_with)
+        cmd.reset_cooldown(ctx)
