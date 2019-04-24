@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from time import perf_counter, time
 import json
 from functools import partial
+from typing import Union
 
 from itertools import islice
 
@@ -65,9 +66,9 @@ class StatsCog(BaseCog):
         else:
             await ctx.send("No active audio players")
     
-    @commands.command(name="changelog", aliases=["commits"])
+    @commands.command(name="changelog")
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.guild)
-    async def changelog(self, ctx: commands.Context, days: int=0) -> str:
+    async def changelog(self, ctx: commands.Context, days: int=0, *, rtn: bool=False) -> Union[list, str]:
         """Display git commmit log"""
         # Limit number of days to get commits from
         if days > 7:
@@ -86,7 +87,7 @@ class StatsCog(BaseCog):
         else:
             # Get 5 most recent commits if no days argument
             commits = list(islice(_c, 5))
-        
+
         # Format commit hash + message
         n = "\n"
         out_commits = "\n".join(
@@ -97,6 +98,17 @@ class StatsCog(BaseCog):
         )
 
         await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
-        
-        # Return commit history
-        return out_commits
+
+        if rtn:
+            # List of github.Commit objects
+            return commits
+        else:
+            # Formatted hash: description string
+            return out_commits
+    
+    @commands.command(name="commits")
+    async def commits(self, ctx: commands.Context) -> None:
+        """Display number of commits made past week"""
+        commits = await ctx.invoke(self.changelog, 7, rtn=True)
+        n_commits = len(commits)
+        await ctx.send(f"{n_commits} commits have been made the past week.")
