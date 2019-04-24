@@ -213,6 +213,8 @@ class SoundCog(BaseCog):
 
     EMOJI = ":speaker:"
 
+    DIRS = [d.path for d in SOUND_SUB_DIRS]
+
     YTDL_MAXSIZE = 10000000 # 10 MB
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -235,16 +237,6 @@ class SoundCog(BaseCog):
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
 
-        # Create required directories
-        self.setup()
-
-    def setup(self) -> None:
-        """Creates directories neccessary for soundboard commands"""
-        # Get directory paths from config
-        for sub_dir in SOUND_SUB_DIRS:
-            if not Path(sub_dir.path).exists():
-                print(f"Creating directory {sub_dir}")
-                os.makedirs(sub_dir.path)
 
     @property
     def sound_list(self) -> list:
@@ -286,12 +278,13 @@ class SoundCog(BaseCog):
     @admins_only()
     async def show_players(self, ctx: commands.Context) -> None:
         """ADMIN ONLY: Shows active Audio Players"""
-        players = [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
-        players = "\n".join(players)
+        players = "\n".join(
+            [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
+        )
         if players:
             await ctx.send(players)
         else:
-            await ctx.send("No active audio players")
+            await ctx.send("No active audio players.")
 
     @commands.command(name="played")
     @admins_only()
@@ -323,8 +316,9 @@ class SoundCog(BaseCog):
 
         vc = ctx.voice_client
 
-        # If bot is restarted while connected, it can sometimes get "stuck" in a channel
-        # in a state where any attempts to play sound is unsuccessful
+        # If bot is restarted while connected to a voice channel, 
+        # it can sometimes get "stuck" in a channel in a state where
+        # any attempts to play sound is unsuccessful
         if not vc and self.bot.user.id in [user.id for user in channel.members]:
             await channel.connect() # Try to connect
             await ctx.invoke(self.stop) # Immediately issue !stop command, removing bot user from channel
