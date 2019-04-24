@@ -711,17 +711,18 @@ class BaseCog(commands.Cog):
         text_fields = [tf async for tf in self._split_string_by_lines(text, limit)]
 
         if len(text_fields) > 1:
-            h = header if keep_header else "_"
+            h = header if keep_header else Embed.Empty
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, fields=[EmbedField(header, field)], footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, title=h, description=field, footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, fields=[EmbedField(h, field)], footer=footer, timestamp=timestamp, color=color)
+                await self.get_embed(ctx, title=h, description=field, footer=footer, timestamp=timestamp, color=color)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
-                await self.get_embed(ctx, fields=[EmbedField(h, field)], footer=False, timestamp=False, color=color)
-                for field in text_fields]
+                await self.get_embed(ctx, title=h, description=field, footer=False, timestamp=False, color=color)
+                for field in text_fields
+            ]
         else:
             # Create normal embed with title and footer if text is not chunked
             embeds = [
