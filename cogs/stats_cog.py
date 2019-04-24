@@ -97,14 +97,13 @@ class StatsCog(BaseCog):
             ]
         )
 
-        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
-
         if rtn:
             # List of github.Commit objects
             return commits
-        else:
-            # Formatted hash: description string
-            return out_commits
+        
+        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
+
+        return out_commits
     
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
