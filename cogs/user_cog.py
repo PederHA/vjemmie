@@ -1,11 +1,12 @@
 from contextlib import suppress
 from random import randint
+import sys
 
 import discord
 from discord.ext import commands
 
-from cogs.base_cog import BaseCog
-
+from cogs.base_cog import BaseCog, EmbedField
+from config import AUTHOR_MENTION
 
 class UserCog(BaseCog):
     """Help commands."""
@@ -35,7 +36,7 @@ class UserCog(BaseCog):
           
         # Send message listing all possible !help categories if no category
         # Make an embed field for each cog
-        fields = [self.EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs if cog.__doc__]
+        fields = [EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs if cog.__doc__]
         embed = await self.get_embed(ctx, title="CATEGORIES", fields=fields, inline=False)
         
         # Send embeds
@@ -59,7 +60,7 @@ class UserCog(BaseCog):
     
     
     @commands.command(name="invite", aliases=["get_invite"])
-    async def invitelink(self, ctx: commands.Context, priv_level: int=None) -> None:
+    async def invitelink(self, ctx: commands.Context) -> None:
         """Get discord bot invite URL"""
         base_url = "https://discordapp.com/api/oauth2/authorize?client_id={id}&scope=bot&permissions={permissions}"
         
@@ -71,9 +72,30 @@ class UserCog(BaseCog):
         
         out_str = "\n".join(
             [
-            f"[{level}]({base_url.format(id=self.bot.user.id, permissions=permissions)})"
+            f"[**{level}**]({base_url.format(id=self.bot.user.id, permissions=permissions)})"
             for level, permissions in levels.items()
             ]
         )
+        embed = await self.get_embed(ctx,
+                                     author=f"Invite {self.bot.user.name}",
+                                     author_icon="https://discordapp.com/assets/2c21aeda16de354ba5334551a883b481.png",
+                                     description=out_str,
+                                     color="blurple"
+                                     )
+        return await ctx.send(embed=embed)
+
+
+    @commands.command(name="about", alias=["info"])
+    async def about(self, ctx: commands.Context) -> None:
+        fields = [
+            EmbedField(name="Owner", value=AUTHOR_MENTION),
+            EmbedField(name="Written in", value=f"<:python:570331647933677590> Python {sys.version.split(' ')[0]}"),
+        ]
         
-        return await self.send_embed_message(ctx, "Invite links", out_str)
+        embed = await self.get_embed(ctx,
+                                     author=self.bot.user.name,
+                                     author_icon=self.bot.user.avatar_url._url,
+                                     description="Top secret bot running on the Tiger Mafia mainframe.",
+                                     fields=fields)
+            
+        await ctx.send(embed=embed)   
