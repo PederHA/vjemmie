@@ -13,7 +13,7 @@ import aiohttp
 import discord
 import requests
 from discord.ext import commands
-
+from discord import Embed
 
 from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, #DISABLE_HELP,
                     DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
@@ -25,7 +25,7 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
             'md', 'ml', 'prolog', 'py', 'tex',
             'xl', 'xml']
 
-EmbedField = namedtuple("EmbedField", "name value")
+EmbedField = namedtuple("EmbedField", "name value inline", defaults=[True])
 
 class InvalidFiletype(Exception):
     """Invalid filetype in a given context"""
@@ -54,7 +54,6 @@ class BaseCog(commands.Cog):
     DOWNLOADS_ALLOWED = DOWNLOADS_ALLOWED
 
     # Embed Options
-    EmbedField = namedtuple("EmbedField", "name value")
     CHAR_LIMIT = 1800
     EMBED_CHAR_LIMIT = 1000
     EMBED_FILL_CHAR = "\xa0"
@@ -196,21 +195,38 @@ class BaseCog(commands.Cog):
     async def get_embed(self,
                         ctx: commands.Context,
                         *,
-                        title: str=None,
+                        author: Optional[str]=None,
+                        author_url: str=Embed.Empty,
+                        author_icon: str=Embed.Empty,
+                        title: str=Embed.Empty,
+                        description: str=Embed.Empty,
+                        fields: Optional[List[EmbedField]]=None,
+                        image_url: Optional[str]=None,
+                        thumbnail_url: Optional[str]=None,
+                        color: Union[str, int, None]=None,
                         footer: bool=True,
-                        fields: Optional[list]=None,
-                        image_url: str=None,
-                        color: Union[str, int]=None,
                         timestamp: bool=True,
-                        inline: bool=True) -> discord.Embed:
+                        inline: Optional[bool]=None
+                        ) -> discord.Embed:
         """Constructs a discord.Embed object.
         
         Parameters
         ----------
         ctx : `commands.Context`
             Discord Context
+        author : `str`, optional
+            Topmost line of text of embed.
+            Intended for name of embed author, but can be anything.
+        author_url: `str`, optional
+            URL to make author name a clickable hyperlink.
+        author_icon: `str`, optional
+            URL to image.
+            Image is displayed to the left of author's name.
         title : `str`, optional
-            Title of embed. A single line of bolded text at the top of the embed.
+            Title of embed. 
+            A single line of bolded text displayed below author name.
+        description: `str`, optional
+            Description field of embed, displayed below embed title.
         footer : `bool`, optional
             Display footer on embed in the format:
             <user avatar> <"requested by `user`"> <timestamp>
@@ -227,25 +243,41 @@ class BaseCog(commands.Cog):
             param `footer=False`
         inline : `bool`, optional
             Display embed fields inline.
+            Overrides whatever value is specified
+            in list of EmbedField objects.
         
         Returns
         -------
         discord.Embed
             A Discord embed object that can be sent to a text channel
         """
-
         opts = {"timestamp":datetime.now()} if timestamp else {}
-        embed = discord.Embed(title=title, **opts)
+        embed = discord.Embed(title=title, description=description, **opts)
         
+        if author:
+            if await self.is_img_url(author_icon):
+                icon_url = author_icon
+            else:
+                icon_url = Embed.Empty
+            embed.set_author(name=author, 
+                             url=author_url,
+                             icon_url=icon_url)
         if footer:
-            embed.set_footer(text=f"Requested by {ctx.message.author.name}", icon_url=ctx.message.author.avatar_url)
+            embed.set_footer(text=f"Requested by {ctx.message.author.name}", 
+                             icon_url=ctx.message.author.avatar_url)
         
         if fields:
             for field in fields:
-                embed.add_field(name=field.name, value=field.value, inline=inline)
+                il = inline if inline is not None else field.inline
+                embed.add_field(name=field.name, 
+                                value=field.value,
+                                inline=il)
         
         if image_url and await self.is_img_url(image_url):
             embed.set_image(url=image_url)
+
+        if thumbnail_url and await self.is_img_url(thumbnail_url):
+            embed.set_thumbnail(url=thumbnail_url)
         
         if color:
             embed.color = await self.get_discord_color(color)
@@ -543,7 +575,7 @@ class BaseCog(commands.Cog):
                 cmd_name = command.name.ljust(20,"\xa0")
             else:
                 cmd_name = f"{command.name} {command.signature}".ljust(35, "\xa0")
-            _out_str += f"`!{cmd_name}:`{command.short_doc}\n"
+            _out_str += f"`!{cmd_name}:` {command.short_doc}\n"
         
         if not _out_str:
             raise AttributeError("Cog has no commands!")
