@@ -75,12 +75,14 @@ class BaseCog(commands.Cog):
         for directory in self.DIRS:
             if not Path(directory).exists():
                 os.makedirs(directory)
+        
         # Create required files
         for _f in self.FILES:
             if not Path(_f).exists():
                 with open(_f, "w") as f:
                     if _f.endswith("json"):
                         f.write("[]")
+    
     @property
     def cog_name(self) -> str:
         cog_name = self.__class__.__name__
@@ -215,13 +217,15 @@ class BaseCog(commands.Cog):
         ctx : `commands.Context`
             Discord Context
         author : `str`, optional
-            Topmost line of text of embed.
+            Author name displayed on topmost line of embed.
             Intended for name of embed author, but can be anything.
         author_url: `str`, optional
             URL to make author name a clickable hyperlink.
+            Author name is required!
         author_icon: `str`, optional
             URL to image.
             Image is displayed to the left of author's name.
+            Author name is required!
         title : `str`, optional
             Title of embed. 
             A single line of bolded text displayed below author name.
@@ -235,7 +239,7 @@ class BaseCog(commands.Cog):
             new field to the embed via `embed.add_field`
         image_url : `str`, optional
             Image URL. TODO: Add more info
-        color : `Optional[str, int]`, optional
+        color : `Union[str, int, None]`, optional
             Color of embed. Can be specified as str or int.
             See `BaseCog.get_discord_color` for info.
         timestamp : `bool`, optional
@@ -251,9 +255,12 @@ class BaseCog(commands.Cog):
         discord.Embed
             A Discord embed object that can be sent to a text channel
         """
+        # Create embed object.
+        # Timestamp must be specified on object instantiation
         opts = {"timestamp":datetime.now()} if timestamp else {}
         embed = discord.Embed(title=title, description=description, **opts)
         
+        # Add author details
         if author:
             if await self.is_img_url(author_icon):
                 icon_url = author_icon
@@ -262,23 +269,33 @@ class BaseCog(commands.Cog):
             embed.set_author(name=author, 
                              url=author_url,
                              icon_url=icon_url)
+        # Add footer
         if footer:
             embed.set_footer(text=f"Requested by {ctx.message.author.name}", 
                              icon_url=ctx.message.author.avatar_url)
         
+        # Add embed fields
         if fields:
             for field in fields:
+                # Make sure fields contains EmbedField objects           
+                if not isinstance(field, EmbedField):
+                    raise TypeError(f"'fields' must be a list of EmbedField objects!")
+                
+                # Use inline kw-only arg if given, otherwise use EmbedField's inline value
                 il = inline if inline is not None else field.inline
                 embed.add_field(name=field.name, 
                                 value=field.value,
                                 inline=il)
         
+        # Add image if URL is an image URL
         if image_url and await self.is_img_url(image_url):
             embed.set_image(url=image_url)
 
+        # Add thumbnail if thumbnail URL is an image URL
         if thumbnail_url and await self.is_img_url(thumbnail_url):
             embed.set_thumbnail(url=thumbnail_url)
         
+        # Add color to embed
         if color:
             embed.color = await self.get_discord_color(color)
         
