@@ -85,11 +85,15 @@ class UserCog(BaseCog):
         return await ctx.send(embed=embed)
 
 
-    @commands.command(name="about", alias=["info"])
+    @commands.command(name="about", aliases=["info"])
     async def about(self, ctx: commands.Context) -> None:
+        """General bot information."""
         fields = [
             EmbedField(name="Owner", value=AUTHOR_MENTION),
             EmbedField(name="Written in", value=f"<:python:570331647933677590> Python {sys.version.split(' ')[0]}"),
+            EmbedField(name="Uptime", value=await ctx.invoke(self.bot.get_command("uptime"), rtn=True)),
+            EmbedField(name="Command categories", value=len(await self.get_cogs())),
+            EmbedField(name="Useful commands", value="`!help`, `!commands`, `!changelog`"),
         ]
         
         embed = await self.get_embed(ctx,
