@@ -11,7 +11,6 @@ import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-from botsecrets import REMOVEBG_API_KEY
 import requests
 
 

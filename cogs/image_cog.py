@@ -9,7 +9,7 @@ import requests
 from discord.ext import commands
 from PIL import Image
 
-from botsecrets import REMOVEBG_API_KEY
+from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
 from ext.checks import owners_only, pfm_cmd
@@ -198,7 +198,7 @@ class ImageCog(BaseCog):
             'https://api.remove.bg/v1.0/removebg',
             files={'image_file': image},
             data={'size': 'auto'},
-            headers={'X-Api-Key': REMOVEBG_API_KEY},
+            headers={'X-Api-Key': REMOVEBG_KEY},
         )
         if response.status_code == requests.codes.ok:
             img_nobg = io.BytesIO(response.content)
