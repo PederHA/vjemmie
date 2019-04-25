@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 from time import perf_counter, time
 import json
 from functools import partial
-from typing import Union
+from typing import Union, List
 
 from itertools import islice
 
-from github import Github, GithubObject
+from github import Github, GithubObject, Commit
 
 from ext.checks import owners_only
 from botsecrets import GITHUB_TOKEN
@@ -72,7 +72,12 @@ class StatsCog(BaseCog):
     
     @commands.command(name="changelog")
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.guild)
-    async def changelog(self, ctx: commands.Context, days: int=0, *, rtn: bool=False) -> Union[list, str]:
+    async def changelog(self, 
+                        ctx: commands.Context, 
+                        days: int=0, 
+                        *, 
+                        rtn_type: Union[str, list, None]=None
+                        ) -> Union[List[Commit.Commit], str, None]:
         """Display git commmit log"""
         # Limit number of days to get commits from
         if days > 7:
@@ -93,25 +98,26 @@ class StatsCog(BaseCog):
             commits = list(islice(_c, 5))
 
         # Format commit hash + message
-        n = "\n"
         out_commits = "\n".join(
             [
-            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.split(n, 1)[0]}"
+            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.splitlines()[0]}"
             for commit in commits
             ]
         )
 
-        if rtn:
+        # Check if return type is passed in
+        if rtn_type == list:
             # List of github.Commit objects
             return commits
-        
-        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
+        elif rtn_type == str:
+            # Formatted string
+            return out_commits
+        else:
+            await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
 
-        return out_commits
-    
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
-        commits = await ctx.invoke(self.changelog, 7, rtn=True)
+        commits = await ctx.invoke(self.changelog, 7, rtn_type=list)
         n_commits = len(commits)
         await ctx.send(f"{n_commits} commits have been made the past week.")
