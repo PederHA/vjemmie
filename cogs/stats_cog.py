@@ -25,7 +25,7 @@ class StatsCog(BaseCog):
         self.github = Github(GITHUB_TOKEN)
 
     @commands.command(name="uptime")
-    async def uptime(self, ctx: commands.Context) -> None:
+    async def uptime(self, ctx: commands.Context, *, rtn: bool=False) -> str:
         """Bot uptime."""
         up = datetime.now() - self.bot.start_time
         days = up.days
@@ -36,12 +36,16 @@ class StatsCog(BaseCog):
         
         # Returns empty string if number is 0
         up_fmt = lambda dur, unit: f"{dur}{unit} " if dur else ""
-
-        await ctx.send("Bot has been up for " 
-                       f"{up_fmt(days, 'd')}"
-                       f"{up_fmt(hours, 'h')}"
-                       f"{up_fmt(minutes, 'm')}"
-                       f"{up_fmt(seconds, 's')}")
+        uptime = (f"{up_fmt(days, 'd')}"
+                  f"{up_fmt(hours, 'h')}"
+                  f"{up_fmt(minutes, 'm')}"
+                  f"{up_fmt(seconds, 's')}")
+        
+        if rtn:
+            return uptime
+        
+        await ctx.send("Bot has been up for "+uptime)
+        
 
     @commands.command(name="get_players")
     @owners_only()
