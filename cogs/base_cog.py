@@ -731,7 +731,7 @@ class BaseCog(commands.Cog):
             h = header if keep_header else Embed.Empty
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, title=h, description=field, footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, title=header, description=field, footer=False, timestamp=False, color=color)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
                 await self.get_embed(ctx, title=h, description=field, footer=footer, timestamp=timestamp, color=color)
@@ -745,7 +745,8 @@ class BaseCog(commands.Cog):
             embeds = [
                 await self.get_embed(
                     ctx,
-                    fields=[EmbedField(header, text_fields[0])],
+                    title=header,
+                    description=text_fields[0],
                     footer=footer,
                     timestamp=timestamp,
                     color=color)
