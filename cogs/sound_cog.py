@@ -518,7 +518,7 @@ class SoundCog(BaseCog):
                     _out += f"{sound}\n"
                 if not _out:
                     return await ctx.send(
-                        f"No sounds for category **`{category}`**"
+                        f"Category **`{category}`** is empty!"
                         )
                 return await self.send_embed_message(
                     ctx, sub_dir.header, _out, color=sub_dir.color
