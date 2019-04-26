@@ -1,5 +1,6 @@
 import re
-from urllib.parse import urlparse
+from typing import Optional
+from urllib.parse import urlparse, ParseResult
 
 from discord.ext import commands
 from discord.ext.commands.converter import IDConverter, _get_from_guilds
@@ -42,8 +43,63 @@ class MemberOrURLConverter(IDConverter):
                 result = _get_from_guilds(bot, 'get_member', user_id)
         if urlparse(argument).scheme in ["http", "https"]:
             result = argument
-        
+
         if result is None:
             raise BadArgument(f"{argument} is neither a Member nor a valid URL")
 
         return result
+
+class ParsedURL(ParseResult):
+    @property
+    def original(self) -> str:
+        return self.geturl()
+
+
+class URLConverter(commands.Converter):
+    SCHEMES = ["http", "https"]
+    EXTENSIONS = []
+    CATEGORY = ""
+
+    @property
+    def category(self) -> str:
+        return self.__class__.__name__.split("Converter")[0]
+
+    async def convert(self, 
+                      ctx: commands.Context, 
+                      arg: Optional[str]
+                      ) -> Optional[ParseResult]:
+        # Simply return arg if None is passed in
+        if arg is None:
+            return arg
+        
+        # Parse URL
+        u = urlparse(arg)
+        url = ParsedURL(u.scheme, u.netloc, u.path, u.params, u.query, u.fragment)
+
+        if self.EXTENSIONS and not any(url.path.lower().endswith(ext)
+                                       for ext in self.EXTENSIONS):
+            if self.category:
+                msg = f"URL file extension is not a valid {self.category} filetype."
+            else:
+                msg = "URL file extension is invalid"
+            raise BadArgument(msg)
+
+        if not url.scheme:
+            raise BadArgument("URL is missing scheme.")
+
+        if url.scheme not in self.SCHEMES:
+            raise BadArgument("URL scheme must be HTTP or HTTPS")
+        
+        if "." not in url.netloc:
+            raise BadArgument("URL lacks top-level domain!")
+        
+        return url
+
+
+class SoundURLConverter(URLConverter):
+    EXTENSIONS = [".mp3", ".m4a", ".wav"]
+
+
+class ImgURLConverter(URLConverter):
+    EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
+
