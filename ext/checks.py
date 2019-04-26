@@ -2,7 +2,7 @@ import json
 
 from discord.ext import commands
 
-from config import DOWNLOADS_ALLOWED, OWNERS
+from config import DOWNLOADS_ALLOWED, OWNER_ID
 
 
 
@@ -21,7 +21,7 @@ def save_blacklist(blacklist: list) -> None:
 def admins_only():
     def predicate(ctx):
         if hasattr(ctx.author, "guild_permissions"): # Disables privileged commands in PMs
-            return ctx.author.guild_permissions.administrator or ctx.author.id in OWNERS
+            return ctx.author.guild_permissions.administrator
         return False
     return commands.check(predicate)
 
@@ -29,7 +29,7 @@ def admins_only():
 def owners_only():
     """Check if command invoker is in list of owners defined in config.py"""
     def predicate(ctx):
-        return ctx.message.author.id in OWNERS
+        return ctx.message.author.id == OWNER_ID
     return commands.check(predicate)
 
 
