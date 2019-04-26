@@ -16,6 +16,7 @@ from collections import defaultdict
 from datetime import datetime
 from contextlib import suppress
 from time import time
+from ext.converters import URLConverter, SoundURLConverter
 
 import discord
 import gtts
@@ -515,8 +516,13 @@ class SoundCog(BaseCog):
                 _out = ""
                 for sound in sub_dir.sound_list:
                     _out += f"{sound}\n"
+                if not _out:
+                    return await ctx.send(
+                        f"No sounds for category **`{category}`**"
+                        )
                 return await self.send_embed_message(
-                    ctx, sub_dir.header, _out, color=sub_dir.color)
+                    ctx, sub_dir.header, _out, color=sub_dir.color
+                    )
         # Raise exception if no sound directory matches category
         else:
             await self.send_error_msg(ctx, f"No such category **`{category}`**.\n"
@@ -742,7 +748,7 @@ class SoundCog(BaseCog):
         return filename
 
     @commands.command(name="dl")
-    async def dl(self, ctx: commands.Context, url: str=None) -> None:
+    async def dl(self, ctx: commands.Context, url: URLConverter=None) -> None:
         """Lazy download sound command.
 
         Depending on arguments received, 
@@ -757,7 +763,8 @@ class SoundCog(BaseCog):
             Can not be None if message has no attachment.
         """     
         if ctx.message.attachments or url and any(
-                filetype in url for filetype in VALID_FILE_TYPES):
+                url.path.lower().endswith(filetype) 
+                for filetype in VALID_FILE_TYPES):
             cmd = self.bot.get_command("add_sound")
             await ctx.invoke(cmd, url)
         
