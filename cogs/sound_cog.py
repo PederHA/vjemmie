@@ -497,7 +497,9 @@ class SoundCog(BaseCog):
         """
 
         # Formatted string of sound categories
-        categories = ", ".join([f"**`{sd.folder}`**" for sd in self.sub_dirs])
+        categories = ", ".join(
+            [f"**`{sd.folder}`**" for sd in self.sub_dirs if sd.sound_list]
+            )
 
         # Raise exception if no category argument is given
         if not category:
