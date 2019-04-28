@@ -686,6 +686,7 @@ class BaseCog(commands.Cog):
                                  header: str,
                                  text: str,
                                  limit: int=None,
+                                 msg_text: str=None,
                                  *,
                                  color: Union[str, int]=None,
                                  footer: bool=True,
@@ -758,7 +759,10 @@ class BaseCog(commands.Cog):
 
         # Send each embed object to ctx.channel
         for embed in embeds:
-            await ctx.send(embed=embed)
+            if embed == embeds[0]:
+                await ctx.send(content=msg_text, embed=embed)
+            else:
+                await ctx.send(embed=embed)
 
     async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> None:
         """Reads local text file and sends contents to `ctx.channel`"""
