@@ -52,9 +52,9 @@ class AvatarCog(BaseCog):
         """
         # Use message author's avatar if no user is specified
         if not user:
-            user_avatar_url = ctx.message.author.avatar_url.split("?")[0] # remove ?size=1024 suffix since a lower res image danker anyway
+            user_avatar_url = ctx.message.author.avatar_url._url.split("?")[0] # remove ?size=1024 suffix since a lower res image danker anyway
         elif isinstance(user, discord.Member):
-            user_avatar_url = user.avatar_url
+            user_avatar_url = user.avatar_url._url
         elif isinstance(user, str):
             user_avatar_url = user
 
