@@ -497,15 +497,20 @@ class SoundCog(BaseCog):
         """
 
         # Formatted string of sound categories
-        categories = ", ".join(
+        categories = "\n".join(
             [f"**`{sd.folder}`**" for sd in self.sub_dirs if sd.sound_list]
             )
-
-        # Raise exception if no category argument is given
+        
+        # Raise exception if all sound directories are empty
+        if not categories:
+            raise AttributeError("Soundboard has no sound files!")
+        
+        # Prompt user to specify category if message lacks category argument
         if not category:
-            await ctx.send(
-                f"Specify a category.\nType **`!{ctx.invoked_with}`** + {categories}"
-            )
+            await self.send_embed_message(ctx,
+                                          header="Categories", 
+                                          text=categories)
+            await ctx.send(f"\nType **`!{ctx.invoked_with}`** + **`<category>`**")
             self.reset_command_cooldown(ctx)
             return
 
