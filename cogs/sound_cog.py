@@ -252,7 +252,7 @@ class SoundCog(BaseCog):
 
         s = list(chain(*[sf.sound_list for sf in self.sub_dirs]))
         if not s:
-            raise Exception("No sound files sound folder")
+            raise ValueError("No local sound files exist!")
         return s
 
     async def cleanup(self, guild):
@@ -363,10 +363,7 @@ class SoundCog(BaseCog):
                 if arg in sub_dir.sound_list:
                     return sub_dir.path, arg
             else:
-                if not arg:
-                    return await parse_sound_name(random.choice(self.sound_list))
-                else:
-                    raise discord.DiscordException(f"Could not find sound with name {arg}")
+                raise AttributeError(f"Could not find sound with name {arg}")
 
         arg = " ".join(args)
 
@@ -380,9 +377,18 @@ class SoundCog(BaseCog):
         else:
             # Try to parse provided sound name
             try:
-                subdir, sound_name = await parse_sound_name(arg)
+                if arg:
+                    subdir, sound_name = await parse_sound_name(arg)
+                else:
+                    # Fails if no local sound files exist
+                    subdir, sound_name = await parse_sound_name(random.choice(self.sound_list))
+            
+            # Just raise SoundCog.sound_list exception
+            except ValueError as e:
+                raise
+            
             # Attempt to suggest sound files with similar names if no results
-            except:
+            except AttributeError:
                 embeds = await ctx.invoke(self.search, arg, rtn=True)
                 dym = "Did you mean:" if embeds else ""
                 await ctx.send(f"No sound with name **`{arg}`**. {dym}")
