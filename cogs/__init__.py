@@ -20,6 +20,7 @@ from cogs.meme_cog import MemeCog
 from cogs.stats_cog import StatsCog
 from cogs.management_cog import ManagementCog
 from cogs.test_cog import TestCog
+from cogs.twitter_cog import TwitterCog
 
 # Private cogs. You can delete this if you cloned the repo
 with suppress(ImportError):
