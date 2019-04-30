@@ -16,6 +16,10 @@ session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
 
 class TwitterCog(BaseCog):
+    """Twitter commands"""
+    
+    EMOJI = "<:twitter:572746936658952197>"
+
     DIRS = ["db/twitter"]
     FILES = [USERS_FILE]
 
@@ -25,7 +29,7 @@ class TwitterCog(BaseCog):
         self.tweets: Dict[str, List[Tuple[str, str]]] = {}
         
         # Key: Username, Value: markovify text model
-        self.text_models: Dict[str, markovify.Text] = {}
+        self.text_models: Dict[str, markovify.NewlineText] = {}
         
         for user in self.get_users():
             self.create_commands(user)
@@ -61,6 +65,7 @@ class TwitterCog(BaseCog):
 
     @commands.command(name="add_twitter")
     async def add_twitter(self, ctx: commands.Context, user: str) -> None:
+        """Add twitter user."""
         try:
             await self.get_tweets(user)
         except Exception as e:
@@ -81,6 +86,8 @@ class TwitterCog(BaseCog):
 
     @commands.command(name="twitters")
     async def show_twitter_users(self, ctx: commands.Context) -> None:
+        """Displays added twitter users."""
+
         users = "\n".join([user for user in self.get_users()])
         
         if not users:
