@@ -96,6 +96,17 @@ class StatsCog(BaseCog):
         else:
             # Get 5 most recent commits if no days argument
             commits = list(islice(_c, 5))
+        
+        if not commits:
+            if days:
+                # Wrong type but w/e ill fix later
+                raise AttributeError(
+                    f"No changes have been made in the past {days} days!"
+                    )
+            else:
+                raise AttributeError(
+                    "Could not fetch changes from GitHub, try again later!"
+                    )
 
         # Format commit hash + message
         out_commits = "\n".join(
@@ -104,7 +115,7 @@ class StatsCog(BaseCog):
             for commit in commits
             ]
         )
-
+        
         # Check if return type is passed in
         if rtn_type == list:
             # List of github.Commit objects
@@ -115,6 +126,7 @@ class StatsCog(BaseCog):
         else:
             await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
 
+    
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
