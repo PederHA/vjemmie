@@ -1,6 +1,9 @@
 import random
+import time
 from functools import partial
 from typing import Dict, Iterable, List, Tuple
+from collections import namedtuple
+
 
 import discord
 import markovify
@@ -11,125 +14,170 @@ from cogs.base_cog import BaseCog
 
 import asyncio
 import json
+import lxml
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
 
+TwitterUser = namedtuple("TwitterUser", "user modified tweets aliases", defaults=[[]])
+Tweet = namedtuple("Tweet", "text url")
+
 class TwitterCog(BaseCog):
     """Twitter commands"""
-    
+
     EMOJI = "<:twitter:572746936658952197>"
 
     DIRS = ["db/twitter"]
     FILES = [USERS_FILE]
 
+    TWITTER_PAGES = 20
+    MARKOV_LEN = 140
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        # Key: Username, Value: tweet URL, tweet text
-        self.tweets: Dict[str, List[Tuple[str, str]]] = {}
         
+        # K: Username, V: TwitterUser
+        self.users: Dict[str, TwitterUser] = self.get_users()
+
         # Key: Username, Value: markovify text model
         self.text_models: Dict[str, markovify.NewlineText] = {}
-        
-        for user in self.get_users():
-            self.create_commands(user)
-  
-    def get_users(self) -> List[str]:
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
 
-    def dump_users(self, users: List[str]) -> None:
-        with open(USERS_FILE, "w") as f:
-            json.dump(users, f)
-    
-    def create_commands(self, user: str) -> None:
-        user = user.lower()
+        for user in self.users.values():
+            self.create_commands(user)
+
+    def get_users(self) -> List[str]:
+        # NOTE: I am looking to move this into utils.serialization
+        # as a general-purpose JSON deserialization function that 
+        # can be used by any cogs that read and store data using JSON files
+        f = open(USERS_FILE, "r")
+        try:
+            users =  json.load(f)
+        except json.decoder.JSONDecodeError:
+            contents = f.read()
+            f.close()
+            new_fn = f"{USERS_FILE.split('.', 1)[0]}_damaged.txt"
+            with open(new_fn, "w") as df:
+                print(f"{USERS_FILE} is damaged! "
+                f"Saving old file as {new_fn} and creating blank {USERS_FILE}.\n"
+                "Manual correction of errors in original file must be performed before "
+                "attempting to use it")
+                df.write(contents)
+            f = open(USERS_FILE, "w")
+            f.write("[]")
+            f.close()
+            users = {}
         
+        users_new = {}
+        for user, values in users.items():
+            users_new[user] = TwitterUser(*values)
+        return users_new
+                
+    def dump_users(self) -> None:
+        with open(USERS_FILE, "w") as f:
+            json.dump(self.users, f, indent=4)
+
+    def create_commands(self, user: TwitterUser) -> None:
+        username = user.user.lower()
+        aliases = user.aliases
+
         # Make command that fetches random tweet URL
-        _u_cmd = asyncio.coroutine(partial(self._twitter_url_cmd, user=user))
-        url_cmd = commands.command(name=f"{user}")(_u_cmd)
+        _u_cmd = asyncio.coroutine(partial(self._twitter_url_cmd, user=username))
+        url_cmd = commands.command(name=f"{username}", aliases=aliases)(_u_cmd)
 
         # Make command that generates tweet using markov chain
-        _m_cmd = asyncio.coroutine(partial(self._twitter_markov_cmd, user=user))
-        markov_cmd = commands.command(name=f"{user}_markov", aliases=[f"{user}m"])(_m_cmd)
+        _m_cmd = asyncio.coroutine(partial(self._twitter_markov_cmd, user=username))
+        markov_cmd = commands.command(name=f"{username}_markov", 
+                                      aliases=[f"{alias}m" for alias in aliases] or [f"{username}m"]
+                                      )(_m_cmd)
 
         self.bot.add_command(url_cmd)
         self.bot.add_command(markov_cmd)
 
     async def _twitter_url_cmd(self, ctx: commands.Context, user: str) -> None:
-        tweets = await self.get_tweets(user)
-        await ctx.send(random.choice([tweet[0] for tweet in tweets]))
+        tweets = self.users[user].tweets
+        await ctx.send(random.choice(tweets)[0])
 
     async def _twitter_markov_cmd(self, ctx: commands.Context, user: str) -> None:
         await ctx.send(await self.generate_sentence(user))
-
-    @commands.command(name="add_twitter")
-    async def add_twitter(self, ctx: commands.Context, user: str) -> None:
+    
+    @commands.group(name="twitter")
+    async def twitter(self, ctx: commands.Context) -> None:
+        cmds = ", ".join([f"**`{command.name}`**" for command in ctx.command.commands])
+        if ctx.invoked_subcommand is None:
+            await ctx.send(f"No argument provided! Must be one of: {cmds}.")
+    
+    @twitter.command(name="add")
+    async def add_twitter_user(self, ctx: commands.Context, user: str, *aliases) -> None:
         """Add twitter user."""
+        await ctx.message.channel.trigger_typing()
+        user = user.lower()
         try:
-            await self.get_tweets(user)
+            await self.get_tweets(user, aliases=aliases)
         except Exception as e:
             return await ctx.send(
                 f"Can't fetch tweets for {user}. Verify that the user exists!"
                 )
         else:
-            self._add_user(user)
+            self.create_commands(self.users[user])
             await ctx.send(f"Added {user}!")
 
-    def _add_user(self, user: str) -> None:
-        users = self.get_users()
-        
-        if user not in users:
-            users.append(user)
-            self.create_commands(user)
-            self.dump_users(users)
-
-    @commands.command(name="twitters")
+    
+    @twitter.command(name="update")
+    async def update_tweets(self, ctx: commands.Context, user: str) -> None:
+        user = user.lower()
+        if user in self.users:
+            try:
+                await self.get_tweets(user)
+            except Exception as e:
+                await self.log_error(ctx, e.args)
+                await ctx.send(
+                    f"Something went wrong when attempting to fetch new tweets for {user}"
+                    )
+            else:
+                await ctx.send(f"Updated {user} successfully!")
+        else:
+            await ctx.send("User is not added! "
+            f"Type **`{self.bot.command_prefix}twitter add <user>`** or ")
+    
+    @twitter.command(name="users", aliases=["show", "list"])
     async def show_twitter_users(self, ctx: commands.Context) -> None:
         """Displays added twitter users."""
 
-        users = "\n".join([user for user in self.get_users()])
-        
+        users = "\n".join([user for user in self.users])
+
         if not users:
             return await ctx.send("No twitter users added! "
-            f"Type {self.bot.command_prefix}add_twitter <user> to add a user"
+            f"Type `{self.bot.command_prefix}twitter add <user>` to add a user"
             )
-        
+
         await self.send_embed_message(ctx, header="Twitter users", text=users)
 
-    # Pending removal
-    @commands.command(name="stevend", aliases=["dognonce"])
-    async def stevend(self, ctx: commands.Context) -> None:
-        tweets = await self.get_tweets("SteveDawson0972")
-        await ctx.send(random.choice(tweets[0]))
-    
-    # Pending removal
-    @commands.command(name="stevendm", aliases=["stevendmarkov"])
-    async def stevend_markov(self, ctx: commands.Context) -> None:
-        await ctx.send(await self.generate_sentence("SteveDawson0972"))
 
-    async def get_tweets(self, user: str) -> List[str]:
+    async def get_tweets(self, user: str, aliases=None) -> List[Tuple[str, str]]:
         """Retrieves tweets for a specific user.
         
         Checks if user's tweets are cached in TwitterCog.tweets before
         attempting to scrape tweets from user's Twitter page.
         """
-        tweets = self.tweets.get(user)
-        if tweets:
-            return tweets
-        
-        to_run = partial(self._get_tweets, user, pages=10)
-        try:
-            tweets = list(
-                await self.bot.loop.run_in_executor(None, to_run)
-                )
-        except Exception as e:
-            raise OSError(f"Could not fetch tweets for {user}")
-        else:
-            self.tweets[user] = tweets
-            return tweets
 
-    def _get_tweets(self, user: str, pages: int=10) -> Iterable[str]:
+        to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
+        tweets = []
+        try:
+            for tweet in await self.bot.loop.run_in_executor(None, to_run):
+                tweets.append(tweet)
+        except ValueError as e:
+            raise IOError(f"Could not fetch tweets for {user}")
+        except lxml.etree.ParserError:
+            pass
+        finally:
+            if tweets:
+                self.users[user] = TwitterUser(user, time.time(), tweets, aliases)
+                self.dump_users()
+                
+            else:
+                raise ValueError(f"Something went wrong when fetching tweets for {user}")
+
+    def _get_tweets(self, user: str, pages: int) -> Iterable[str]:
         """Modified version of https://github.com/kennethreitz/twitter-scraper.
 
         Generator of tweet URLs or tweet text from a specific user.
@@ -175,10 +223,14 @@ class TwitterCog(BaseCog):
                         f'Oops! Either "{user}" does not exist or is private.')
 
                 tweets = []
-                for tweet in html.find('.stream-item'):   
-                    text = tweet.find('.tweet-text')[0].full_text
-                    _url = f"https://twitter.com/{user}/status/{tweet.attrs['data-item-id']}"          
-                    tweets.append((_url, text))
+                for tweet in html.find('.stream-item'):
+                    try:
+                        text = tweet.find('.tweet-text')[0].full_text.split(
+                            "pic.twitter.com")[0].split("https://")[0]
+                        _url = f"https://twitter.com/{user}/status/{tweet.attrs['data-item-id']}"
+                        tweets.append((_url, text))
+                    except:
+                        pass
 
                 last_tweet = html.find('.stream-item')[-1].attrs['data-item-id']
 
@@ -191,27 +243,30 @@ class TwitterCog(BaseCog):
                 pages += -1
 
         yield from gen_tweets(pages)
-    
+
     async def generate_sentence(self, user: str, length: int=140) -> str:
-        _tweets = await self.get_tweets(user)
-        tweets = [tweet[1].split("pic.twitter")[0] for tweet in _tweets]
+        if user not in self.users:
+            await self.get_tweets(user)
+        
+        _tweets = self.users[user].tweets
+        tweets = [tweet[1] for tweet in _tweets]
 
         text_model = await self.get_text_model(user, tweets)
-        
-        to_run = partial(text_model.make_short_sentence, 140, tries=300)
+
+        to_run = partial(text_model.make_short_sentence, length, tries=300)
         sentence = await self.bot.loop.run_in_executor(None, to_run)
-        
+
         if not sentence:
             raise OSError("Could not generate text!") # I'll find a better exception class
 
         return sentence
-    
+
     async def get_text_model(self, user: str, text: List[str]) -> markovify.Text:
         text_model = self.text_models.get(user)
-        
+
         if not text_model:
             t = "\n".join([_t for _t in text])
             text_model = markovify.NewlineText(t)
             self.text_models[user] = text_model
-        
+
         return text_model
