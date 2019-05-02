@@ -52,6 +52,7 @@ class TwitterCog(BaseCog):
         f = open(USERS_FILE, "r")
         try:
             users =  json.load(f)
+            f.close()
         except json.decoder.JSONDecodeError:
             contents = f.read()
             f.close()
@@ -124,6 +125,8 @@ class TwitterCog(BaseCog):
     
     @twitter.command(name="update")
     async def update_tweets(self, ctx: commands.Context, user: str) -> None:
+        """Update tweets for a specific user."""
+
         user = user.lower()
         if user in self.users:
             try:
@@ -159,6 +162,8 @@ class TwitterCog(BaseCog):
         Checks if user's tweets are cached in TwitterCog.tweets before
         attempting to scrape tweets from user's Twitter page.
         """
+        if not aliases:
+            aliases = []
 
         to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
         tweets = []
@@ -171,7 +176,17 @@ class TwitterCog(BaseCog):
             pass
         finally:
             if tweets:
+                # Add fetched tweets to existing user's tweets if they exist
+                if self.users.get(user):
+                    tweets = set(tuple(tweets))
+                    old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in self.users[user].tweets))
+                    tweets.update(set(old_tweets))
+                    tweets = list(tweets)
+                
+                # Update users with fetched Twitter user
                 self.users[user] = TwitterUser(user, time.time(), tweets, aliases)
+                
+                # Save users to file
                 self.dump_users()
                 
             else:
@@ -245,12 +260,15 @@ class TwitterCog(BaseCog):
         yield from gen_tweets(pages)
 
     async def generate_sentence(self, user: str, length: int=140) -> str:
+        # Add user if username passed in is not added to database
         if user not in self.users:
             await self.get_tweets(user)
         
+        # Get tweet text only
         _tweets = self.users[user].tweets
         tweets = [tweet[1] for tweet in _tweets]
 
+        # Create text model based on tweets
         text_model = await self.get_text_model(user, tweets)
 
         to_run = partial(text_model.make_short_sentence, length, tries=300)
@@ -262,6 +280,7 @@ class TwitterCog(BaseCog):
         return sentence
 
     async def get_text_model(self, user: str, text: List[str]) -> markovify.Text:
+        # Check if we have already created a text model for this user
         text_model = self.text_models.get(user)
 
         if not text_model:
