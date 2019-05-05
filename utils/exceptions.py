@@ -12,3 +12,7 @@ class EmptyArgsError(Exception):
 
 class InvalidObjectType(Exception):
     pass
+
+class NoContextException(Exception):
+    """Raised if bot cannot retrieve context from call stack."""
+    pass
