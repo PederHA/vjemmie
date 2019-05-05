@@ -16,6 +16,7 @@ from collections import defaultdict
 from datetime import datetime
 from contextlib import suppress
 from time import time
+import sys
 from ext.converters import URLConverter, SoundURLConverter
 
 import discord
@@ -23,6 +24,7 @@ import gtts
 import youtube_dl
 from async_timeout import timeout
 from discord.ext import commands
+from discord.opus import load_opus
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
@@ -220,7 +222,10 @@ class SoundCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-
+        
+        if sys.platform == "linux":
+            load_opus("libopus.so.0")
+        
         # Create SoundDirectory instance for each subdirectory
         self.sub_dirs = [
                          SoundDirectory(
