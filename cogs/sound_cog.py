@@ -206,7 +206,7 @@ class SoundDirectory:
             [
             i.rsplit(".", 1)[0]
             for i in os.listdir(self.path)
-            if any([i.endswith(ext) for ext in VALID_FILE_TYPES]) # Only include known compatible containers
+            if any(i.endswith(ext) for ext in VALID_FILE_TYPES) # Only include known compatible containers
             ],
             key=lambda f: f.lower()) # Sort case insensitive
 
