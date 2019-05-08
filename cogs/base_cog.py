@@ -362,11 +362,7 @@ class BaseCog(commands.Cog):
         error : Exception
             Exception that was raised
         """
-        # NOTE: The paragraph under might be incorrect after the new `cog_command_error()` method was added
-
-        # Sometimes two instances of the class instance is passed in, totaling 4 args instead of 3
-        # My hypothesis might be wrong here, and the extra arg actually has a purpose
-        # I have not investigated it properly
+        # This might have been fixed in a recent version of Discord.py
         if bugged_params:
             ctx = error
             error = bugged_params[0]
@@ -380,30 +376,46 @@ class BaseCog(commands.Cog):
             return await ctx.send(
                 f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
                 f"Try again in {error.retry_after:.2f}s")
-            #return await ctx.send(f"{error.args[0]}")
         
-        if hasattr(error, "original"):
-            return await self.send_error_msg(ctx, error.original.args[0])
-
-        # Get error message
-        if hasattr(error, "original"):
-            # Result of raised exception
-            # `raise discord.DiscordException("error")`
-            error_msg = error.original.args[0]
-            #return await self._unknown_error(ctx, error_msg)
         else:
-            # Result of "real" exception
-            # `n = 1 / 0`
-            error_msg = error.args[0]
+            return await self._handle_error(ctx, error)
 
-        await self._unknown_error(ctx, error_msg)
+
 
     # UNFINISHED
     async def parse_error(self, error: BaseException) -> None:
         if isinstance(error.original, PermissionError):
             return error.original.args[0]
 
-    async def _unknown_error(self, ctx: commands.Context, error_msg: str):
+    async def _handle_error(self, ctx: commands.Context, error: Exception) -> None:
+        # Show user original error message of these exception types
+        SHOW = [
+            commands.errors.MissingRequiredArgument,
+            ZeroDivisionError
+            ]
+        
+        # Don't log traceback of these exception types
+        IGNORE_EXC = [
+            commands.errors.MissingRequiredArgument
+        ]
+        
+        if (any(isinstance(error, err) for err in SHOW) or
+            any(isinstance(error.original, err) for err in SHOW)):
+            if hasattr(error, "original"):
+                msg = error.original.args[0]
+            else:
+                msg = error.args[0]
+
+        else:
+            msg = "An unknown error occured"
+
+        # Log traceback in logging channel if exception type is not ignored
+        log_error = not any(isinstance(error, err) for err in IGNORE_EXC)
+
+        await self.send_error_msg(ctx, msg, log_error=log_error)
+
+
+    async def send_error_msg(self, ctx: commands.Context, error_msg: str, *, log_error: bool=True):
         """Method called when raised exception is not recognized
         by `BaseCog.cog_command_error()`
         
@@ -414,17 +426,14 @@ class BaseCog(commands.Cog):
         error_msg : `str`
             Error message
         """
-        # List of error messages to ignore
-        ignore = []
-        if not any(x in error_msg for x in ignore):
-            out_msg = f"**Error:** {error_msg}"
-        else:
-            out_msg = "An error occured."
-        await ctx.send(out_msg) # Display error to user
 
-        # Get formatted traceback
-        traceback_msg = traceback.format_exc()
-        await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
+        # Display error to user
+        await ctx.send(f"ERROR: {error_msg}")
+        
+        if log_error:
+            # Get formatted traceback
+            traceback_msg = traceback.format_exc()
+            await self.log_error(ctx, traceback_msg) # Send entire exception traceback to log channel
 
     async def get_aiohttp_session(self, ctx: commands.Context) -> aiohttp.ClientSession:
         """Retrieves per-guild aiohttp.ClientSession session object. 
@@ -797,9 +806,7 @@ class BaseCog(commands.Cog):
                 not url.endswith(p.hostname)
                 )
 
-    async def send_error_msg(self, ctx: commands.Context, msg: str) -> None:
-        """Sends text message to `ctx.channel` prepended with error-text."""
-        await self.send_text_message(f"**ERROR:** {msg}", ctx)
+
 
     async def log_file_download(self,
                                 ctx: commands.Context,
