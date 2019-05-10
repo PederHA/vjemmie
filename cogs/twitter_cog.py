@@ -43,7 +43,7 @@ class TwitterCog(BaseCog):
         for user in self.users.values():
             self.create_commands(user)
 
-    def get_users(self) -> List[str]:
+    def get_users(self) -> dict:
         # NOTE: I am looking to move this into utils.serialization
         # as a general-purpose JSON deserialization function that 
         # can be used by any cogs that read and store data using JSON files
