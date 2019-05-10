@@ -67,8 +67,9 @@ class TwitterCog(BaseCog):
             users = {}
         
         users_new = {}
-        for user, values in users.items():
-            users_new[user] = TwitterUser(*values)
+        if users:
+            for user, values in users.items():
+                users_new[user] = TwitterUser(*values)
         return users_new
                 
     def dump_users(self) -> None:
