@@ -1,20 +1,18 @@
+import asyncio
+import json
 import random
 import time
+from collections import namedtuple
 from functools import partial
 from typing import Dict, Iterable, List, Tuple
-from collections import namedtuple
-
 
 import discord
+import lxml
 import markovify
 from discord.ext import commands
 from requests_html import HTML, HTMLSession
 
 from cogs.base_cog import BaseCog
-
-import asyncio
-import json
-import lxml
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
@@ -159,15 +157,15 @@ class TwitterCog(BaseCog):
     async def get_tweets(self, user: str, aliases=None) -> List[Tuple[str, str]]:
         """Retrieves tweets for a specific user.
         
-        Checks if user's tweets are cached in TwitterCog.tweets before
-        attempting to scrape tweets from user's Twitter page.
+        If user already has saved tweets, new tweets are added to
+        existing list of tweets.
         """
         if not aliases:
             aliases = []
-
-        to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
+        
         tweets = []
         try:
+            to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
             for tweet in await self.bot.loop.run_in_executor(None, to_run):
                 tweets.append(tweet)
         except ValueError as e:
@@ -177,11 +175,13 @@ class TwitterCog(BaseCog):
         finally:
             if tweets:
                 # Add fetched tweets to existing user's tweets if they exist
-                if self.users.get(user):
+                _user = self.users.get(user)
+                if _user:
                     tweets = set(tuple(tweets))
-                    old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in self.users[user].tweets))
+                    old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in _user.tweets))
                     tweets.update(set(old_tweets))
                     tweets = list(tweets)
+                    aliases = _user.aliases
                 
                 # Update users with fetched Twitter user
                 self.users[user] = TwitterUser(user, time.time(), tweets, aliases)
@@ -204,8 +204,7 @@ class TwitterCog(BaseCog):
         pages : `int`, optional
             Number of pages to return tweets from. 
             25 is the maximum allowed number of pages.
-
-        
+     
         Raises
         ------
         ValueError
@@ -265,8 +264,7 @@ class TwitterCog(BaseCog):
             await self.get_tweets(user)
         
         # Get tweet text only
-        _tweets = self.users[user].tweets
-        tweets = [tweet[1] for tweet in _tweets]
+        tweets = [tweet[1] for tweet in self.users[user].tweets]
 
         # Create text model based on tweets
         text_model = await self.get_text_model(user, tweets)
