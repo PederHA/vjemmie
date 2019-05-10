@@ -10,10 +10,10 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 
-from cogs.base_cog import BaseCog
+from cogs.base_cog import BaseCog, EmbedField
 from cogs.sound_cog import AudioPlayer
 from ext.checks import admins_only, disabled_cmd
-
+from itertools import chain
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -112,7 +112,7 @@ class ManagementCog(BaseCog):
         await self.bot.loop.run_in_executor(None, to_run)
 
     
-    async def _get_cogs_by_help_status(self) -> Tuple[List[str]]:   
+    async def _get_cogs_by_help_status(self) -> Tuple[list, list]:   
         enabled = []
         disabled = []
         
@@ -129,3 +129,25 @@ class ManagementCog(BaseCog):
                 }
         with open("db/cogs.json", "w") as f:
             json.dump(out_dict, f, indent=4)
+
+    @commands.command(name="fs")
+    async def get_dirs_files(self, ctx: commands.Context) -> None:
+        # Get all cogs
+        cogs = await self.get_cogs(all_cogs=True)
+        
+        # Get lists of files and directories belonging to each cog
+        dirs = list(chain.from_iterable([cog.DIRS for cog in cogs if cog.DIRS]))
+        files = list(chain.from_iterable([cog.FILES for cog in cogs if cog.FILES]))
+        
+        # Make embed fields for files and directories
+        f_field = EmbedField(name="Files", value="\n".join(files))
+        d_field = EmbedField(name="Directories", value="\n".join(dirs))
+        
+        embed = await self.get_embed(ctx, fields=[f_field, d_field])
+        await ctx.send(embed=embed)
+
+
+    @commands.command(name="ping")
+    async def ping(self, ctx: commands.Context) -> None:  
+        ws_ping = round(self.bot.ws.latency*100)
+        await ctx.send(f"Ping: {ws_ping}ms")
