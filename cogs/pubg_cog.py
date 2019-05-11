@@ -62,6 +62,9 @@ class PUBGCog(BaseCog):
                 "hot_idx": 9
                 }
         }
+        if not map_:
+            _maps = ",".join([f"**`{m}`**" for m in MAPS.keys()])
+            return await ctx.send(f"No map specified! Choose one of: {_maps}")
 
         # Get PUBG map
         pubgmap = MAPS.get(map_.lower())
