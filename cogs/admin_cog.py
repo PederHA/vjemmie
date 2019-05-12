@@ -18,7 +18,7 @@ class AdminCog(BaseCog):
         """Sets activity and prints a message when cog is instantiated 
         and added to the bot.
         """
-        activity_name = "!help" if not activity_name else activity_name
+        activity_name = f"{self.bot.command_prefix}about" if not activity_name else activity_name
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
         print("Bot logged in")
