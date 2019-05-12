@@ -5,19 +5,20 @@ import traceback
 from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Union
 from urllib.parse import urlparse, urlsplit
-from pathlib import Path
 
 import aiohttp
 import discord
 import requests
-from discord.ext import commands
 from discord import Embed
+from discord.ext import commands
 
-from config import (DOWNLOADS_ALLOWED, AUTHOR_MENTION, #DISABLE_HELP,
-                    DOWNLOAD_CHANNEL_ID, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
-                    MAX_DL_SIZE, GUILD_HISTORY_CHANNEL)
+from config import (  # DISABLE_HELP,
+    AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
+    GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
+from utils.exceptions import VJEMMIE_EXCEPTIONS, CommandError
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -391,8 +392,10 @@ class BaseCog(commands.Cog):
         # Show user original error message of these exception types
         SHOW = [
             commands.errors.MissingRequiredArgument,
-            ZeroDivisionError
+            ZeroDivisionError,
+            discord.DiscordException
             ]
+        SHOW = SHOW + VJEMMIE_EXCEPTIONS
         
         # Don't log traceback of these exception types
         IGNORE_EXC = [
@@ -405,7 +408,6 @@ class BaseCog(commands.Cog):
                 msg = error.original.args[0]
             else:
                 msg = error.args[0]
-
         else:
             msg = "An unknown error occured"
 
@@ -604,7 +606,7 @@ class BaseCog(commands.Cog):
             _out_str += f"`!{cmd_name}:` {command.short_doc}\n"
         
         if not _out_str:
-            raise AttributeError("Cog has no commands!")
+            raise CommandError("Cog has no commands!")
 
         
         if rtn:
