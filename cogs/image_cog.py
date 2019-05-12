@@ -13,7 +13,7 @@ from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
 from ext.checks import owners_only, pfm_cmd
-from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
+from utils.exceptions import InvalidURLError, NonImgUrlError, WordExceededLimit
 
 
 class ImageCog(BaseCog):
@@ -204,6 +204,8 @@ class ImageCog(BaseCog):
             img_nobg = io.BytesIO(response.content)
             img_nobg.seek(0)
             return img_nobg
+        else:
+            raise Exception(response)
    
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)

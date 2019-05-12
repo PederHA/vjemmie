@@ -17,7 +17,7 @@ import numpy as np
 import requests
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageEnhance
 
-from utils.exceptions import InvalidURL, NonImgURL, WordExceededLimit
+from utils.exceptions import InvalidURLError, NonImgUrlError, WordExceededLimit
 
 
 class ImageFryer:
