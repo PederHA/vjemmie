@@ -589,13 +589,8 @@ class BaseCog(commands.Cog):
         _out_str = ""
         for command in _commands:
             
-            # Hide commands that fail for current context
-            check_failed = False
-            for check in command.checks:
-                if not check(ctx):
-                    check_failed = True
-                    break
-            if check_failed or command.hidden:
+            # Skip commands that fail for current context or are hidden
+            if not await command.can_run(ctx) or command.hidden:
                 continue
             
             # Show/hide command signature (displays aliases, args, etc.)
