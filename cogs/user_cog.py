@@ -36,9 +36,10 @@ class UserCog(BaseCog):
             else:
                 cogs.append(cog)
         
+        # Raise exception if no cog commands are available
         if not cogs:
             raise CogError(
-                "Bot has no cogs, or cog commands are not available for the current server or channel."
+                "Bot has no cogs, or cog commands are unavailable for the current server or channel."
                 )
         
         # Send help message for specific category
