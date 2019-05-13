@@ -8,6 +8,9 @@ from discord.ext import commands
 from cogs.base_cog import BaseCog, EmbedField
 from config import AUTHOR_MENTION
 
+from utils.exceptions import CommandError, CategoryError
+
+
 class UserCog(BaseCog):
     """Help commands."""
 
@@ -23,8 +26,16 @@ class UserCog(BaseCog):
         if simple in ["n", "-", "advanced"]:
             simple = False
         
-        cogs = await self.get_cogs()
-
+        # Only include cogs that have commands that pass checks for current ctx
+        cogs = []
+        for cog in await self.get_cogs():
+            try:
+                await cog._get_cog_commands(ctx, rtn=True)
+            except CommandError: # Cog has no commands that pass checks
+                pass
+            else:
+                cogs.append(cog)
+            
         # Send help message for specific category
         if cog_name:
             cog_name = cog_name.lower()
