@@ -20,6 +20,9 @@ class CategoryError(Exception):
 class CommandError(Exception):
     pass
 
+class CogError(Exception):
+    pass
+
 __all__ = [
     "WordExceededLimit", "NonImgUrlError", "InvalidURLError", 
     "EmptyArgsError", "NoContextException",

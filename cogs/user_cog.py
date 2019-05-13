@@ -8,7 +8,7 @@ from discord.ext import commands
 from cogs.base_cog import BaseCog, EmbedField
 from config import AUTHOR_MENTION
 
-from utils.exceptions import CommandError, CategoryError
+from utils.exceptions import CommandError, CategoryError, CogError
 
 
 class UserCog(BaseCog):
@@ -35,7 +35,12 @@ class UserCog(BaseCog):
                 pass
             else:
                 cogs.append(cog)
-            
+        
+        if not cogs:
+            raise CogError(
+                "Bot has no cogs, or cog commands are not available for the current server or channel."
+                )
+        
         # Send help message for specific category
         if cog_name:
             cog_name = cog_name.lower()
