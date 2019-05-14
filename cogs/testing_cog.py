@@ -62,7 +62,3 @@ class TestingCog(BaseCog):
         """Drop into debugger for TestingCog."""
         breakpoint()
         print("yeah!")
-    
-    @commands.command(name="yeah")
-    async def yeah(self, ctx):
-        await ctx.send("yeah")
