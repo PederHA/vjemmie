@@ -63,7 +63,6 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        #self.setup()
 
         # Load subreddits
         self.subs = self.load_subs()
@@ -636,7 +635,9 @@ class RedditCog(BaseCog):
                               time: str = None,
                               post_limit: int = None,
                               is_text: bool = False,
-                              allow_nsfw: bool = False) -> None:
+                              allow_nsfw: bool = False,
+                              rtn_posts: bool = False
+                              ) -> None:
         # Parse arguments to params sorting & time
         sorting = await self.check_sorting(ctx, sorting) # "top"/"hot"
         time = await self.check_time(ctx, time) # "all", "year", "month", "week", "day"
@@ -654,6 +655,9 @@ class RedditCog(BaseCog):
                 f"Cannot retrieve **r/{subreddit}** submissions! " 
                 "Subreddit might be quarantined."
                 )
+        
+        if rtn_posts:
+            return posts
         
         # Select a random post from list of posts
         while True:
