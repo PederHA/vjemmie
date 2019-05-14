@@ -24,14 +24,13 @@ class StatsCog(BaseCog):
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
 
-    @commands.command(name="uptime")
+    @commands.command(name="uptime", aliases=["up"])
     async def uptime(self, ctx: commands.Context, *, rtn: bool=False) -> str:
         """Bot uptime."""
         up = datetime.now() - self.bot.start_time
         days = up.days
         hours, remainder = divmod(up.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        # If you want to take into account fractions of a second
         seconds += round(up.microseconds / 1e6)
         
         # Returns empty string if number is 0
@@ -44,7 +43,7 @@ class StatsCog(BaseCog):
         if rtn:
             return uptime
         
-        await ctx.send("Bot has been up for "+uptime)
+        await ctx.send(f"Bot has been up for {uptime}")
         
 
     @commands.command(name="get_players")
@@ -116,13 +115,11 @@ class StatsCog(BaseCog):
             ]
         )
         
-        # Check if return type is passed in
-        if rtn_type == list:
-            # List of github.Commit objects
-            return commits
-        elif rtn_type == str:
-            # Formatted string
-            return out_commits
+        # Check if a return type is passed in
+        if rtn_type is list:
+            return commits # List of github.Commit objects
+        elif rtn_type is str:
+            return out_commits # Message string
         else:
             await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
 
