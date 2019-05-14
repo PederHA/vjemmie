@@ -65,4 +65,4 @@ class TestingCog(BaseCog):
     
     @commands.command(name="yeah")
     async def yeah(self, ctx):
-        await ctx.send("yeah3")
+        await ctx.send("yeah")
