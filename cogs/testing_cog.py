@@ -3,9 +3,12 @@ import unicodedata
 import discord
 import requests
 from discord.ext import commands
+from datetime import datetime
+import time
 
 from cogs.base_cog import BaseCog
 from ext.checks import owners_only
+from utils.experimental import get_ctx
 
 
 class TestingCog(BaseCog):
@@ -59,3 +62,7 @@ class TestingCog(BaseCog):
         """Drop into debugger for TestingCog."""
         breakpoint()
         print("yeah!")
+    
+    @commands.command(name="yeah")
+    async def yeah(self, ctx):
+        await ctx.send("yeah")
