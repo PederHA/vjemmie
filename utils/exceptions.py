@@ -23,10 +23,16 @@ class CommandError(Exception):
 class CogError(Exception):
     pass
 
+class FileTypeError(Exception):
+    """Invalid filetype in a given context"""
+
+class FileSizeError(Exception):
+    """File Size too small or too large"""
+
 __all__ = [
     "WordExceededLimit", "NonImgUrlError", "InvalidURLError", 
-    "EmptyArgsError", "NoContextException",
-    "CategoryError", "CommandError"
+    "EmptyArgsError", "NoContextException", "CategoryError",
+    "CommandError", "CogError", "FileTypeError", "FileSizeError",
 ]
 
 VJEMMIE_EXCEPTIONS = [
