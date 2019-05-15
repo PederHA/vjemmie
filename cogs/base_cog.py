@@ -18,7 +18,7 @@ from discord.ext import commands
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
     GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
-from utils.exceptions import VJEMMIE_EXCEPTIONS, CommandError
+from utils.exceptions import VJEMMIE_EXCEPTIONS, CommandError, FileTypeError, FileSizeError
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -28,8 +28,6 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 
 EmbedField = namedtuple("EmbedField", "name value inline", defaults=[True])
 
-class InvalidFiletype(Exception):
-    """Invalid filetype in a given context"""
 
 class FileSizeError(Exception):
     """File Size too small or too large"""
@@ -381,8 +379,6 @@ class BaseCog(commands.Cog):
         else:
             return await self._handle_error(ctx, error)
 
-
-
     # UNFINISHED
     async def parse_error(self, error: BaseException) -> None:
         if isinstance(error.original, PermissionError):
@@ -392,7 +388,7 @@ class BaseCog(commands.Cog):
         # Show user original error message of these exception types
         SHOW = [
             commands.errors.MissingRequiredArgument,
-            ZeroDivisionError,
+            MemoryError,
             discord.DiscordException
             ]
         SHOW = SHOW + VJEMMIE_EXCEPTIONS
@@ -496,6 +492,10 @@ class BaseCog(commands.Cog):
         if resp.content_length > self.MAX_DL_SIZE:
             raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
         
+        # Check available RAM
+        if resp.content_length > psutil.virtual_memory().available * 0.9:
+            raise MemoryError(f"Not enough memory to download file!")
+        
         # Download content
         data = await resp.read()
         
@@ -522,7 +522,7 @@ class BaseCog(commands.Cog):
         # Check if url has an image extension
         file_name, ext = await self.get_filename_extension_from_url(image_url)
         if ext.lower() not in self.IMAGE_EXTENSIONS:
-            raise InvalidFiletype("Attempted to upload a non-image file")
+            raise FileTypeError("Attempted to upload a non-image file")
 
         # Get file-like bytes stream (io.BytesIO)
         file_bytes = await self.download_from_url(ctx, image_url)
