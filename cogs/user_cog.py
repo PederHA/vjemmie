@@ -69,7 +69,7 @@ class UserCog(BaseCog):
         l = []
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
-            with suppress(CogError):
+            with suppress(CommandError):
                 cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
         
