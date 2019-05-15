@@ -69,10 +69,15 @@ class UserCog(BaseCog):
         l = []
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
-            with suppress(AttributeError):
+            with suppress(CogError):
                 cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
-        out = "\n".join(l)   
+        
+        if not l:
+            raise CommandError("No commands are available!")
+        
+        out = "\n".join(l)
+           
         await self.send_embed_message(ctx, "Commands", out, color="red")
     
     
