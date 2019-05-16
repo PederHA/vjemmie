@@ -18,7 +18,8 @@ from discord.ext import commands
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
     GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
-from utils.exceptions import VJEMMIE_EXCEPTIONS, CommandError, FileTypeError, FileSizeError
+from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
+                              CommandError, FileSizeError, FileTypeError)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -278,7 +279,7 @@ class BaseCog(commands.Cog):
             for field in fields:
                 # Make sure fields contains EmbedField objects           
                 if not isinstance(field, EmbedField):
-                    raise TypeError(f"'fields' must be a list of EmbedField objects!")
+                    raise discord.DiscordException(f"'fields' must be a list of EmbedField objects!")
                 
                 # Use inline kw-only arg if given, otherwise use EmbedField's inline value
                 il = inline if inline is not None else field.inline
@@ -305,7 +306,7 @@ class BaseCog(commands.Cog):
         Generator of discord users in voice channel of ctx.message.author.
         """
         if not hasattr(ctx.message.author.voice, "channel"):
-            raise AttributeError("Message author is not connected to a voice channel.")
+            raise discord.DiscordException("Message author is not connected to a voice channel.")
 
         for member in ctx.message.author.voice.channel.members:
             if member.nick and nick:
@@ -455,7 +456,7 @@ class BaseCog(commands.Cog):
 
         # Check if downloads are enabled in config. 
         if not self.DOWNLOADS_ALLOWED:
-            raise PermissionError("Downloads are not allowed for this bot!")
+            raise BotPermissionError("Downloads are not allowed for this bot!")
         
         # Add bot attribute keeping track of aiohttp ClientSession objects
         if not hasattr(self.bot, "sessions"):
@@ -493,7 +494,7 @@ class BaseCog(commands.Cog):
             raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
         
         # Check available RAM
-        if resp.content_length > psutil.virtual_memory().available * 0.9:
+        if resp.content_length * 2 > psutil.virtual_memory().available:
             raise MemoryError(f"Not enough memory to download file!")
         
         # Download content
@@ -634,7 +635,7 @@ class BaseCog(commands.Cog):
         elif channel_id:
             channel = self.bot.get_channel(channel_id)
         else:
-            raise Exception('"ctx" or "channel_id" must be specified')
+            raise discord.DiscordException('"ctx" or "channel_id" must be specified')
 
         # Split string into chunks
         chunks = await self._split_string_to_chunks(text)
@@ -681,7 +682,7 @@ class BaseCog(commands.Cog):
         
         else:
             if chunk_len > limit:
-                raise ValueError(
+                raise discord.DiscordException(
                     "String does not have enough newline characters to split by!"
                     )
             if chunk:
@@ -789,7 +790,7 @@ class BaseCog(commands.Cog):
             os.path.basename(urlsplit(url).path))
 
         if not extension:
-            raise AttributeError("URL has no file extension")
+            raise discord.DiscordException("URL has no file extension")
 
         return fname, extension
 
@@ -850,7 +851,7 @@ class BaseCog(commands.Cog):
         if add_msg:
             msg += f" {add_msg}"
         if not self.DOWNLOADS_ALLOWED:
-            raise PermissionError(msg)
+            raise BotPermissionError(msg)
         
     async def get_cogs(self, *, all_cogs: bool=False) -> list:
         """Returns list of cogs, sorted by name. Optionally includes
