@@ -1,8 +1,8 @@
+import argparse
 import io
 import traceback
 from functools import partial
 from typing import Optional
-import argparse
 
 import discord
 import requests
@@ -13,7 +13,9 @@ from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
 from ext.checks import owners_only, pfm_cmd
-from utils.exceptions import InvalidURLError, NonImgUrlError, WordExceededLimit
+from utils.exceptions import (BotException, FileSizeError,
+                              InvalidURLError, NonImgUrlError,
+                              WordExceededLimit)
 
 
 class ImageCog(BaseCog):
@@ -102,7 +104,7 @@ class ImageCog(BaseCog):
         
         Raises
         ------
-        ValueError
+        `discord.DiscordException`
             Raised if ctx.message has no image URL or image attachment
         
         Returns
@@ -112,7 +114,7 @@ class ImageCog(BaseCog):
         """
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
-            raise ValueError("URL or attachment must be an image file!")
+            raise discord.DiscordException("URL or attachment must be an image file!")
 
         try:
             # Download image if url if not a file-like object
@@ -230,7 +232,7 @@ class ImageCog(BaseCog):
                 else:
                     break
             else:
-                raise Exception("Image is way, way, way too large")
+                raise FileSizeError("Image is way, way, way too large")
         
         new_img = io.BytesIO()
         image = image.resize((new_w, new_h), resample=Image.BICUBIC)
@@ -254,7 +256,7 @@ class ImageCog(BaseCog):
                 tries +=1
                 if tries > 2000:
                     # Completely arbitrary number, but lets us have an exit clause
-                    raise Exception("Fatal exception")
+                    raise BotException("Fatal exception")
        
         n = await get_division_n(width, height, target)
         return int(abs(width//n)), int(abs(height//n))
