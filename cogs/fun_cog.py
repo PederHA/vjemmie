@@ -24,8 +24,9 @@ class FunCog(BaseCog):
                       description='Random roll. Provide number argument to specify range (1-100 default).')
     async def roll(self, ctx: commands.Context, lower: Union[int, str]=0, upper: Union[int, str]=100) -> None:
         """!roll 0-<high> or <low> <high>"""
-        type_err = "Upper and lower range must be integers!"
+        type_err = "Upper and lower bounds must be integers!"
         
+        # Check if user passed in bounds as "<upper>-<lower>"
         if isinstance(lower, str) and "-" in lower:
             lower, upper = lower.split("-")
             try:
@@ -33,6 +34,7 @@ class FunCog(BaseCog):
             except ValueError:
                 return await ctx.send(type_err)
         
+        # Raise exception if lower or upper bound is str
         if isinstance(lower, str) or isinstance(upper, str):
             return await ctx.send(type_err)
         
