@@ -19,7 +19,7 @@ from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
     GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
-                              CommandError, FileSizeError, FileTypeError)
+                              CommandError, FileSizeError, FileTypeError, CategoryError)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -396,23 +396,23 @@ class BaseCog(commands.Cog):
         
         # Don't log traceback of these exception types
         IGNORE_EXC = [
-            commands.errors.MissingRequiredArgument
+            commands.errors.MissingRequiredArgument,
+            CategoryError
         ]
         
         if (any(isinstance(error, err) for err in SHOW) or
             any(isinstance(error.original, err) for err in SHOW)):
+            # Use original exception
             if hasattr(error, "original"):
-                msg = error.original.args[0]
-            else:
-                msg = error.args[0]
+                error = error.original
+            msg = error.args[0]
         else:
             msg = "An unknown error occured"
 
-        # Log traceback in logging channel if exception type is not ignored
+        # Log traceback in logging channel if exception class is not ignored
         log_error = not any(isinstance(error, err) for err in IGNORE_EXC)
 
         await self.send_error_msg(ctx, msg, log_error=log_error)
-
 
     async def send_error_msg(self, ctx: commands.Context, error_msg: str, *, log_error: bool=True):
         """Method called when raised exception is not recognized
