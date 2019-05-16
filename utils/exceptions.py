@@ -32,6 +32,9 @@ class FileSizeError(Exception):
 class BotPermissionError(Exception):
     """Bot lacks permissions to perform action"""
 
+class BotException(Exception):
+    pass
+
 class FatalBotException(Exception):
     pass
 
