@@ -29,14 +29,21 @@ class FileTypeError(Exception):
 class FileSizeError(Exception):
     """File Size too small or too large"""
 
-__all__ = [
-    "WordExceededLimit", "NonImgUrlError", "InvalidURLError", 
-    "EmptyArgsError", "NoContextException", "CategoryError",
-    "CommandError", "CogError", "FileTypeError", "FileSizeError",
-]
+class BotPermissionError(Exception):
+    """Bot lacks permissions to perform action"""
+
+class FatalBotException(Exception):
+    pass
+
+#__all__ = [
+#    "WordExceededLimit", "NonImgUrlError", "InvalidURLError", 
+#    "EmptyArgsError", "NoContextException", "CategoryError",
+#    "CommandError", "CogError", "FileTypeError", "FileSizeError",
+#    "BotPermissionError", "FatalBotException"
+#]
 
 VJEMMIE_EXCEPTIONS = [
     v for k, v in dict(locals()).items()
-    if any(k.endswith(_end) for _end in ["Exception", "Error"]) and 
-    issubclass(v, Exception)
+    #if k in __all__ and issubclass(v, Exception)
+    if hasattr(v, "__bases__") and Exception in v.__bases__
 ]
