@@ -1,17 +1,18 @@
 import asyncio
+import io
+import math
 import random
 import traceback
-import io
-from pprint import pprint
 from functools import partial
-import math
+from pprint import pprint
 from typing import Union
 
 import discord
+import requests
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-import requests
+from utils.exceptions import CommandError
 
 
 class FunCog(BaseCog):
@@ -36,7 +37,7 @@ class FunCog(BaseCog):
         
         # Raise exception if lower or upper bound is str
         if isinstance(lower, str) or isinstance(upper, str):
-            return await ctx.send(type_err)
+            return await ctx.send(f"{type_err}. Did you mean **`!random`**?")
         
         await ctx.send(random.randint(lower, upper))
             
@@ -44,16 +45,16 @@ class FunCog(BaseCog):
     async def roll2(self, ctx: commands.Context, *args) -> None:
         """
         Select from  <item1, item2, ..., itemlast>
-        """
-        if args[0] in ["c", "channel"]:
+        """    
+        # Parse args
+        if args and args[0] in ["c", "channel"]:
             to_roll = [user async for user in self.get_users_in_voice(ctx)]
-        
         elif len(args)>1:
-            to_roll = list(args)
+            to_roll = list(args)          
+        else:
+            raise CommandError("At least two items separated by spaces are required!")       
         
-        choice = random.choice(to_roll)
-        
-        await ctx.send(choice)
+        await ctx.send(random.choice(to_roll))
     
     @commands.command(name="braille")
     async def braille(self, ctx: commands.Context, *text: str) -> None:
