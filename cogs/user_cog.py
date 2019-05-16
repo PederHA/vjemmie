@@ -49,7 +49,7 @@ class UserCog(BaseCog):
                 if cog_name == cog.cog_name.lower():
                     return await cog._get_cog_commands(ctx, simple)
             else:
-                raise discord.DiscordException(f"No such category **{cog_name}**.")
+                raise CategoryError(f"No such category **{cog_name}**.")
           
         # Send message listing all possible !help categories if no category
         # Make an embed field for each cog
