@@ -668,7 +668,7 @@ class SoundCog(BaseCog):
         await self.bot.loop.run_in_executor(None, to_run)
 
         # Confirm creation of file
-        await ctx.send(f'TTS file created: **`{sound_name}`**')
+        await ctx.send(f'TTS audio file created: **`{sound_name}`**')
 
         # Try to play created sound file in author's voice channel afterwards
         with suppress(AttributeError):
