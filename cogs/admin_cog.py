@@ -115,7 +115,7 @@ class AdminCog(BaseCog):
 
     @commands.command(name="blacklist")
     @admins_only()
-    async def add_to_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
+    async def blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
         if member: # Proceed if discord.commands.MemberConverter returns a member
             blacklist = load_blacklist() # Get most recent version of blacklist
             if member.id not in blacklist:
@@ -144,7 +144,7 @@ class AdminCog(BaseCog):
     
     @commands.command(name="unblacklist", aliases=["remove_blacklist", "rblacklist"])
     @admins_only()
-    async def remove_from_blacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
+    async def unblacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
         if member: # Proceed if discord.commands.MemberConverter returns a member
             blacklist = load_blacklist() # Get most recent version of blacklist
             if member.id in blacklist:
@@ -173,12 +173,10 @@ class AdminCog(BaseCog):
     @admins_only()
     async def timeout(self, ctx: commands.Context, member: commands.MemberConverter, duration_min: Union[int, float]=30) -> None:
         sleep_duration_sec = 60 * duration_min
-        blacklist_cmd = self.bot.get_command("blacklist")
-        unblacklist_cmd = self.bot.get_command("unblacklist")
-        await ctx.invoke(blacklist_cmd, member, output=False)
+        await ctx.invoke(self.blacklist, member, output=False)
         await ctx.send(f"Timing out {member.name} for {sleep_duration_sec} seconds.")
         await asyncio.sleep(sleep_duration_sec)
-        await ctx.invoke(unblacklist_cmd, member, output=False)
+        await ctx.invoke(self.unblacklist, member, output=False)
         await ctx.send(f"Timeout ended for {member.name}")
 
     @commands.command(name="delete_messages", aliases=["dlt"])
@@ -207,7 +205,7 @@ class AdminCog(BaseCog):
                                ctx: commands.Context, 
                                message_id: int, 
                                emoji: str,
-                               channel_id: int) -> None:
+                               channel_id: int=None) -> None:
         """Adds emoji reaction to a specific message posted in
         `ctx.channel` or in a specific channel."""
         # Get channel
