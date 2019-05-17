@@ -33,9 +33,9 @@ class AdminCog(BaseCog):
         """Called when bot leaves a guild."""
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
     
-    @commands.command(aliases=["change_activity"])
+    @commands.command(aliases=["ca"])
     @admins_only()
-    async def ca(self, ctx: commands.Context, activity_name: Optional[str]=None) -> None:
+    async def change_activity(self, ctx: commands.Context, activity_name: Optional[str]=None) -> None:
         """Changes bot activity.
         
         Parameters
