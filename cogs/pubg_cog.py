@@ -121,7 +121,7 @@ class PUBGCog(BaseCog):
             return await ctx.send("Can't roll crate for 1 player.")
         
         else:
-            squad = args
+            squad = players
 
         # Limit names to one word
         squad = [name.split(" ")[0] for name in squad]
