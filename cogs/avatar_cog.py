@@ -59,12 +59,10 @@ class AvatarCog(BaseCog):
             user_avatar_url = user
 
         # Download user's avatar
-        with open("memes/temp/temp.webp", "wb") as f:
-            avatar_img = await self.download_from_url(ctx, user_avatar_url)
-            f.write(avatar_img.read())
+        avatar_img = await self.download_from_url(ctx, user_avatar_url)
 
         # Open user's avatar
-        user_avatar = Image.open("memes/temp/temp.webp", "r")
+        user_avatar = Image.open(avatar_img)
 
         # Open template
         background = Image.open(f"memes/templates/{template}", "r")
