@@ -11,6 +11,7 @@ from urllib.parse import urlparse, urlsplit
 
 import aiohttp
 import discord
+import psutil
 import requests
 from discord import Embed
 from discord.ext import commands
@@ -19,7 +20,8 @@ from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
     GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
-                              CommandError, FileSizeError, FileTypeError, CategoryError)
+                              CategoryError, CommandError, FileSizeError,
+                              FileTypeError)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
