@@ -35,4 +35,4 @@ class WeatherCog(BaseCog):
         now_temp_c = weather_now["location"]["temperature"]["@value"]
         now_wind_mps = weather_now["location"]["windSpeed"]["@mps"]
         
-        await ctx.send(f"{loc.capitalize()}: {now_temp_c}°C, {now_wind_mps} m/s")
+        await ctx.send(f"{location.capitalize()}: {now_temp_c}°C, {now_wind_mps} m/s")
