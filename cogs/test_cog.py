@@ -25,8 +25,13 @@ class TestCog(BaseCog):
     
     @commands.command(name="run_tests", aliases=["runtest"])
     async def run_tests(self, ctx: commands.Context) -> None:
+        # Store test results
         test_results = {}
+
+        # Patch ctx to disable message sending
         ctx = await self.patch_ctx(ctx)
+        
+        # Find tests
         for k in dir(self):
             if k.startswith("test_"):
                 coro = getattr(self, k)
@@ -41,10 +46,14 @@ class TestCog(BaseCog):
                         test_results[k] = r
         else:
             print("Tests completed!")
+            
+            # Restore original ctx
             ctx = self.original_ctx
 
-            passed = "Passed:\n"+"\n".join([k for k, v in test_results.items() if v])
+            # Format results
+            passed = "\n".join([k for k, v in test_results.items() if v])
             failed = "\n".join([k for k, v in test_results.items() if not v])
+            
             if not failed:
                 result = "All tests passed!"
             elif not passed:
@@ -55,6 +64,9 @@ class TestCog(BaseCog):
             
 
     async def patch_ctx(self, ctx: commands.Context) -> commands.Context:
+        """Patches the `send()` method of a 
+        `discord.ext.commands.Context` object with a dummy method
+        that disables message sending while tests are running."""
         async def new_send(*args, **kwargs):
             pass
         self.original_ctx = copy.copy(ctx)
@@ -62,14 +74,14 @@ class TestCog(BaseCog):
         return ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
-        try:
-            cmd_n, raise_exc, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
-        except:
-            print(coro_or_cmd, args, kwargs)
-        
+        # Pop specific kwargs
+        raise_exc = kwargs.pop("raise_exc", False) # Whether to raise test assertion errors or not
         ctx = kwargs.pop("ctx", None)
         assertion = kwargs.pop("assertion", None)
 
+        # Get name of command or coro, str formatted args and str formatted kwargs
+        cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
+        
         # Show args & kwargs if verbose is enabled
         a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
 
@@ -82,9 +94,9 @@ class TestCog(BaseCog):
             if raise_exc:
                 raise
             print(traceback.format_exc())
-            msg = f"{cmd_n} {a_kw} FAIL ❌"
+            msg = f"{cmd_name} {a_kw} FAIL ❌"
         else:
-            msg = f"{cmd_n} {a_kw} PASS ✔️" 
+            msg = f"{cmd_name} {a_kw} PASS ✔️" 
         finally:
             print(msg)
     
@@ -95,14 +107,11 @@ class TestCog(BaseCog):
         except:
             coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.name}"
         
-        # Whether to raise test assertion errors or not
-        raise_exc = kwargs.pop("raise_exc", False)        
-        
         # String formatted args, kwargs
         _args = f"\t{args}" if args else ""
         _kwargs = f"\t{kwargs}" if kwargs else ""
 
-        return coro_or_cmd_name, raise_exc, _args, _kwargs      
+        return coro_or_cmd_name, _args, _kwargs      
     
     async def do_test_coro(self, coro, *args, **kwargs) -> None:
         return await self._do_test(coro, *args, **kwargs)
@@ -204,8 +213,7 @@ class TestCog(BaseCog):
 
         # Sleep between image uploads to be nice to Discord
         await asyncio.sleep(5)
- 
-        
+   
         attachment = discord.Attachment(
             data={
                 "filename" : "Gfw036Q.png",
