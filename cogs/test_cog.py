@@ -3,6 +3,9 @@ import discord
 from cogs.base_cog import BaseCog
 import asyncio
 from unittest.mock import Mock
+import inspect
+import traceback
+import copy
 
 
 class TestCog(BaseCog):
@@ -22,18 +25,51 @@ class TestCog(BaseCog):
     
     @commands.command(name="run_tests", aliases=["runtest"])
     async def run_tests(self, ctx: commands.Context) -> None:
-        for command in self.get_commands():
-            if not command.name.startswith("test_"):
-                continue
-            await ctx.invoke(command)
+        test_results = {}
+        ctx = await self.patch_ctx(ctx)
+        for k in dir(self):
+            if k.startswith("test_"):
+                coro = getattr(self, k)
+                if inspect.iscoroutinefunction(coro):
+                    try:
+                        await coro(ctx)
+                    except:
+                        r = False
+                    else:
+                        r = True
+                    finally:
+                        test_results[k] = r
+        else:
+            print("Tests completed!")
+            ctx = self.original_ctx
+
+            passed = "Passed:\n"+"\n".join([k for k, v in test_results.items() if v])
+            failed = "\n".join([k for k, v in test_results.items() if not v])
+            if not failed:
+                result = "All tests passed!"
+            elif not passed:
+                result = "All tests failed"
+            else:
+                result = f"Passed:\n{passed}\n\nFailed:\n{failed}\n"
+            await self.send_text_message(result, ctx)
+            
+
+    async def patch_ctx(self, ctx: commands.Context) -> commands.Context:
+        async def new_send(*args, **kwargs):
+            pass
+        self.original_ctx = copy.copy(ctx)
+        ctx.send = new_send
+        return ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
-        cmd_n, raise_exc, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
+        try:
+            cmd_n, raise_exc, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
+        except:
+            print(coro_or_cmd, args, kwargs)
         
         ctx = kwargs.pop("ctx", None)
         assertion = kwargs.pop("assertion", None)
-        
-        
+
         # Show args & kwargs if verbose is enabled
         a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
 
@@ -45,9 +81,10 @@ class TestCog(BaseCog):
         except:
             if raise_exc:
                 raise
-            msg = f"{cmd_n} {a_kw} failed!"
+            print(traceback.format_exc())
+            msg = f"{cmd_n} {a_kw} FAIL ❌"
         else:
-            msg = f"{cmd_n} {a_kw} passed! OK" 
+            msg = f"{cmd_n} {a_kw} PASS ✔️" 
         finally:
             print(msg)
     
@@ -67,44 +104,95 @@ class TestCog(BaseCog):
 
         return coro_or_cmd_name, raise_exc, _args, _kwargs      
     
-    async def test_coro(self, coro, *args, **kwargs) -> None:
+    async def do_test_coro(self, coro, *args, **kwargs) -> None:
         return await self._do_test(coro, *args, **kwargs)
  
-    async def test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:    
+    async def do_test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:    
+        if isinstance(cmd, str):
+            #if cmd == "mlady":
+            #    breakpoint()
+            cmd = self.bot.get_command(cmd)
+        if not cmd:
+            raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
         return await self._do_test(cmd, *args, **kwargs, ctx=ctx)    
     
     #########################################
     #####             TESTS             #####
     #########################################
 
-    @commands.command(name="test_is_img_url")
-    async def test_is_img_url(self, ctx: commands.Context) -> None:
-        urls = [
-            "https://cdn.discordapp.com/avatars/103890994440728576/aab962dd36a3a9ce906ce06729dd6619.webp?size=1024",
-            "https://cdn.discordapp.com/attachments/549649397420392567/566333674640113684/deepfried.jpg",
-            "https://i.imgur.com/Gfw036Q.png",
-            "https://i.imgur.com/Gfw036Q.PNG",
-            "https://i.imgur.com/Gfw036Q.png?yeboi=True",
-            "https://cdn.discordapp.com/attachments/348610981204590593/566394515347341312/caust.PNG",
-            "https://images-ext-2.discordapp.net/external/"
-            "UfCviSx8c0rnOwqMbm_63jZ9t97IQ6zoDdjo7I7iHbU/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/"
-            "103890994440728576/88b28f8e3afff899e4958646736d8e7e.webp",
-        ]
-        invalid_urls = [
-            "example.com/img.jpg",
-            "image.png",
-            "http://example.com/image",
-            "http://img.jpg"
-        ]
+    # AdminCog
+    async def test_admincog_change_activity(self, ctx: commands.Context) -> None:
+        cmd = self.bot.get_command("change_activity")
+        await self.do_test_command(ctx, cmd, "test activity")
+        await asyncio.sleep(0.5)
+        # Reset to default activity
+        await ctx.invoke(cmd)
+    
+    async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "serverlist")    
+    
+    # AvatarCog
+    async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
+        """AvatarCog command where `template_overlay==False`"""
+        await self.do_test_command(ctx, "fuckup")
+    
+    async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
+        """AvatarCog command where `template_overlay==True`"""
+        await self.do_test_command(ctx, "mlady")
+    
+    # FunCog
+    async def test_funcog_roll(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "roll", 1, 100)
 
-        for url in urls:
-            await self.test_coro(self.is_img_url, url, assertion=True)
-        
-        for i_url in invalid_urls:
-            await self.test_coro(self.is_img_url, i_url, assertion=False)
-        
-    @commands.command(name="test_deepfry")
-    async def test_deepfry(self, ctx: commands.Context) -> None:
+    async def test_funcog_random(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "random", "Jeff", "Steve", "Travis", "Hugo")
+
+    async def test_funcog_braille(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "braille", "testing braille command")
+
+    # PUBGCog
+    async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "drop", "erangel", "hot")
+
+    async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "crate")
+
+    # RedditCog
+    async def test_redditcog_meme(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "meme")
+
+    async def test_redditcog_reddit(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "reddit", "python")
+
+    async def test_redditcog_rsettings(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "rsettings")
+
+    async def test_redditcog_rsort(self, ctx: commands.Context) -> None:
+        cmd = self.bot.get_command("rsort")
+        await self.do_test_command(ctx, cmd)
+        await ctx.invoke(cmd)
+    
+    async def test_redditcog_rtime(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "rtime")
+    
+    async def test_redditcog_subs(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "subs")
+    
+    # SoundCog
+    async def test_soundcog_connect(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "connect")
+
+    async def test_soundcog_play(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "play", "dota")
+    
+    async def test_soundcog_queue(self, ctx: commands.Context) -> None:
+        pass
+    
+    async def test_soundcog_stop(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "stop")
+    
+    # ImageCog    
+    async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
         deepfry_cmd = self.bot.get_command("deepfry")
         
@@ -112,7 +200,7 @@ class TestCog(BaseCog):
         
         # Test command with URL argument
         print(f"Testing {self.pfix}deepfry with URL.")
-        await self.test_command(ctx, deepfry_cmd, "-url", url)        
+        await self.do_test_command(ctx, deepfry_cmd, "-url", url)        
 
         # Sleep between image uploads to be nice to Discord
         await asyncio.sleep(5)
@@ -136,4 +224,4 @@ class TestCog(BaseCog):
         
         # Test with message attachment
         print(f"Testing {self.pfix}deepfry with attachment.")
-        await self.test_command(ctx, deepfry_cmd)
+        await self.do_test_command(ctx, deepfry_cmd)
