@@ -1,14 +1,14 @@
+import sys
 from contextlib import suppress
 from random import randint
-import sys
 
 import discord
+import psutil
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
 from config import AUTHOR_MENTION
-
-from utils.exceptions import CommandError, CategoryError, CogError
+from utils.exceptions import CategoryError, CogError, CommandError
 
 
 class UserCog(BaseCog):
@@ -98,6 +98,7 @@ class UserCog(BaseCog):
             for level, permissions in levels.items()
             ]
         )
+        
         embed = await self.get_embed(ctx,
                                      author=f"Invite {self.bot.user.name}",
                                      author_icon="https://discordapp.com/assets/2c21aeda16de354ba5334551a883b481.png",
@@ -110,12 +111,28 @@ class UserCog(BaseCog):
     @commands.command(name="about", aliases=["info"])
     async def about(self, ctx: commands.Context) -> None:
         """General bot information."""
+        # Memory
+        mem = psutil.virtual_memory()
+        mem_total_mb = round(mem.total / 1000000)
+        mem_used_mb = round(mem.used / 1000000)
+        #mem_graphic = f"[{'l'*round(mem.percent/10)}{'_'*round((100-mem.percent)/10)}]"
+
+        # Soundboard
+        sound_cog = self.bot.get_cog("SoundCog")
+        try:
+            n_soundfiles = len(sound_cog.sound_list)
+        except:
+            n_soundfiles = 0
+        
         fields = [
             EmbedField(name="Owner", value=AUTHOR_MENTION),
-            EmbedField(name="Running on", value=f"<:python:570331647933677590> Python {sys.version.split(' ')[0]}"),
-            EmbedField(name="Uptime", value=await ctx.invoke(self.bot.get_command("uptime"), rtn=True)),
+            EmbedField(name="Running on", value=f"<:python:570331647933677590> Python {sys.version.split(' ')[0]}"), 
             EmbedField(name="Command categories", value=len(await self.get_cogs())),
             EmbedField(name="Useful commands", value="`!help`, `!commands`, `!changelog`"),
+            EmbedField(name="Soundboard files", value=f"{n_soundfiles}"),
+            EmbedField(name="Memory usage", value=f"{mem_used_mb} / {mem_total_mb} MB"),
+            EmbedField(name="CPU Usage", value=f"{psutil.cpu_percent()}%"),
+            EmbedField(name="Uptime", value=await ctx.invoke(self.bot.get_command("uptime"), rtn=True)),   
         ]
         
         embed = await self.get_embed(ctx,
