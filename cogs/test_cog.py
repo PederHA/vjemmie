@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import inspect
 import traceback
 import copy
+from utils.checks import owners_only
 
 
 class TestCog(BaseCog):
@@ -23,7 +24,8 @@ class TestCog(BaseCog):
         self.verbose = not self.verbose
         await ctx.send(f"Test terminal output is now {'enabled' if self.verbose else 'disabled'}")
     
-    @commands.command(name="run_tests", aliases=["runtest"])
+    @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
+    @owners_only()
     async def run_tests(self, ctx: commands.Context) -> None:
         # Store test results
         test_results = {}
