@@ -19,8 +19,7 @@ class AdminCog(BaseCog):
         and added to the bot.
         """
         activity_name = f"{self.bot.command_prefix}about" if not activity_name else activity_name
-        activity = discord.Game(activity_name)
-        await self.bot.change_presence(activity=activity)
+        await self._change_activity(activity_name)
         print("Bot logged in")
     
     @commands.Cog.listener()
@@ -32,6 +31,10 @@ class AdminCog(BaseCog):
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Called when bot leaves a guild."""
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
+    
+    async def _change_activity(self, activity_name: str) -> None:
+        activity = discord.Game(activity_name)
+        await self.bot.change_presence(activity=activity)
     
     @commands.command(aliases=["ca"])
     @admins_only()
@@ -45,7 +48,7 @@ class AdminCog(BaseCog):
         activity_name : `Optional[str]`, optional
             Name of activity.
         """
-        await self.on_ready(activity_name=activity_name)
+        await self._change_activity(activity_name)
     
     @commands.command(name="serverlist")
     @admins_only()
