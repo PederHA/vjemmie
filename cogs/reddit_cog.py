@@ -311,7 +311,7 @@ class RedditCog(BaseCog):
             ctx,
             header="Reddit settings",
             text=out,
-            color="Red",
+            color="red",
             timestamp=False)
 
 
