@@ -7,7 +7,7 @@ from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
 from cogs.base_cog import BaseCog
-from ext.converters import MemberOrURLConverter
+from utils.converters import MemberOrURLConverter
 
 
 class AvatarCog(BaseCog):

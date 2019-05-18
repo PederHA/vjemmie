@@ -17,7 +17,7 @@ from datetime import datetime
 from contextlib import suppress
 from time import time
 import sys
-from ext.converters import URLConverter, SoundURLConverter
+from utils.converters import URLConverter, SoundURLConverter
 
 import discord
 import gtts
