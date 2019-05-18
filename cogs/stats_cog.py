@@ -11,7 +11,7 @@ from itertools import islice
 
 from github import Github, GithubObject, Commit
 
-from ext.checks import owners_only
+from utils.checks import owners_only
 from botsecrets import GITHUB_TOKEN
 
 class StatsCog(BaseCog):

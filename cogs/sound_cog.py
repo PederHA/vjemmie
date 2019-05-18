@@ -28,7 +28,7 @@ from discord.opus import load_opus
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
-from ext.checks import admins_only
+from utils.checks import admins_only
 from cogs.base_cog import BaseCog
 
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR

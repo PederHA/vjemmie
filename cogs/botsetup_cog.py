@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
-from ext.checks import admins_only, load_blacklist, save_blacklist
+from utils.checks import admins_only, load_blacklist, save_blacklist
 
 
 class BotSetupCog(commands.Cog):

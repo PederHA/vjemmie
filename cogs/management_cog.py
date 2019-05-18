@@ -12,7 +12,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
 from cogs.sound_cog import AudioPlayer
-from ext.checks import admins_only, disabled_cmd
+from utils.checks import admins_only, disabled_cmd
 from itertools import chain
 
 class DateTimeEncoder(json.JSONEncoder):

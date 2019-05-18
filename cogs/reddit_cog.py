@@ -21,7 +21,7 @@ from discord.ext import commands
 
 from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
-from ext.checks import admins_only
+from utils.checks import admins_only
 
 reddit = praw.Reddit(
     client_id=REDDIT_ID,

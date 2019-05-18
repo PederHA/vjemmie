@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
-from ext.checks import admins_only, load_blacklist, save_blacklist
+from utils.checks import admins_only, load_blacklist, save_blacklist
 
 
 class AdminCog(BaseCog):
@@ -14,12 +14,11 @@ class AdminCog(BaseCog):
     
     """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
-    async def on_ready(self, *, activity_name: Optional[str]=None) -> None:
+    async def on_ready(self) -> None:
         """Sets activity and prints a message when cog is instantiated 
         and added to the bot.
         """
-        activity_name = f"{self.bot.command_prefix}about" if not activity_name else activity_name
-        await self._change_activity(activity_name)
+        await self._change_activity()
         print("Bot logged in")
     
     @commands.Cog.listener()
@@ -32,7 +31,9 @@ class AdminCog(BaseCog):
         """Called when bot leaves a guild."""
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
     
-    async def _change_activity(self, activity_name: str) -> None:
+    async def _change_activity(self, activity_name: str=None) -> None:
+        if not activity_name:
+            activity_name = f"{self.bot.command_prefix}about"
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
     

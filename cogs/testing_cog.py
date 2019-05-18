@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 
 from cogs.base_cog import BaseCog
-from ext.checks import owners_only
+from utils.checks import owners_only
 from utils.experimental import get_ctx
 
 

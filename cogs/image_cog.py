@@ -12,7 +12,7 @@ from PIL import Image
 from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
 from deepfryer.fryer import ImageFryer
-from ext.checks import owners_only, pfm_cmd
+from utils.checks import owners_only, pfm_cmd
 from utils.exceptions import (BotException, FileSizeError,
                               InvalidURLError, NonImgUrlError,
                               WordExceededLimit)
