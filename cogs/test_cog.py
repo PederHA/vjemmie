@@ -1,18 +1,26 @@
-from discord.ext import commands
-import discord
-from cogs.base_cog import BaseCog
 import asyncio
-from unittest.mock import Mock
+import copy
 import inspect
 import traceback
-import copy
-from utils.checks import owners_only
+import unittest
+from unittest.mock import Mock
 
+import discord
+from discord.ext import commands
+
+from cogs.base_cog import BaseCog
+from utils.checks import owners_only
+from utils.exceptions import CommandError
+
+class TestError(Exception):
+    pass
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
     
     DISABLE_HELP = True
+    FAIL_MSG = "{cmd_name} {a_kw} FAIL ❌"
+    PASS_MSG = "{cmd_name} {a_kw} PASS ✔️" 
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
@@ -76,10 +84,17 @@ class TestCog(BaseCog):
         return ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
-        # Pop specific kwargs
-        raise_exc = kwargs.pop("raise_exc", False) # Whether to raise test assertion errors or not
+        # Pop ctx
         ctx = kwargs.pop("ctx", None)
-        assertion = kwargs.pop("assertion", None)
+        
+        # Object to test equality of result with
+        assertion = kwargs.pop("assertion", object())
+        
+        # Assert type of result instead of value
+        assert_type = kwargs.pop("assert_type", False)
+        
+        # same as TestCase.assertRaises
+        raises = kwargs.pop("raises", None)
 
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
@@ -87,20 +102,54 @@ class TestCog(BaseCog):
         # Show args & kwargs if verbose is enabled
         a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
 
+        passed = False
         try:
             if ctx:
-                await ctx.invoke(coro_or_cmd, *args, **kwargs)
+                r = await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
-                assert await coro_or_cmd(*args, **kwargs) == assertion
-        except:
-            if raise_exc:
-                raise
-            print(traceback.format_exc())
-            msg = f"{cmd_name} {a_kw} FAIL ❌"
+                r = await coro_or_cmd(*args, **kwargs)
+            if type(assertion) != object:
+                if assert_type:
+                    assert type(r) == assertion
+                else:
+                    assert r == assertion
+        except AssertionError:
+            await self._format_assertion_error(assertion, assert_type)
+        except Exception as e:
+            passed = await self._handle_exc(e, raises)
         else:
-            msg = f"{cmd_name} {a_kw} PASS ✔️" 
+            passed = True
         finally:
+            if passed:
+                msg = self.PASS_MSG
+            else:
+                msg = self.FAIL_MSG
+            msg = msg.format(cmd_name=cmd_name, a_kw=a_kw)
             print(msg)
+            if not passed:
+                raise TestError(msg)
+    
+    async def _format_assertion_error(self, assertion, assert_type) -> None:
+        print(traceback.format_exc())
+        if type(assertion) != object:
+            if assert_type:
+                print(f"type(r) == {type(r)}", end=", ")
+            else:
+                print(f"r == {r}", end=", ")
+            print(f"assertion == {assertion}")
+    
+    async def _handle_exc(self, exc, raises) -> bool:
+        passed = False
+        if raises:
+            try:
+                assert type(exc) == raises
+            except:
+                pass
+            else:
+                passed = True
+        if not passed:
+            print(traceback.format_exc())
+        return passed
     
     async def _get_test_attrs(self, coro_or_cmd, *args, **kwargs) -> tuple:
         # Get coroutine or command's name
@@ -120,8 +169,6 @@ class TestCog(BaseCog):
  
     async def do_test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:    
         if isinstance(cmd, str):
-            #if cmd == "mlady":
-            #    breakpoint()
             cmd = self.bot.get_command(cmd)
         if not cmd:
             raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
@@ -149,11 +196,12 @@ class TestCog(BaseCog):
     
     async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==True`"""
-        await self.do_test_command(ctx, "mlady")
+        await self.do_test_command(ctx, "mlady")    
     
     # FunCog
     async def test_funcog_roll(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "roll", 1, 100)
+        await self.do_test_command(ctx, "roll", "foo", "bar", raises=CommandError)
 
     async def test_funcog_random(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "random", "Jeff", "Steve", "Travis", "Hugo")
@@ -202,6 +250,14 @@ class TestCog(BaseCog):
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
     
+    # StatsCog
+    async def test_statscog_uptime(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "uptime")
+        await self.do_test_command(ctx, "uptime", rtn=True, assertion=str, assert_type=True)
+    
+    async def test_statscog_changelog(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "changelog", rtn_type=list, assertion=list, assert_type=True)
+    
     # ImageCog    
     async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
@@ -235,3 +291,4 @@ class TestCog(BaseCog):
         # Test with message attachment
         print(f"Testing {self.pfix}deepfry with attachment.")
         await self.do_test_command(ctx, deepfry_cmd)
+
