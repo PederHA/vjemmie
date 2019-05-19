@@ -33,11 +33,11 @@ class FunCog(BaseCog):
             try:
                 lower, upper = int(lower), int(upper)
             except ValueError:
-                return await ctx.send(type_err)
+                raise CommandError(type_err)
         
         # Raise exception if lower or upper bound is str
         if isinstance(lower, str) or isinstance(upper, str):
-            return await ctx.send(f"{type_err}. Did you mean **`!random`**?")
+            raise CommandError(f"{type_err}. Did you mean **`!random`**?")
         
         await ctx.send(random.randint(lower, upper))
             
