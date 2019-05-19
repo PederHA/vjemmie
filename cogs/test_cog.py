@@ -3,6 +3,7 @@ import copy
 import inspect
 import traceback
 import unittest
+from contextlib import contextmanager
 from unittest.mock import Mock
 
 import discord
@@ -12,8 +13,10 @@ from cogs.base_cog import BaseCog
 from utils.checks import owners_only
 from utils.exceptions import CommandError
 
+
 class TestError(Exception):
     pass
+
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
@@ -38,50 +41,48 @@ class TestCog(BaseCog):
         # Store test results
         test_results = {}
 
-        # Patch ctx to disable message sending
-        ctx = await self.patch_ctx(ctx)
-        
-        # Find tests
-        for k in dir(self):
-            if k.startswith("test_"):
-                coro = getattr(self, k)
-                if inspect.iscoroutinefunction(coro):
-                    try:
-                        await coro(ctx)
-                    except:
-                        r = False
-                    else:
-                        r = True
-                    finally:
-                        test_results[k] = r
-        else:
+        # Temporarily patch ctx to disable message sending
+        with self.patch_ctx(ctx) as ctx:
+            # Find tests
+            for k in dir(self):
+                if k.startswith("test_"):
+                    coro = getattr(self, k)
+                    if inspect.iscoroutinefunction(coro):
+                        try:
+                            await coro(ctx)
+                        except:
+                            r = False
+                        else:
+                            r = True
+                        finally:
+                            test_results[k] = r
             print("Tests completed!")
-            
-            # Restore original ctx
-            ctx = self.original_ctx
 
-            # Format results
-            passed = "\n".join([k for k, v in test_results.items() if v])
-            failed = "\n".join([k for k, v in test_results.items() if not v])
-            
-            if not failed:
-                result = "All tests passed!"
-            elif not passed:
-                result = "All tests failed"
-            else:
-                result = f"Passed:\n{passed}\n\nFailed:\n{failed}\n"
-            await self.send_text_message(result, ctx)
-            
+        # Format results
+        passed = "\n".join([k for k, v in test_results.items() if v])
+        failed = "\n".join([k for k, v in test_results.items() if not v])
+        
+        if not failed:
+            result = "All tests passed!"
+        elif not passed:
+            result = "All tests failed"
+        else:
+            result = f"Passed:\n{passed}\n\nFailed:\n{failed}\n"
+        await self.send_text_message(result, ctx)
 
-    async def patch_ctx(self, ctx: commands.Context) -> commands.Context:
+    @contextmanager        
+    def patch_ctx(self, ctx: commands.Context) -> commands.Context:
         """Patches the `send()` method of a 
         `discord.ext.commands.Context` object with a dummy method
         that disables message sending while tests are running."""
         async def new_send(*args, **kwargs):
             pass
-        self.original_ctx = copy.copy(ctx)
-        ctx.send = new_send
-        return ctx
+        original_ctx = copy.copy(ctx)
+        try:
+            ctx.send = new_send
+            yield ctx
+        finally:
+            ctx = original_ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         # Pop ctx
@@ -291,4 +292,3 @@ class TestCog(BaseCog):
         # Test with message attachment
         print(f"Testing {self.pfix}deepfry with attachment.")
         await self.do_test_command(ctx, deepfry_cmd)
-
