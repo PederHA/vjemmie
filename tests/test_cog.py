@@ -39,9 +39,11 @@ class TestCog(BaseCog):
     @owners_only()
     async def run_tests(self, ctx: commands.Context) -> None:
         # Store test results
-        test_results = {}
+        passed = []
+        failed = []
 
         # Temporarily patch ctx to disable message sending
+        # while invoking bot commands
         with self.patch_ctx(ctx) as ctx:
             # Find tests
             for k in dir(self):
@@ -51,23 +53,21 @@ class TestCog(BaseCog):
                         try:
                             await coro(ctx)
                         except:
-                            r = False
+                            failed.append(k)
                         else:
-                            r = True
-                        finally:
-                            test_results[k] = r
+                            passed.append(k)
             print("Tests completed!")
 
         # Format results
-        passed = "\n".join([k for k, v in test_results.items() if v])
-        failed = "\n".join([k for k, v in test_results.items() if not v])
+        passed_fmt = "\n".join(passed)
+        failed_fmt = "\n".join(failed)
         
         if not failed:
             result = "All tests passed!"
         elif not passed:
             result = "All tests failed"
         else:
-            result = f"Passed:\n{passed}\n\nFailed:\n{failed}\n"
+            result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
 
     @contextmanager        
