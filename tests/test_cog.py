@@ -5,6 +5,7 @@ import traceback
 import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock
+from functools import wraps
 
 import discord
 from discord.ext import commands
@@ -17,18 +18,25 @@ from utils.exceptions import CommandError
 class TestError(Exception):
     pass
 
+def blocking(f):
+    f.blocking = True
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapper
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
     
     DISABLE_HELP = True
-    FAIL_MSG = "{cmd_name} {a_kw} FAIL ❌"
-    PASS_MSG = "{cmd_name} {a_kw} PASS ✔️" 
+    FAIL_MSG = "{cmd_name} {a_kw} ❌"
+    PASS_MSG = "{cmd_name} {a_kw} ✔️" 
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.verbose = False
         self.pfix = self.bot.command_prefix
+
     
     @commands.command(name="verbose")
     async def toggle_verbose(self, ctx: commands.Context) -> None:
@@ -37,18 +45,22 @@ class TestCog(BaseCog):
     
     @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
     @owners_only()
-    async def run_tests(self, ctx: commands.Context) -> None:
+    async def run_tests(self, ctx: commands.Context, skip_blocking: bool=False) -> None:
+        if not ctx.message.author.voice:
+            raise CommandError("Must be connected to a voice channel when running tests!")
+        
         # Store test results
         passed = []
         failed = []
 
-        # Temporarily patch ctx to disable message sending
-        # while invoking bot commands
+        # Temporarily patch ctx to disable message sending while invoking bot commands
         with self.patch_ctx(ctx) as ctx:
             # Find tests
             for k in dir(self):
                 if k.startswith("test_"):
                     coro = getattr(self, k)
+                    if skip_blocking and hasattr(coro, "blocking"):
+                        continue
                     if inspect.iscoroutinefunction(coro):
                         try:
                             await coro(ctx)
@@ -57,6 +69,7 @@ class TestCog(BaseCog):
                         else:
                             passed.append(k)
             print("Tests completed!")
+            await ctx.invoke(self.bot.get_command("stop"))
 
         # Format results
         passed_fmt = "\n".join(passed)
@@ -191,10 +204,12 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "serverlist")    
     
     # AvatarCog
+    @blocking
     async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==False`"""
         await self.do_test_command(ctx, "fuckup")
     
+    @blocking
     async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==True`"""
         await self.do_test_command(ctx, "mlady")    
@@ -216,11 +231,14 @@ class TestCog(BaseCog):
 
     async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate")
+        await self.do_test_command(ctx, "crate", "c", raises=CommandError)
 
     # RedditCog
+    @blocking
     async def test_redditcog_meme(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "meme")
-
+    
+    @blocking
     async def test_redditcog_reddit(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "reddit", "python")
 
@@ -258,6 +276,19 @@ class TestCog(BaseCog):
     
     async def test_statscog_changelog(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog", rtn_type=list, assertion=list, assert_type=True)
+    
+    # TwitterCog
+    @blocking
+    async def test_twittercog_add(self, ctx: commands.Context) -> None:
+        twitter_cog = self.bot.get_cog("TwitterCog")
+        username = "vjemmie_test"
+        if username in twitter_cog.users:
+            await self.do_test_command(ctx, "twitter add", username, raises=CommandError)
+        else:
+            await self.do_test_command(ctx, "twitter add", username)
+    
+    async def test_twittercog_users(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "twitter users")
     
     # ImageCog    
     async def _test_deepfry(self, ctx: commands.Context) -> None:
