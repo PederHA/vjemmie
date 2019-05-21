@@ -13,7 +13,8 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-from utils.checks import dgvgk_cmd
+from utils.checks import dgvgk_cmd, test_server_cmd
+from utils.exceptions import CommandError
 
 
 class War3Cog(BaseCog):
@@ -52,11 +53,7 @@ class War3Cog(BaseCog):
                 rating = round(rating*40)
                 if len(name) > 10:
                     name = name[:10]
-                # Align rows. Kinda hacky, looking for better solution.
-                name_spc = " " * (10 - len(name))
-                rating_spc = " " * (10 - len(str(rating)))
-                wins_spc = " " * (6 - len(str(wins)))
-                output += f"{name}{name_spc}\tRating: {rating}{rating_spc}Wins: {wins}{wins_spc}Losses: {losses}\n"
+                output += f"{name.ljust(10)}\tRating: {str(rating).ljust(10)}Wins: {str(wins).ljust(6)}Losses: {losses}\n"
         output += "```"
         if post_game:
             deletion_timer = 60.0
@@ -99,17 +96,12 @@ class War3Cog(BaseCog):
                 try:
                     msg = await self.bot.wait_for("message", check=pred, timeout=10.0)
                 except asyncio.TimeoutError:
-                    await ctx.send("No reply from user. Aborting.")
-                    raise Exception("User did not reply to confirmation prompt.")
+                    return await ctx.send("No reply from user. Aborting.")
                 if msg.content.lower() not in  ["yes", "y", "ja"]:
-                    await ctx.send("Aborting rating update.")
-                    raise Exception
+                    return await ctx.send("Aborting rating update.")
         
-        # Could use sets for this as well, but this is pretty clear
-        for name in winners:
-            if name in losers:
-                await ctx.send(f"{name} cannot be on both teams.")
-                raise Exception("!add: Duplicate name on winning and losing team")
+        for name in winners and name in losers:
+            raise CommandError(f"{name} cannot be on both teams.")
         
         # Get players from db as list of namedtuples        
         players = self.db.get_players(game, alias=alias)
