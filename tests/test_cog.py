@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-from utils.checks import owners_only
+from utils.checks import owners_only, test_server_cmd
 from utils.exceptions import CommandError
 
 
@@ -21,8 +21,8 @@ class TestError(Exception):
 def blocking(f):
     f.blocking = True
     @wraps(f)
-    def wrapper(*args, **kwargs):
-        return f(*args, **kwargs)
+    async def wrapper(*args, **kwargs):
+        return await f(*args, **kwargs)
     return wrapper
 
 class TestCog(BaseCog):
@@ -45,6 +45,7 @@ class TestCog(BaseCog):
     
     @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
     @owners_only()
+    @test_server_cmd()
     async def run_tests(self, ctx: commands.Context, skip_blocking: bool=False) -> None:
         if not ctx.message.author.voice:
             raise CommandError("Must be connected to a voice channel when running tests!")
@@ -53,6 +54,7 @@ class TestCog(BaseCog):
         passed = []
         failed = []
 
+        coros = []
         # Temporarily patch ctx to disable message sending while invoking bot commands
         with self.patch_ctx(ctx) as ctx:
             # Find tests
@@ -62,14 +64,18 @@ class TestCog(BaseCog):
                     if skip_blocking and hasattr(coro, "blocking"):
                         continue
                     if inspect.iscoroutinefunction(coro):
+                        #coros.append(coro)
                         try:
                             await coro(ctx)
                         except:
                             failed.append(k)
                         else:
                             passed.append(k)
+            #tasks = [asyncio.ensure_future(coro(ctx)) for coro in coros]
+            #self.bot.loop.call_soon_threadsafe(asyncio.gather(*tasks))
+            await ctx.invoke(self.bot.get_command("destroy"))
             print("Tests completed!")
-            await ctx.invoke(self.bot.get_command("stop"))
+            #await ctx.invoke(self.bot.get_command("stop"))
 
         # Format results
         passed_fmt = "\n".join(passed)
@@ -82,7 +88,15 @@ class TestCog(BaseCog):
         else:
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
-
+    
+    async def _run_coro(self, coro) -> bool:
+        try:
+            await coro(ctx)
+        except:
+            return False
+        else:
+            return True
+    
     @contextmanager        
     def patch_ctx(self, ctx: commands.Context) -> commands.Context:
         """Patches the `send()` method of a 
@@ -96,7 +110,7 @@ class TestCog(BaseCog):
             yield ctx
         finally:
             ctx = original_ctx
-
+    
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         # Pop ctx
         ctx = kwargs.pop("ctx", None)
@@ -268,6 +282,9 @@ class TestCog(BaseCog):
     
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
+
+    async def test_soundcog_destroy(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "destroy")
     
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
