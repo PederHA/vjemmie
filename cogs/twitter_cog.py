@@ -13,6 +13,7 @@ from discord.ext import commands
 from requests_html import HTML, HTMLSession
 
 from cogs.base_cog import BaseCog
+from utils.exceptions import CommandError
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
@@ -111,6 +112,11 @@ class TwitterCog(BaseCog):
         """Add twitter user."""
         await ctx.message.channel.trigger_typing()
         user = user.lower()
+
+        if user in self.users:
+            raise CommandError(f"{user} is already added! " 
+                f"Type **`{self.bot.command_prefix}twitter update {user}`** to fetch newest tweets for {user}.")
+
         try:
             await self.get_tweets(user, aliases=aliases)
         except Exception as e:
