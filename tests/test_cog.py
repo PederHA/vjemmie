@@ -17,6 +17,7 @@ from discord.ext import commands
 from cogs.base_cog import BaseCog
 from utils.checks import owners_only, test_server_cmd
 from utils.exceptions import CommandError
+from utils.messaging import confirm_yes
 
 
 class TestError(Exception):
@@ -68,7 +69,10 @@ class TestCog(BaseCog):
     @test_server_cmd()
     async def run_tests(self, ctx: commands.Context, skip_blocking: bool=False) -> None:
         if not ctx.message.author.voice:
-            if not await self.confirm_run_incomplete_tests(ctx):
+            msg = ("Not connected to a voice channel! "
+            "You must be in a voice channel to run all tests.\n"
+            "Are you sure you want to proceed with incomplete testing?")
+            if await confirm_yes(self.bot, ctx, msg):
                 await ctx.send("Proceeding with incomplete testing!\n"
                 "**NOTE:** In order to run all tests you must be connected to a voice channel!")
             else:
@@ -78,7 +82,6 @@ class TestCog(BaseCog):
         passed = []
         failed = []
 
-        coros = []
         # Temporarily patch ctx to disable message sending while invoking bot commands
         with self.patch_ctx(ctx) as ctx:
             # Find tests
@@ -94,9 +97,8 @@ class TestCog(BaseCog):
                             failed.append(k)
                         else:
                             passed.append(k)
-            await ctx.invoke(self.bot.get_command("destroy"))
+            await self._post_tests_cleanup(ctx)
             print("Tests completed!")
-            #await ctx.invoke(self.bot.get_command("stop"))
 
         # Format results
         passed_fmt = "\n".join(passed)
@@ -110,23 +112,6 @@ class TestCog(BaseCog):
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
     
-    async def confirm_run_incomplete_tests(self, ctx) -> bool:
-        await ctx.send("Not connected to a voice channel! "
-            "You must be in a voice channel to run all tests.\n"
-            "Are you sure you want to proceed with incomplete testing? [y/n]")
-        def pred(m) -> bool:
-            return m.author == ctx.message.author and m.channel == ctx.message.channel
-        try:
-            reply = await self.bot.wait_for("message", check=pred, timeout=10.0)
-        except asyncio.TimeoutError:
-            pass
-        else:
-            r = reply.content.lower()
-            if r in ["y", "yes", "+"]:
-                return True
-        finally:
-            return False    
-    
     def determine_run_coro(self, coro, ctx: commands.Context, skip_blocking: bool) -> bool:
         if skip_blocking and hasattr(coro, "blocking"):
             return False
@@ -134,6 +119,11 @@ class TestCog(BaseCog):
             return False
         else:
             return True
+    
+    async def _post_tests_cleanup(self, ctx) -> None:
+        """Calls methods required for cleanup after running tests."""
+        # Nothing here for now
+        pass
     
     async def _run_coro(self, coro, ctx) -> bool:
         try:
