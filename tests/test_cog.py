@@ -320,10 +320,15 @@ class TestCog(BaseCog):
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
     
-    @voice
     async def test_soundcog_destroy(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "destroy")
+
+    async def test_soundcog_played(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "played")
     
+    async def test_soundcog_search(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "search", "steven dawson")
+        
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
@@ -354,6 +359,12 @@ class TestCog(BaseCog):
 
     async def test_usercog_commands(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "commands")
+
+    async def test_usercog_about(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "about")
+
+    async def test_usercog_invite(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "invite")    
 
     # ImageCog    
     async def _test_deepfry(self, ctx: commands.Context) -> None:
