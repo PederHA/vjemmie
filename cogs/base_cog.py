@@ -614,7 +614,7 @@ class BaseCog(commands.Cog):
                 if simple:
                     cmd_name = cmd.name.ljust(20,"\xa0")
                 else:
-                    cmd_name = f"{command.name} {command.signature}".ljust(35, "\xa0")
+                    cmd_name = f"{cmd.name} {cmd.signature}".ljust(35, "\xa0")
                 indent = f"-{self.EMBED_FILL_CHAR*2}" if type(cmd) == commands.Command and subcommand else ""
                 padding = "\xa0"*2 if not indent else ""
                 out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {command.short_doc}")
