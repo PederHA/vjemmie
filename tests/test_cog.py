@@ -29,6 +29,13 @@ def blocking(f):
         return await f(*args, **kwargs)
     return wrapper
 
+def voice(f):
+    f.voice = True
+    @wraps(f)
+    async def wrapper(*args, **kwargs):
+        return await f(*args, **kwargs)
+    return wrapper
+
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
     
@@ -61,7 +68,11 @@ class TestCog(BaseCog):
     @test_server_cmd()
     async def run_tests(self, ctx: commands.Context, skip_blocking: bool=False) -> None:
         if not ctx.message.author.voice:
-            raise CommandError("Must be connected to a voice channel when running tests!")
+            if not await self.confirm_run_incomplete_tests(ctx):
+                await ctx.send("Proceeding with incomplete testing!\n"
+                "**NOTE:** In order to run all tests you must be connected to a voice channel!")
+            else:
+                return await ctx.send("Aborting.")
         
         # Store test results
         passed = []
@@ -74,7 +85,7 @@ class TestCog(BaseCog):
             for k in dir(self):
                 if k.startswith("test_"):
                     coro = getattr(self, k)
-                    if skip_blocking and hasattr(coro, "blocking"):
+                    if not self.determine_run_coro(coro, ctx, skip_blocking):
                         continue
                     if inspect.iscoroutinefunction(coro):
                         try:
@@ -98,6 +109,31 @@ class TestCog(BaseCog):
         else:
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
+    
+    async def confirm_run_incomplete_tests(self, ctx) -> bool:
+        await ctx.send("Not connected to a voice channel! "
+            "You must be in a voice channel to run all tests.\n"
+            "Are you sure you want to proceed with incomplete testing? [y/n]")
+        def pred(m) -> bool:
+            return m.author == ctx.message.author and m.channel == ctx.message.channel
+        try:
+            reply = await self.bot.wait_for("message", check=pred, timeout=10.0)
+        except asyncio.TimeoutError:
+            pass
+        else:
+            r = reply.content.lower()
+            if r in ["y", "yes", "+"]:
+                return True
+        finally:
+            return False    
+    
+    def determine_run_coro(self, coro, ctx: commands.Context, skip_blocking: bool) -> bool:
+        if skip_blocking and hasattr(coro, "blocking"):
+            return False
+        elif not ctx.message.author.voice and hasattr(coro, "voice"):
+            return False
+        else:
+            return True
     
     async def _run_coro(self, coro, ctx) -> bool:
         try:
@@ -256,7 +292,8 @@ class TestCog(BaseCog):
     # PUBGCog
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "drop", "erangel", "hot")
-
+    
+    @voice
     async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate")
         await self.do_test_command(ctx, "crate", "c", raises=CommandError)
@@ -285,18 +322,23 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "subs")
     
     # SoundCog
+    @voice
     async def test_soundcog_connect(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "connect")
-
+    
+    @voice
     async def test_soundcog_play(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "play", "dota")
     
+    @voice
     async def test_soundcog_queue(self, ctx: commands.Context) -> None:
         pass
     
+    @voice
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
-
+    
+    @voice
     async def test_soundcog_destroy(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "destroy")
     
