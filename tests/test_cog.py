@@ -316,6 +316,16 @@ class TestCog(BaseCog):
     
     async def test_twittercog_users(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "twitter users")
+    
+    # UserCog
+    async def test_usercog_help(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "help")
+
+    async def test_usercog_help_subcommands(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "help", "twitter")
+
+    async def test_usercog_commands(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "commands")
 
     # ImageCog    
     async def _test_deepfry(self, ctx: commands.Context) -> None:
