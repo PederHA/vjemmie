@@ -125,14 +125,6 @@ class TestCog(BaseCog):
         # Nothing here for now
         pass
     
-    async def _run_coro(self, coro, ctx) -> bool:
-        try:
-            await coro(ctx)
-        except:
-            return False
-        else:
-            return True
-    
     @contextmanager        
     def patch_ctx(self, ctx: commands.Context) -> commands.Context:
         """Patches the `send()` method of a 
