@@ -3,9 +3,10 @@ import copy
 import inspect
 import traceback
 import unittest
+from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
-from functools import wraps
+from functools import wraps, partial
 
 import discord
 from discord.ext import commands
@@ -36,12 +37,20 @@ class TestCog(BaseCog):
         super().__init__(bot)
         self.verbose = False
         self.pfix = self.bot.command_prefix
+        self.msg_enabled = cycle([False, True])
 
     
-    @commands.command(name="verbose")
-    async def toggle_verbose(self, ctx: commands.Context) -> None:
+    @commands.command(name="tverbose", aliases=["terminal_verbose"])
+    async def toggle_terminal_verbose(self, ctx: commands.Context) -> None:
         self.verbose = not self.verbose
         await ctx.send(f"Test terminal output is now {'enabled' if self.verbose else 'disabled'}")
+    
+    @commands.command(name="verbose")
+    async def toggle_message_send(self, ctx: commands.Context) -> None:
+        next(self.msg_enabled)
+        status = "enabled" if self.msg_enabled else "disabled"
+        addendum = "Be aware that Discord rate limits apply!" if self.msg_enabled else ""
+        await ctx.send(f"Message sending is now **{status}**! {addendum}")
     
     @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
     @owners_only()
@@ -64,15 +73,12 @@ class TestCog(BaseCog):
                     if skip_blocking and hasattr(coro, "blocking"):
                         continue
                     if inspect.iscoroutinefunction(coro):
-                        #coros.append(coro)
                         try:
                             await coro(ctx)
                         except:
                             failed.append(k)
                         else:
                             passed.append(k)
-            #tasks = [asyncio.ensure_future(coro(ctx)) for coro in coros]
-            #self.bot.loop.call_soon_threadsafe(asyncio.gather(*tasks))
             await ctx.invoke(self.bot.get_command("destroy"))
             print("Tests completed!")
             #await ctx.invoke(self.bot.get_command("stop"))
@@ -89,7 +95,7 @@ class TestCog(BaseCog):
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
     
-    async def _run_coro(self, coro) -> bool:
+    async def _run_coro(self, coro, ctx) -> bool:
         try:
             await coro(ctx)
         except:
@@ -106,8 +112,12 @@ class TestCog(BaseCog):
             pass
         original_ctx = copy.copy(ctx)
         try:
-            ctx.send = new_send
-            yield ctx
+            enabled = next(self.msg_enabled)
+            if not enabled:
+                ctx.send = new_send
+                yield ctx
+            else:
+                yield ctx
         finally:
             ctx = original_ctx
     
@@ -306,7 +316,7 @@ class TestCog(BaseCog):
     
     async def test_twittercog_users(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "twitter users")
-    
+
     # ImageCog    
     async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
