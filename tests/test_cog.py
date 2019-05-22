@@ -1,8 +1,11 @@
+"""Very simple testing suite for the bot's commands that came about due to my
+impatience for getting tests up and running, but being unwilling to put in the
+effort of researching how to integrate discord commands into existing testing frameworks.
+"""
 import asyncio
 import copy
 import inspect
 import traceback
-import unittest
 from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
@@ -37,7 +40,8 @@ class TestCog(BaseCog):
         super().__init__(bot)
         self.verbose = False
         self.pfix = self.bot.command_prefix
-        self.msg_enabled = cycle([False, True])
+        self.msg_toggle = cycle([True, False])
+        self.msg_enabled = False
 
     
     @commands.command(name="tverbose", aliases=["terminal_verbose"])
@@ -47,7 +51,7 @@ class TestCog(BaseCog):
     
     @commands.command(name="verbose")
     async def toggle_message_send(self, ctx: commands.Context) -> None:
-        next(self.msg_enabled)
+        self.msg_enabled = next(self.msg_toggle)
         status = "enabled" if self.msg_enabled else "disabled"
         addendum = "Be aware that Discord rate limits apply!" if self.msg_enabled else ""
         await ctx.send(f"Message sending is now **{status}**! {addendum}")
@@ -112,7 +116,7 @@ class TestCog(BaseCog):
             pass
         original_ctx = copy.copy(ctx)
         try:
-            enabled = next(self.msg_enabled)
+            enabled = self.msg_enabled
             if not enabled:
                 ctx.send = new_send
                 yield ctx
