@@ -6,6 +6,7 @@ import numpy
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
+from utils.exceptions import CommandError
 
 
 class PUBGCog(BaseCog):
@@ -64,14 +65,14 @@ class PUBGCog(BaseCog):
         }
         if not map_:
             _maps = ",".join([f"**`{m}`**" for m in MAPS.keys()])
-            return await ctx.send(f"No map specified! Choose one of: {_maps}")
+            raise CommandError(f"No map specified! Choose one of: {_maps}")
 
         # Get PUBG map
         pubgmap = MAPS.get(map_.lower())
 
         # Raise exception if map cannot be found
         if not pubgmap:
-            return await ctx.send("Invalid map!")
+            raise CommandError("Invalid map!")
 
         # Get list of locations for selected map
         locations = pubgmap.get("locations")
@@ -105,20 +106,20 @@ class PUBGCog(BaseCog):
         # Get players from ctx.author's voice channel
         elif len(players) == 1 and players[0] in ["channel", "c", "ch", "chanel"]:
             try:
-                squad = [user for user in await self.get_users_in_voice(ctx)]
+                squad = [user async for user in self.get_users_in_voice(ctx)]
             except AttributeError:
-                return await ctx.send(
+                raise CommandError(
                     f"Must be connected to a voice channel to use `{players[0]}` argument."
                 )
             else:
                 if len(squad) < 2:
-                    return await ctx.send(
+                    raise CommandError(
                         "A minimum number of 2 people is required!"
                         )                    
       
        # At least 2 players must be specified 
         elif len(players) == 1:
-            return await ctx.send("Can't roll crate for 1 player.")
+            raise CommandError("Can't roll crate for 1 player.")
         
         else:
             squad = players
