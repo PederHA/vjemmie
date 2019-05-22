@@ -589,28 +589,46 @@ class BaseCog(commands.Cog):
         _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
         
         # Get commands as string of command names + descriptions, separated by newlines
-        _out_str = ""
+        out = []
         for command in _commands:
             
             # Skip commands that fail for current context or are hidden
             if not await command.can_run(ctx) or command.hidden:
                 continue
             
-            # Show/hide command signature (displays aliases, args, etc.)
-            if simple:
-                cmd_name = command.name.ljust(20,"\xa0")
+            group = False
+            if isinstance(command, commands.Group):
+                # We use a set here, because each alias of a subcommand is treated
+                # as an individual command, leading to the output string containing 
+                # duplicate commands if dict values are simply converted to a list
+                cmds = list(set(command.all_commands.values()))
+                cmds.insert(0, command)
+                group = True
             else:
-                cmd_name = f"{command.name} {command.signature}".ljust(35, "\xa0")
-            _out_str += f"`!{cmd_name}:` {command.short_doc}\n"
+                cmds = [command]
+            
+            for cmd in cmds:          
+                # Show/hide command signature (displays aliases, args, etc.)
+                subcommand = group and type(cmd) == commands.Command
+                prefix = f"{self.bot.command_prefix}" if not subcommand else ""
+                if simple:
+                    cmd_name = cmd.name.ljust(20,"\xa0")
+                else:
+                    cmd_name = f"{command.name} {command.signature}".ljust(35, "\xa0")
+                indent = f"-{self.EMBED_FILL_CHAR*2}" if type(cmd) == commands.Command and subcommand else ""
+                padding = "\xa0"*2 if not indent else ""
+                out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {command.short_doc}")
+
+        out_str = "\n".join(out)    
         
-        if not _out_str:
+        if not out_str:
             raise CommandError("Cog has no commands!")
 
         
         if rtn:
-            return _out_str
+            return out_str
         
-        await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", _out_str)
+        await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", out_str)
 
     async def send_text_message(self, 
                                 text: str,     
