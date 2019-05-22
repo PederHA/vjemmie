@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from cogs.admin_cog import AdminCog
 from cogs.avatar_cog import AvatarCog
+from cogs.experimental_cog import ExperimentalCog
 from cogs.fun_cog import FunCog
 from cogs.image_cog import ImageCog
 from cogs.management_cog import ManagementCog
@@ -16,7 +17,6 @@ from cogs.pubg_cog import PUBGCog
 from cogs.reddit_cog import RedditCog
 from cogs.sound_cog import SoundCog
 from cogs.stats_cog import StatsCog
-from cogs.testing_cog import TestingCog
 from cogs.twitter_cog import TwitterCog
 from cogs.user_cog import UserCog
 from cogs.weather_cog import WeatherCog

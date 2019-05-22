@@ -11,7 +11,7 @@ from utils.checks import owners_only
 from utils.experimental import get_ctx
 
 
-class TestingCog(BaseCog):
+class ExperimentalCog(BaseCog):
     """Unstable/bad/temporary commands"""
 
     EMOJI = ":robot:"
