@@ -10,6 +10,7 @@ from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
 from functools import wraps, partial
+from typing import Coroutine, Awaitable, ContextManager
 
 import discord
 from discord.ext import commands
@@ -46,9 +47,8 @@ class TestCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        self.verbose = False
         self.pfix = self.bot.command_prefix
-        self.msg_toggle = cycle([True, False])
+        self.verbose = False
         self.msg_enabled = False
 
     
@@ -59,7 +59,7 @@ class TestCog(BaseCog):
     
     @commands.command(name="verbose")
     async def toggle_message_send(self, ctx: commands.Context) -> None:
-        self.msg_enabled = next(self.msg_toggle)
+        self.msg_enabled = not self.msg_enabled
         status = "enabled" if self.msg_enabled else "disabled"
         addendum = "Be aware that Discord rate limits apply!" if self.msg_enabled else ""
         await ctx.send(f"Message sending is now **{status}**! {addendum}")
@@ -113,6 +113,8 @@ class TestCog(BaseCog):
         await self.send_text_message(result, ctx)
     
     def determine_run_coro(self, coro, ctx: commands.Context, skip_blocking: bool) -> bool:
+        """Determines if certain conditions in order for coroutine 
+        to be tested."""
         if skip_blocking and hasattr(coro, "blocking"):
             return False
         elif not ctx.message.author.voice and hasattr(coro, "voice"):
@@ -126,16 +128,19 @@ class TestCog(BaseCog):
         pass
     
     @contextmanager        
-    def patch_ctx(self, ctx: commands.Context) -> commands.Context:
+    def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
         """Patches the `send()` method of a 
         `discord.ext.commands.Context` object with a dummy method
         that disables message sending while tests are running."""
         async def new_send(*args, **kwargs):
             pass
+        new_send.testing = True
+        
         original_ctx = copy.copy(ctx)
         try:
             enabled = self.msg_enabled
             if not enabled:
+                # Patch ctx.send with dummy method
                 ctx.send = new_send
                 yield ctx
             else:
@@ -160,7 +165,7 @@ class TestCog(BaseCog):
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
         
         # Show args & kwargs if verbose is enabled
-        a_kw = f"{_args}, {_kwargs}" if self.verbose else ""
+        a_kw = f"{_args} {_kwargs}" if self.verbose else ""
 
         passed = False
         try:
@@ -219,8 +224,8 @@ class TestCog(BaseCog):
             coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.name}"
         
         # String formatted args, kwargs
-        _args = f"\t{args}" if args else ""
-        _kwargs = f"\t{kwargs}" if kwargs else ""
+        _args = f"  {' '.join([repr(arg) for arg in args])}" if args else ""
+        _kwargs = f"\t{', '.join([f'{k}={v}' for k, v in kwargs.items()])}" if kwargs else ""
 
         return coro_or_cmd_name, _args, _kwargs      
     
@@ -286,22 +291,20 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "meme")
     
     @blocking
-    async def test_redditcog_reddit(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "python")
+    async def test_redditcog_get(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "reddit", "get", "python")
 
-    async def test_redditcog_rsettings(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "rsettings")
+    async def test_redditcog_settings(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "reddit", "settings")
 
-    async def test_redditcog_rsort(self, ctx: commands.Context) -> None:
-        cmd = self.bot.get_command("rsort")
-        await self.do_test_command(ctx, cmd)
-        await ctx.invoke(cmd)
-    
-    async def test_redditcog_rtime(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "rtime")
+    async def test_redditcog_sort(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "reddit", "sort")
+        
+    async def test_redditcog_time(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "reddit", "time")
     
     async def test_redditcog_subs(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "subs")
+        await self.do_test_command(ctx, "reddit", "subs")
     
     # SoundCog
     @voice
