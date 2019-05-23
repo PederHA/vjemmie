@@ -651,7 +651,7 @@ class BaseCog(commands.Cog):
         """
         # Obtain channel
         if ctx:
-            channel = ctx.message.channel
+            channel = ctx
         elif channel_id:
             channel = self.bot.get_channel(channel_id)
         else:
