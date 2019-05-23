@@ -23,7 +23,7 @@ from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only
 
-reddit = praw.Reddit(
+reddit_client = praw.Reddit(
     client_id=REDDIT_ID,
     client_secret=REDDIT_SECRET,
     user_agent=REDDIT_USER_AGENT,
@@ -100,8 +100,30 @@ class RedditCog(BaseCog):
                 self._NSFW_WHITELIST.contents =  json.load(f)
         return self._NSFW_WHITELIST.contents
 
+    @commands.group(name="reddit")
+    async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
+        """Reddit command. Arguments:
 
-    @commands.command(name="add_sub")
+            < list of subcommands displayed here in output of `!help reddit` >
+        """
+        # Try to get subcommand
+        cmd = self.bot.get_command(f"reddit {opt}")
+        if not cmd:
+            if opt:
+                await ctx.send(
+                    f'**"{opt}"** is not a valid argument for **`{self.bot.command_prefix}reddit`**'
+                    )
+            else:
+                await ctx.send(f"No argument provided!")
+            await ctx.invoke(self.bot.get_command("help"), "reddit")
+        else:
+            await ctx.invoke(cmd, *args)
+    
+    @reddit.command(name="get", aliases=["sub"])
+    async def reddit_get_sub_post(self, ctx: commands.Context, subreddit: str, time: str=None, sorting: str=None) -> None:
+        await self.get_from_reddit(ctx, subreddit, sorting, time)
+    
+    @reddit.command(name="add", aliases=["add_sub"])
     async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
         """Add <subreddit> [alias]
         
@@ -169,7 +191,7 @@ class RedditCog(BaseCog):
         """Method used as a base for adding custom subreddit commands"""
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
-    @commands.command(name="remove_sub")
+    @reddit.command(name="remove", aliases=["remove_sub"])
     @admins_only()
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
         """ADMIN ONLY: Remove <subreddit>
@@ -197,7 +219,7 @@ class RedditCog(BaseCog):
         commands_ = self._get_commands(cmd)
         await ctx.send(f"Removed subreddit **r/{subreddit}** with command(s) **{commands_}**")
 
-    @commands.command(name="subs", aliases=["subreddits"])
+    @reddit.command(name="subs", aliases=["list", "subreddits"])
     async def list_subs(self, ctx: commands.Context) -> None:
         """Shows available subreddits
         
@@ -215,7 +237,7 @@ class RedditCog(BaseCog):
         out = "\n".join(_out)
         await self.send_embed_message(ctx, "Subreddits", out, limit=1000)
 
-    @commands.command(name="rtime", aliases=["change_reddit_time", "reddit_time"])
+    @reddit.command(name="time")
     async def change_time_filtering(self, ctx: commands.Context, opt: str=None) -> None:
         """All/Year/Month/Week/Day
         
@@ -250,7 +272,7 @@ class RedditCog(BaseCog):
             out_msg = f"Reddit time filtering set to **{time}**."
         await ctx.send(out_msg)
 
-    @commands.command(name="rsort", aliases=["hot", "top"])
+    @reddit.command(name="sort", aliases=["sorting"])
     async def change_content_sorting(self, ctx: commands.Context, status: str=None) -> None:
         """Toggle top/hot
 
@@ -288,7 +310,7 @@ class RedditCog(BaseCog):
                                       timestamp=False, 
                                       color="red")
 
-    @commands.command(name="rsettings", aliases=["reddit_settings"])
+    @reddit.command(name="settings")
     async def reddit_settings(self, ctx: commands.Context) -> None:
         """Displays current Reddit settings
         
@@ -314,8 +336,7 @@ class RedditCog(BaseCog):
             color="red",
             timestamp=False)
 
-
-    @commands.command(name="add_alias")
+    @reddit.command(name="add_alias", aliases=["alias"])
     async def change_sub_command(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """Add alias for <subreddit>
         
@@ -363,7 +384,7 @@ class RedditCog(BaseCog):
                     self._add_sub(sub_values) 
                     break
 
-    @commands.command(name="remove_alias")
+    @reddit.command(name="remove_alias")
     @admins_only()
     async def remove_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """ADMIN ONLY: Remove alias for subreddit
@@ -390,8 +411,6 @@ class RedditCog(BaseCog):
         self.dump_subs()
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
-
-
 
     @commands.command(name="meme")
     async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
@@ -427,30 +446,6 @@ class RedditCog(BaseCog):
 
             subreddit = random.choice(subreddits)
             await self.get_from_reddit(ctx, subreddit)
-    
-    @commands.command(name="reddit")
-    async def reddit(self, ctx: commands.Context, subreddit: str=None, sorting: str=None, time: str=None) -> None:
-        """Get a random post from <subreddit> (<sorting>) (<time>)
-
-        If no argument to parameter `subreddit` is passed in, the bot invokes
-        the help command for the Reddit Cog instead.
-        
-        Parameters
-        ----------
-        ctx : `commands.Context`
-            Discord Context object
-        subreddit : `str`, optional
-            Name of subreddit to fetch posts from. Defaults to None.
-        sorting : `str`, optional
-            Content sorting to filter posts by. Defaults to None.
-        time : `str`, optional
-            Time sorting to filter posts by. Defaults to None.
-        """
-        if not subreddit:
-            cmd = self.bot.get_command("help")
-            await ctx.invoke(cmd, "reddit")
-        else:
-            await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
         """Small helper method for getting a valid sorting filter
@@ -614,7 +609,7 @@ class RedditCog(BaseCog):
                                    post_limit: int = None,
                                    allow_nsfw: bool = False) -> set:
         # Get subreddit
-        sub = reddit.subreddit(subreddit)
+        sub = reddit_client.subreddit(subreddit)
 
         # Check if NSFW subreddit
         if self._is_nsfw(ctx, sub):
