@@ -22,7 +22,7 @@ from utils.exceptions import CommandError
 from utils.messaging import wait_for_user_reply
 
 SENTINEL = object() # Shouldn't strictly be called "sentinel", but it's not a None-value either...
-
+DEFAULT_OPERATOR = operator.eq
 
 class TestError(Exception):
     pass
@@ -62,7 +62,6 @@ voice = decorator_factory("voice")
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
-
     DISABLE_HELP = True
     FAIL_MSG = "{cmd_name} {a_kw} ❌"
     PASS_MSG = "{cmd_name} {a_kw} ✔️"
@@ -216,6 +215,9 @@ class TestCog(BaseCog):
 
         index = kwargs.pop("index", SENTINEL)
 
+        # Get operator for assertion statement (default: ==)
+        op = await self._get_operator(kwargs) # TODO: UNFINISHED!!
+
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
 
@@ -223,7 +225,6 @@ class TestCog(BaseCog):
         a_kw = f"{_args} {_kwargs}" if self.verbose else ""
 
         passed = False
-        op = operator.eq
         try:
             # Await coro or command
             if ctx:
@@ -259,6 +260,13 @@ class TestCog(BaseCog):
             if not passed:
                 raise TestError(msg)
     
+    async def _get_operator(self, kwargs: dict) -> operator:
+        op = kwargs.pop("op", None)
+        if inspect.isbuiltin(op):
+            return op
+        else:
+            return DEFAULT_OPERATOR
+
     async def _format_assertion_error(self, cmd_name, assertion, assert_type) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
@@ -296,8 +304,8 @@ class TestCog(BaseCog):
             coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.qualified_name}"
 
         # String formatted args, kwargs
-        _args = f"  {' '.join([repr(arg) for arg in args])}" if args else ""
-        _kwargs = f"\t{', '.join([f'{k}={v}' for k, v in kwargs.items()])}" if kwargs else ""
+        _args = f"{' '.join([repr(arg) for arg in args])}" if args else ""
+        _kwargs = f"{', '.join([f'{k}={v}' for k, v in kwargs.items()])}" if kwargs else ""
 
         return coro_or_cmd_name, _args, _kwargs
 
@@ -311,6 +319,7 @@ class TestCog(BaseCog):
             raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
         return await self._do_test(cmd, *args, **kwargs, ctx=ctx)
 
+    
     #########################################
     #####             TESTS             #####
     #########################################
