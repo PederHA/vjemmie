@@ -6,6 +6,7 @@ import asyncio
 import copy
 import inspect
 import traceback
+import operator
 from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
@@ -18,14 +19,14 @@ from discord.ext import commands
 from cogs.base_cog import BaseCog
 from utils.checks import owners_only, test_server_cmd
 from utils.exceptions import CommandError
-from utils.messaging import confirm_yes
+from utils.messaging import wait_for_user_reply
 
 
 class TestError(Exception):
     pass
 
-def blocking(f):
-    f.blocking = True
+def network_io(f):
+    f.network_io = True
     @wraps(f)
     async def wrapper(*args, **kwargs):
         return await f(*args, **kwargs)
@@ -40,44 +41,66 @@ def voice(f):
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
-    
+
     DISABLE_HELP = True
     FAIL_MSG = "{cmd_name} {a_kw} ❌"
-    PASS_MSG = "{cmd_name} {a_kw} ✔️" 
+    PASS_MSG = "{cmd_name} {a_kw} ✔️"
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.pfix = self.bot.command_prefix
-        self.verbose = False
+        self.verbose = True
         self.msg_enabled = False
+        self.network_io_enabled = False
 
-    
+
     @commands.command(name="tverbose", aliases=["terminal_verbose"])
     async def toggle_terminal_verbose(self, ctx: commands.Context) -> None:
-        self.verbose = not self.verbose
-        await ctx.send(f"Test terminal output is now {'enabled' if self.verbose else 'disabled'}")
-    
+        return await self._toggle_attr(ctx, "verbose", "Test terminal output")
+
     @commands.command(name="verbose")
     async def toggle_message_send(self, ctx: commands.Context) -> None:
-        self.msg_enabled = not self.msg_enabled
-        status = "enabled" if self.msg_enabled else "disabled"
-        addendum = "Be aware that Discord rate limits apply!" if self.msg_enabled else ""
-        await ctx.send(f"Message sending is now **{status}**! {addendum}")
-    
+        return await self._toggle_attr(
+            ctx,
+            "msg_enabled",
+            "Message sending",
+            addendum="Be aware that Discord rate limits apply!")
+
+    @commands.command(name="network_io", aliases=["io"])
+    async def toggle_network_io(self, ctx: commands.Context) -> None:
+        await self._toggle_attr(
+            ctx, "network_io_enabled", description="Network IO-bound commands")
+
+    async def _toggle_attr(self, ctx, attr: str, description: str, addendum: str=None, addendum_on_false: bool=False) -> None:
+        # Toggle attr
+        state = getattr(self, attr)
+        new_state = not state
+        setattr(self, attr, new_state)
+
+        # Get string representation of attr state
+        status = "enabled" if new_state else "disabled"
+
+        # Generate addendum if passed in
+        op = operator.not_ if addendum_on_false else operator.truth
+        addendum = addendum if op(attr) and addendum else ""
+
+        await ctx.send(f"{description} is now **{status}**! {addendum}")
+
     @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
     @owners_only()
     @test_server_cmd()
-    async def run_tests(self, ctx: commands.Context, skip_blocking: bool=False) -> None:
+    async def run_tests(self, ctx: commands.Context, skip_network_io: bool=False) -> None:
         if not ctx.message.author.voice:
             msg = ("Not connected to a voice channel! "
             "You must be in a voice channel to run all tests.\n"
             "Are you sure you want to proceed with incomplete testing?")
-            if await confirm_yes(self.bot, ctx, msg):
-                await ctx.send("Proceeding with incomplete testing!\n"
-                "**NOTE:** In order to run all tests you must be connected to a voice channel!")
+            if await wait_for_user_reply(self.bot, ctx, msg):
+                await ctx.send(
+                    "Proceeding with incomplete testing!\n"
+                    "**NOTE:** In order to run all tests you must be connected to a voice channel!")
             else:
                 return await ctx.send("Aborting.")
-        
+
         # Store test results
         passed = []
         failed = []
@@ -88,7 +111,7 @@ class TestCog(BaseCog):
             for k in dir(self):
                 if k.startswith("test_"):
                     coro = getattr(self, k)
-                    if not self.determine_run_coro(coro, ctx, skip_blocking):
+                    if not self.determine_run_coro(coro, ctx, skip_network_io):
                         continue
                     if inspect.iscoroutinefunction(coro):
                         try:
@@ -103,7 +126,7 @@ class TestCog(BaseCog):
         # Format results
         passed_fmt = "\n".join(passed)
         failed_fmt = "\n".join(failed)
-        
+
         if not failed:
             result = "All tests passed!"
         elif not passed:
@@ -111,23 +134,23 @@ class TestCog(BaseCog):
         else:
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
-    
-    def determine_run_coro(self, coro, ctx: commands.Context, skip_blocking: bool) -> bool:
-        """Determines if certain conditions in order for coroutine 
-        to be tested."""
-        if skip_blocking and hasattr(coro, "blocking"):
+
+    def determine_run_coro(self, coro, ctx: commands.Context, skip_network_io: bool) -> bool:
+        """Checks if certain conditions are met, in order to determine
+        if coroutine should be tested."""
+        if skip_network_io and hasattr(coro, "network_io"):
             return False
         elif not ctx.message.author.voice and hasattr(coro, "voice"):
             return False
         else:
             return True
-    
+
     async def _post_tests_cleanup(self, ctx) -> None:
         """Calls methods required for cleanup after running tests."""
         # Nothing here for now
         pass
-    
-    @contextmanager        
+
+    @contextmanager
     def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
         """Patches the `send()` method of a 
         `discord.ext.commands.Context` object with a dummy method
@@ -135,7 +158,7 @@ class TestCog(BaseCog):
         async def new_send(*args, **kwargs):
             pass
         new_send.testing = True
-        
+
         original_ctx = copy.copy(ctx)
         try:
             enabled = self.msg_enabled
@@ -147,23 +170,23 @@ class TestCog(BaseCog):
                 yield ctx
         finally:
             ctx = original_ctx
-    
+
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         # Pop ctx
         ctx = kwargs.pop("ctx", None)
-        
+
         # Object to test equality of result with
         assertion = kwargs.pop("assertion", object())
-        
+
         # Assert type of result instead of value
         assert_type = kwargs.pop("assert_type", False)
-        
+
         # same as TestCase.assertRaises
         raises = kwargs.pop("raises", None)
 
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
-        
+
         # Show args & kwargs if verbose is enabled
         a_kw = f"{_args} {_kwargs}" if self.verbose else ""
 
@@ -179,9 +202,9 @@ class TestCog(BaseCog):
                 else:
                     assert r == assertion
         except AssertionError:
-            await self._format_assertion_error(assertion, assert_type)
+            await self._format_assertion_error(cmd_name, assertion, assert_type)
         except Exception as e:
-            passed = await self._handle_exc(e, raises)
+            passed = await self._handle_exc(cmd_name, e, raises)
         else:
             passed = True
         finally:
@@ -193,17 +216,17 @@ class TestCog(BaseCog):
             print(msg)
             if not passed:
                 raise TestError(msg)
-    
-    async def _format_assertion_error(self, assertion, assert_type) -> None:
-        print(traceback.format_exc())
+
+    async def _format_assertion_error(self, cmd_name, assertion, assert_type) -> None:
+        await self.log_test_error(cmd_name)
         if type(assertion) != object:
             if assert_type:
                 print(f"type(r) == {type(r)}", end=", ")
             else:
                 print(f"r == {r}", end=", ")
             print(f"assertion == {assertion}")
-    
-    async def _handle_exc(self, exc, raises) -> bool:
+
+    async def _handle_exc(self, cmd_name, exc, raises) -> bool:
         passed = False
         if raises:
             try:
@@ -213,32 +236,39 @@ class TestCog(BaseCog):
             else:
                 passed = True
         if not passed:
-            print(traceback.format_exc())
+            await self.log_test_error(cmd_name)
         return passed
+    
+    async def log_test_error(self, cmd_name) -> None:
+        exc_info = traceback.format_exc()
+        with open(f"tests/logs/{cmd_name}.txt", "w") as f:
+            f.write(exc_info)
+        if self.verbose:
+            print(exc_info)
     
     async def _get_test_attrs(self, coro_or_cmd, *args, **kwargs) -> tuple:
         # Get coroutine or command's name
         try:
             coro_or_cmd_name = coro_or_cmd.__func__.__name__
         except:
-            coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.name}"
+            coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.qualified_name}"
         
         # String formatted args, kwargs
         _args = f"  {' '.join([repr(arg) for arg in args])}" if args else ""
         _kwargs = f"\t{', '.join([f'{k}={v}' for k, v in kwargs.items()])}" if kwargs else ""
 
-        return coro_or_cmd_name, _args, _kwargs      
-    
+        return coro_or_cmd_name, _args, _kwargs
+
     async def do_test_coro(self, coro, *args, **kwargs) -> None:
         return await self._do_test(coro, *args, **kwargs)
- 
-    async def do_test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:    
+
+    async def do_test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:
         if isinstance(cmd, str):
             cmd = self.bot.get_command(cmd)
         if not cmd:
             raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
-        return await self._do_test(cmd, *args, **kwargs, ctx=ctx)    
-    
+        return await self._do_test(cmd, *args, **kwargs, ctx=ctx)
+
     #########################################
     #####             TESTS             #####
     #########################################
@@ -250,21 +280,21 @@ class TestCog(BaseCog):
         await asyncio.sleep(0.5)
         # Reset to default activity
         await ctx.invoke(cmd)
-    
+
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "serverlist")    
-    
+        await self.do_test_command(ctx, "serverlist")
+
     # AvatarCog
-    @blocking
+    @network_io
     async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==False`"""
         await self.do_test_command(ctx, "fuckup")
-    
-    @blocking
+
+    @network_io
     async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==True`"""
-        await self.do_test_command(ctx, "mlady")    
-    
+        await self.do_test_command(ctx, "mlady")
+
     # FunCog
     async def test_funcog_roll(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "roll", 1, 100)
@@ -279,69 +309,69 @@ class TestCog(BaseCog):
     # PUBGCog
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "drop", "erangel", "hot")
-    
+
     @voice
     async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate")
         await self.do_test_command(ctx, "crate", "c", raises=CommandError)
 
     # RedditCog
-    @blocking
+    @network_io
     async def test_redditcog_meme(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "meme")
-    
-    @blocking
+
+    @network_io
     async def test_redditcog_get(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "get", "python")
+        await self.do_test_command(ctx, "reddit get", "python")
 
     async def test_redditcog_settings(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "settings")
+        await self.do_test_command(ctx, "reddit settings")
 
     async def test_redditcog_sort(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "sort")
-        
+        await self.do_test_command(ctx, "reddit sort")
+
     async def test_redditcog_time(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "time")
-    
+        await self.do_test_command(ctx, "reddit time")
+
     async def test_redditcog_subs(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "reddit", "subs")
-    
+        await self.do_test_command(ctx, "reddit subs")
+
     # SoundCog
     @voice
     async def test_soundcog_connect(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "connect")
-    
+
     @voice
     async def test_soundcog_play(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "play", "dota")
-    
+
     @voice
     async def test_soundcog_queue(self, ctx: commands.Context) -> None:
         pass
-    
+
     @voice
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
-    
+
     async def test_soundcog_destroy(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "destroy")
 
     async def test_soundcog_played(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "played")
-    
+
     async def test_soundcog_search(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson")
-        
+
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
         await self.do_test_command(ctx, "uptime", rtn=True, assertion=str, assert_type=True)
-    
+
     async def test_statscog_changelog(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog", rtn_type=list, assertion=list, assert_type=True)
-    
+
     # TwitterCog
-    @blocking
+    @network_io
     async def test_twittercog_add(self, ctx: commands.Context) -> None:
         twitter_cog = self.bot.get_cog("TwitterCog")
         username = "vjemmie_test"
@@ -349,10 +379,10 @@ class TestCog(BaseCog):
             await self.do_test_command(ctx, "twitter add", username, raises=CommandError)
         else:
             await self.do_test_command(ctx, "twitter add", username)
-    
+
     async def test_twittercog_users(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "twitter users")
-    
+
     # UserCog
     async def test_usercog_help(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "help")
@@ -367,22 +397,22 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "about")
 
     async def test_usercog_invite(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "invite")    
+        await self.do_test_command(ctx, "invite")
 
-    # ImageCog    
+    # ImageCog
     async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
         deepfry_cmd = self.bot.get_command("deepfry")
-        
+
         url = "https://cdn.discordapp.com/attachments/560503336013529091/566615384808095754/Gfw036Q.png"
-        
+
         # Test command with URL argument
         print(f"Testing {self.pfix}deepfry with URL.")
-        await self.do_test_command(ctx, deepfry_cmd, "-url", url)        
+        await self.do_test_command(ctx, deepfry_cmd, "-url", url)
 
         # Sleep between image uploads to be nice to Discord
         await asyncio.sleep(5)
-   
+
         attachment = discord.Attachment(
             data={
                 "filename" : "Gfw036Q.png",
@@ -395,10 +425,10 @@ class TestCog(BaseCog):
             },
             state=Mock(http=None)
             )
-        
+
         # Attach attachment to ctx.message
         ctx.message.attachments.append(attachment)
-        
+
         # Test with message attachment
         print(f"Testing {self.pfix}deepfry with attachment.")
         await self.do_test_command(ctx, deepfry_cmd)
