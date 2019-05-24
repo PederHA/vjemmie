@@ -11,7 +11,7 @@ from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
 from functools import wraps, partial
-from typing import Coroutine, Awaitable, ContextManager
+from typing import Coroutine, Awaitable, ContextManager, Any, TypeVar, Callable
 
 import discord
 from discord.ext import commands
@@ -21,23 +21,44 @@ from utils.checks import owners_only, test_server_cmd
 from utils.exceptions import CommandError
 from utils.messaging import wait_for_user_reply
 
+SENTINEL = object() # Shouldn't strictly be called "sentinel", but it's not a None-value either...
+
 
 class TestError(Exception):
     pass
 
-def network_io(f):
-    f.network_io = True
-    @wraps(f)
-    async def wrapper(*args, **kwargs):
-        return await f(*args, **kwargs)
-    return wrapper
 
-def voice(f):
-    f.voice = True
-    @wraps(f)
-    async def wrapper(*args, **kwargs):
-        return await f(*args, **kwargs)
-    return wrapper
+def decorator_factory(attr_k: str, attr_v: Any=SENTINEL) -> Any: # Callable[[Any], Awaitable[[Any], Any]] IDK if this is correct, so we're going with Any
+    """Creates a decorator that sets a given attribute 
+    on an awaitable object.
+    
+    Parameters
+    ----------
+    attr_k : str
+        Name of attribute
+    attr_v : Any, optional
+        Value of attribute, default SENTINEL
+    """
+    if attr_v is SENTINEL:
+        attr_v = True
+    def outer(f: Awaitable) -> Awaitable:
+        setattr(f, attr_k, attr_v)
+        @wraps(f)
+        async def wrapper(*args, **kwargs):
+            return await f(*args, **kwargs)
+        return wrapper
+    return outer
+
+
+# Up/Downloads data to/from internet
+network_io = decorator_factory("network_io")
+
+# Uploads images to Discord
+discord_io = decorator_factory("discord_io")
+
+# Requires cmd invoker to be in a voice channel
+voice = decorator_factory("voice")
+
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
@@ -51,8 +72,8 @@ class TestCog(BaseCog):
         self.pfix = self.bot.command_prefix
         self.verbose = True
         self.msg_enabled = False
-        self.network_io_enabled = False
-
+        self.network_io_enabled = False # Enables commands such as: !meme, !reddit get, !twitter add
+        self.discord_io_enabled = False # Enables commands such as: !fuckup, !mlady
 
     @commands.command(name="tverbose", aliases=["terminal_verbose"])
     async def toggle_terminal_verbose(self, ctx: commands.Context) -> None:
@@ -89,7 +110,7 @@ class TestCog(BaseCog):
     @commands.command(name="run_tests", aliases=["runtest", "runtests", "tests"])
     @owners_only()
     @test_server_cmd()
-    async def run_tests(self, ctx: commands.Context, skip_network_io: bool=False) -> None:
+    async def run_tests(self, ctx: commands.Context) -> None:
         if not ctx.message.author.voice:
             msg = ("Not connected to a voice channel! "
             "You must be in a voice channel to run all tests.\n"
@@ -111,7 +132,7 @@ class TestCog(BaseCog):
             for k in dir(self):
                 if k.startswith("test_"):
                     coro = getattr(self, k)
-                    if not self.determine_run_coro(coro, ctx, skip_network_io):
+                    if not self.determine_run_coro(coro, ctx):
                         continue
                     if inspect.iscoroutinefunction(coro):
                         try:
@@ -138,7 +159,9 @@ class TestCog(BaseCog):
     def determine_run_coro(self, coro, ctx: commands.Context, skip_network_io: bool) -> bool:
         """Checks if certain conditions are met, in order to determine
         if coroutine should be tested."""
-        if skip_network_io and hasattr(coro, "network_io"):
+        if not self.network_io_enabled and hasattr(coro, "network_io"):
+            return False
+        elif not self.discord_io_enabled and hasattr(coro, "discord_io"):
             return False
         elif not ctx.message.author.voice and hasattr(coro, "voice"):
             return False
@@ -176,7 +199,7 @@ class TestCog(BaseCog):
         ctx = kwargs.pop("ctx", None)
 
         # Object to test equality of result with
-        assertion = kwargs.pop("assertion", object())
+        assertion = kwargs.pop("assertion", SENTINEL)
 
         # Assert type of result instead of value
         assert_type = kwargs.pop("assert_type", False)
@@ -196,7 +219,7 @@ class TestCog(BaseCog):
                 r = await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
                 r = await coro_or_cmd(*args, **kwargs)
-            if type(assertion) != object:
+            if assertion is not SENTINEL:
                 if assert_type:
                     assert type(r) == assertion
                 else:
@@ -219,7 +242,7 @@ class TestCog(BaseCog):
 
     async def _format_assertion_error(self, cmd_name, assertion, assert_type) -> None:
         await self.log_test_error(cmd_name)
-        if type(assertion) != object:
+        if assertion is not SENTINEL:
             if assert_type:
                 print(f"type(r) == {type(r)}", end=", ")
             else:
@@ -281,6 +304,7 @@ class TestCog(BaseCog):
         # Reset to default activity
         await ctx.invoke(cmd)
 
+    @discord_io
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "serverlist")
 
