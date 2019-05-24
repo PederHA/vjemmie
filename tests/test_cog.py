@@ -161,7 +161,7 @@ class TestCog(BaseCog):
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
         await self.send_text_message(result, ctx)
 
-    def determine_run_coro(self, coro, ctx: commands.Context, skip_network_io: bool) -> bool:
+    def determine_run_coro(self, coro, ctx: commands.Context) -> bool:
         """Checks if certain conditions are met, in order to determine
         if coroutine should be tested."""
         if not self.network_io_enabled and hasattr(coro, "network_io"):
@@ -212,6 +212,10 @@ class TestCog(BaseCog):
         # same as TestCase.assertRaises
         raises = kwargs.pop("raises", None)
 
+        in_ = kwargs.pop("in_", None)
+
+        index = kwargs.pop("index", SENTINEL)
+
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
 
@@ -219,16 +223,26 @@ class TestCog(BaseCog):
         a_kw = f"{_args} {_kwargs}" if self.verbose else ""
 
         passed = False
+        op = operator.eq
         try:
+            # Await coro or command
             if ctx:
                 r = await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
                 r = await coro_or_cmd(*args, **kwargs)
+            
+            # Assert returned value == assertion, if specified
             if assertion is not SENTINEL:
                 if assert_type:
-                    assert type(r) == assertion
+                    assert op(type(r), assertion)
                 else:
-                    assert r == assertion
+                    if index is not SENTINEL:
+                        r = r[0]
+                    if in_:
+                        r = getattr(r, in_)
+                        op = operator.contains
+                    assert op(r, assertion)
+
         except AssertionError:
             await self._format_assertion_error(cmd_name, assertion, assert_type)
         except Exception as e:
@@ -244,7 +258,7 @@ class TestCog(BaseCog):
             print(msg)
             if not passed:
                 raise TestError(msg)
-
+    
     async def _format_assertion_error(self, cmd_name, assertion, assert_type) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
@@ -390,7 +404,9 @@ class TestCog(BaseCog):
 
     async def test_soundcog_search(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson")
-
+        await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list, assert_type=True)
+        await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
+    
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
