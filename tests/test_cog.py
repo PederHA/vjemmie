@@ -92,6 +92,11 @@ class TestCog(BaseCog):
         await self._toggle_attr(
             ctx, "network_io_enabled", description="Network IO-bound commands")
 
+    @commands.command(name="discord_io", aliases=["dio"])
+    async def toggle_discord_io(self, ctx: commands.Context) -> None:
+        await self._toggle_attr(
+            ctx, "discord_io_enabled", description="Discord IO-bound commands")
+
     async def _toggle_attr(self, ctx, attr: str, description: str, addendum: str=None, addendum_on_false: bool=False) -> None:
         # Toggle attr
         state = getattr(self, attr)
@@ -261,21 +266,21 @@ class TestCog(BaseCog):
         if not passed:
             await self.log_test_error(cmd_name)
         return passed
-    
+
     async def log_test_error(self, cmd_name) -> None:
         exc_info = traceback.format_exc()
         with open(f"tests/logs/{cmd_name}.txt", "w") as f:
             f.write(exc_info)
         if self.verbose:
             print(exc_info)
-    
+
     async def _get_test_attrs(self, coro_or_cmd, *args, **kwargs) -> tuple:
         # Get coroutine or command's name
         try:
             coro_or_cmd_name = coro_or_cmd.__func__.__name__
         except:
             coro_or_cmd_name = f"{self.pfix}{coro_or_cmd.qualified_name}"
-        
+
         # String formatted args, kwargs
         _args = f"  {' '.join([repr(arg) for arg in args])}" if args else ""
         _kwargs = f"\t{', '.join([f'{k}={v}' for k, v in kwargs.items()])}" if kwargs else ""
@@ -309,12 +314,12 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "serverlist")
 
     # AvatarCog
-    @network_io
+    @discord_io
     async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==False`"""
         await self.do_test_command(ctx, "fuckup")
 
-    @network_io
+    @discord_io
     async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
         """AvatarCog command where `template_overlay==True`"""
         await self.do_test_command(ctx, "mlady")
