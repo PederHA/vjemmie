@@ -22,6 +22,7 @@ from discord.ext import commands
 from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only
+from utils.caching import get_cached
 
 reddit_client = praw.Reddit(
     client_id=REDDIT_ID,
@@ -74,9 +75,6 @@ class RedditCog(BaseCog):
         
         # Iterable of reddit submissions that have been posted in the current session
         self.posts = set()
-        
-        # NSFW Whitelist
-        self._NSFW_WHITELIST = recordclass("CachedList", "contents modified_at", defaults=[None, None])()
 
     def load_subs(self) -> dict:
         with open("db/reddit/subs.json", "r") as f:
@@ -92,13 +90,7 @@ class RedditCog(BaseCog):
 
     @property
     def NSFW_WHITELIST(self):
-        filename = "db/reddit/nsfw_whitelist.json"
-        _modified = os.path.getmtime(filename)
-        if not self._NSFW_WHITELIST.modified_at or _modified != self._NSFW_WHITELIST.modified_at:
-            self._NSFW_WHITELIST.modified_at = _modified
-            with open(filename, "r") as f:  
-                self._NSFW_WHITELIST.contents =  json.load(f)
-        return self._NSFW_WHITELIST.contents
+        return get_cached("db/reddit/nsfw_whitelist.json", category="reddit")
 
     @commands.group(name="reddit")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
