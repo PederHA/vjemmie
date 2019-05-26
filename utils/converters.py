@@ -1,10 +1,15 @@
 import re
 from typing import Optional
 from urllib.parse import urlparse, ParseResult
+from functools import partial
+
+import requests
 
 from discord.ext import commands
 from discord.ext.commands.converter import IDConverter, _get_from_guilds
 from discord.ext.commands.errors import BadArgument
+
+from utils.exceptions import CommandError
 
 
 class MemberOrURLConverter(IDConverter):
@@ -103,3 +108,22 @@ class SoundURLConverter(URLConverter):
 class ImgURLConverter(URLConverter):
     EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
 
+class SteamID64Converter(commands.Converter):
+    async def convert(self, ctx: commands.Context, arg: str) -> Optional[str]:
+        exc_text = f"Unable to find user {arg}"
+        
+        lookup = partial(requests.post, "https://steamid.io/lookup", data={"input": arg})
+        r = await ctx.bot.loop.run_in_executor(None, lookup)
+        
+        if r.status_code != 200:
+            raise ConnectionError("SteamID lookup returned non-200 code")
+        
+        try:
+            steamid = r.text.split("data-steamid64=")[1].split('"', 2)[1]
+        except IndexError:
+            raise CommandError(exc_text)
+        else:
+            if not steamid.isnumeric():
+                raise CommandError(exc_text)
+            else:
+                return steamid
