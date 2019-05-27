@@ -7,6 +7,7 @@ from contextlib import suppress
 from discord.ext import commands
 
 from cogs.admin_cog import AdminCog
+from cogs.autochess_cog import AutoChessCog
 from cogs.avatar_cog import AvatarCog
 from cogs.experimental_cog import ExperimentalCog
 from cogs.fun_cog import FunCog
