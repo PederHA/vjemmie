@@ -72,7 +72,7 @@ class BaseCog(commands.Cog):
         self.add_help_command()
         self.setup()
 
-    def setup(self) -> None:
+    def setup(self, default_factory=list) -> None:
         # Create required directories
         for directory in self.DIRS:
             if not Path(directory).exists():
@@ -83,7 +83,7 @@ class BaseCog(commands.Cog):
             if not Path(_f).exists():
                 with open(_f, "w") as f:
                     if _f.endswith("json"):
-                        f.write("[]")
+                        f.write(f"{default_factory()}")
     
     @property
     def cog_name(self) -> str:
