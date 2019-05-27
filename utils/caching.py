@@ -8,13 +8,24 @@ from functools import partial
 from recordclass import recordclass
 from recordclass.recordobject import recordclasstype
 
+class CacheError(Exception):
+    """Exceptions stemming from operations 
+    performed on the cache data structure"""
 
-_deque = partial(deque, [], maxlen=5)
-CACHE = defaultdict(_deque)
+DEFAULT_CATEGORY = "default"
+DEFAULT_SIZE = 5
+
+_deque = partial(deque, [], maxlen=DEFAULT_SIZE)
+CACHE = None
 CachedContent = recordclass("CachedContent", "contents content_type modified")
 
-
-def get_cached(path: str, category: str) -> Union[str, dict]:
+def get_cached(path: str, category: str=None) -> Union[str, dict]:
+    if not CACHE:
+        _do_create_cache()
+    
+    if not category:
+        category = DEFAULT_CATEGORY
+    
     extension = os.path.splitext(path)[1]
     is_json = extension == ".json"
     
@@ -58,3 +69,32 @@ def _get_from_cache(path: str, category: str) -> CachedContent:
         for cached in CACHE[category]:
             if path in cached:
                 return cached[path]
+
+def setup_cache(category_size: int=DEFAULT_SIZE, default_category: str=None) -> None:
+    global DEFAULT_CATEGORY
+    global _deque
+
+    if CACHE:
+        raise CacheError("Cache already contains data! "
+            "Flush cache before attempting to make changes.")
+    
+    if category_size:
+        try:
+            category_size = int(category_size)
+        except:
+            raise TypeError("Category size must be an integer!")
+        _deque.keywords["maxlen"] = category_size
+
+    if default_category:
+        if not isinstance(default_category, str):
+            raise TypeError("Default category name must be a string!")
+        DEFAULT_CATEGORY = default_category
+    
+    _do_create_cache()
+
+def flush_cache() -> None:
+    _do_create_cache()
+
+def _do_create_cache() -> None:
+    global CACHE
+    CACHE = defaultdict(_deque)    
