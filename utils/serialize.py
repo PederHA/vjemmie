@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 
-def load_json(self, fp: str, default=list) -> list:
+def load_json(fp: str, default=list) -> list:
     f = open(fp, "r")
     try:
         data =  json.load(f)
@@ -25,6 +25,6 @@ def load_json(self, fp: str, default=list) -> list:
         f.close()
         return default()
 
-def dump_json(self, fp: str, obj: Any) -> None:
+def dump_json(fp: str, obj: Any) -> None:
     with open(fp, "w") as f:
         json.dump(obj, f, indent=4)
