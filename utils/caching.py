@@ -2,7 +2,7 @@ import json
 import os
 import time
 from typing import Any, Dict, Union
-from collections import deque, defaultdict
+from collections import deque, defaultdict, OrderedDict
 from functools import partial
 
 from recordclass import recordclass
@@ -13,9 +13,8 @@ class CacheError(Exception):
     performed on the cache data structure"""
 
 DEFAULT_CATEGORY = "default"
-DEFAULT_SIZE = 5
+MAX_SIZE = 5
 
-_deque = partial(deque, [], maxlen=DEFAULT_SIZE)
 CACHE = None
 CachedContent = recordclass("CachedContent", "contents content_type modified")
 
@@ -25,10 +24,7 @@ def get_cached(path: str, category: str=None) -> Union[str, dict]:
     
     if not category:
         category = DEFAULT_CATEGORY
-    
-    extension = os.path.splitext(path)[1]
-    is_json = extension == ".json"
-    
+
     cached = _get_from_cache(path, category)
     
     if cached:
@@ -36,6 +32,8 @@ def get_cached(path: str, category: str=None) -> Union[str, dict]:
         modified = os.path.getmtime(path)
 
     if not cached or last_modified != modified:
+        extension = os.path.splitext(path)[1]
+        is_json = extension == ".json"
         cache_data = _get_file_contents(path, category, is_json)
         _add_to_cache(path, category, cache_data)
         contents = cache_data.contents
@@ -57,22 +55,25 @@ def _get_file_contents(path: str, category: str, is_json: bool) -> CachedContent
 
 
 def _add_to_cache(path: str, category: str, contents: CachedContent) -> None:
-    for cached in CACHE[category]:
-        if path in cached:
-            CACHE[category].remove(cached)
-            break
-    CACHE[category].append({path: contents})
+    try:
+        del CACHE[category][path]
+    except KeyError:
+        pass
+    if len(CACHE[category]) == MAX_SIZE:
+        CACHE[category].popitem(last=False) # Pop oldest item
+    CACHE[category][path] = contents
 
 
 def _get_from_cache(path: str, category: str) -> CachedContent:
-    if category in CACHE:
-        for cached in CACHE[category]:
-            if path in cached:
-                return cached[path]
+    try:
+        return CACHE[category][path]
+    except KeyError:
+        pass
 
-def setup_cache(category_size: int=DEFAULT_SIZE, default_category: str=None) -> None:
+
+def setup_cache(category_size: int=MAX_SIZE, default_category: str=None) -> None:
     global DEFAULT_CATEGORY
-    global _deque
+    global MAX_SIZE
 
     if CACHE:
         raise CacheError("Cache already contains data! "
@@ -83,7 +84,8 @@ def setup_cache(category_size: int=DEFAULT_SIZE, default_category: str=None) -> 
             category_size = int(category_size)
         except:
             raise TypeError("Category size must be an integer!")
-        _deque.keywords["maxlen"] = category_size
+        if category_size > 0:
+            MAX_SIZE = category_size
 
     if default_category:
         if not isinstance(default_category, str):
@@ -97,4 +99,4 @@ def flush_cache() -> None:
 
 def _do_create_cache() -> None:
     global CACHE
-    CACHE = defaultdict(_deque)    
+    CACHE = defaultdict(OrderedDict)
