@@ -91,12 +91,16 @@ class AutoChessCog(BaseCog):
 
     @autochess.command(name="addme")
     async def add_user_self(self, ctx: commands.Context, steamid: SteamID64Converter) -> None:
-        """Add yourself to the bot's database!"""
+        """Add yourself to the bot!"""
         await ctx.invoke(self.add_user, ctx.message.author, steamid)
 
     @autochess.command(name="add")
-    async def add_user(self, ctx: commands.Context, user: commands.MemberConverter, steamid: SteamID64Converter) -> None:
-        """Add a specific user to the bot's database."""
+    async def add_user(self, ctx: commands.Context, steamid: SteamID64Converter, user: commands.MemberConverter=None) -> None:
+        """Add a DAC user to the bot."""
+        await self._do_add_user(user, steamid)
+        await ctx.send(f"Added {user} with SteamID {steamid}!")
+    
+    async def _do_add_user(self, user: discord.User, steamid: str) -> None:
         rank, matches_played, wins, mmr = await self.scrape_op_gg_stats(steamid)
         users = self.users
         users[str(user.id)] = {
@@ -107,7 +111,7 @@ class AutoChessCog(BaseCog):
                           "wins": wins
                           }
         self.dump_users(users)
-
+    
     async def scrape_op_gg_stats(self, steamid) -> None:
         url = f"https://autochess.op.gg/user/{steamid}"
         
