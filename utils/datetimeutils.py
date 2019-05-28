@@ -1,8 +1,8 @@
 import datetime
 from typing import Dict
 
-def format_time_difference(start: datetime.datetime) -> Dict[str, int]:
-    diff = datetime.datetime.now() - start
+def format_time_difference(start: datetime.datetime, timezone: datetime.timezone=None) -> Dict[str, int]:    
+    diff = datetime.datetime.now(timezone) - start
     
     days = diff.days
     hours, remainder = divmod(diff.seconds, 3600)

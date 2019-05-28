@@ -191,8 +191,10 @@ class AutoChessCog(BaseCog):
             _l_u = ciso8601.parse_datetime(v["last_updated"])
             diff = datetime.now(timezone.utc) - _l_u
             if diff.days < 1:
-                _last_updated = format_time_difference(_l_u)
-                last_updated = f"{_last_updated['hours']} ago"
+                _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
+                lu_hours = int(_last_updated["hours"])
+                s = "s" if lu_hours > 1 else ""
+                last_updated = f"{lu_hours} hour{s} ago"
             else:
                 last_updated = _l_u.strftime("%a %b %d %Y")
 
