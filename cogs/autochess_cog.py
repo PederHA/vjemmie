@@ -14,6 +14,8 @@ from utils.caching import get_cached
 from utils.converters import SteamID64Converter
 from utils.exceptions import CommandError
 from utils.serialize import dump_json
+from utils.checks import admins_only
+
 
 USERS_FILE = "db/autochess/users.json"
 RANKS = {
@@ -96,7 +98,8 @@ class AutoChessCog(BaseCog):
         await ctx.invoke(self.add_user, steamid, ctx.message.author)
 
     @autochess.command(name="add")
-    async def add_user(self, ctx: commands.Context, steamid: SteamID64Converter, user: commands.MemberConverter=None) -> None:
+    @admins_only()
+    async def add_user(self, ctx: commands.Context, steamid: SteamID64Converter, user: commands.UserConverter=None) -> None:
         """Add a DAC user to the bot."""
         await self._do_add_user(user, steamid)
         await ctx.send(f"Added {user} with SteamID {steamid}!")
