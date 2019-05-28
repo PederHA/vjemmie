@@ -3,6 +3,7 @@ from functools import partial
 
 import discord
 import requests
+import ciso8601
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
@@ -92,7 +93,7 @@ class AutoChessCog(BaseCog):
     @autochess.command(name="addme")
     async def add_user_self(self, ctx: commands.Context, steamid: SteamID64Converter) -> None:
         """Add yourself to the bot!"""
-        await ctx.invoke(self.add_user, ctx.message.author, steamid)
+        await ctx.invoke(self.add_user, steamid, ctx.message.author)
 
     @autochess.command(name="add")
     async def add_user(self, ctx: commands.Context, steamid: SteamID64Converter, user: commands.MemberConverter=None) -> None:
@@ -101,14 +102,15 @@ class AutoChessCog(BaseCog):
         await ctx.send(f"Added {user} with SteamID {steamid}!")
     
     async def _do_add_user(self, user: discord.User, steamid: str) -> None:
-        rank, matches_played, wins, mmr = await self.scrape_op_gg_stats(steamid)
+        rank, matches_played, wins, mmr, last_updated = await self.scrape_op_gg_stats(steamid)
         users = self.users
         users[str(user.id)] = {
                           "steamid": steamid, 
                           "rank": rank,
                           "mmr": mmr, 
                           "matches": matches_played, 
-                          "wins": wins
+                          "wins": wins,
+                          "last_updated": last_updated
                           }
         self.dump_users(users)
     
@@ -122,7 +124,12 @@ class AutoChessCog(BaseCog):
             raise CommandError("No response from stats API.")
 
         soup = BeautifulSoup(r.text, features="lxml")
-
+        
+        # Last updated
+        t = soup.find("span", {"class": "date"}).text
+        t = t.splitlines()[1].strip()
+        last_updated = ciso8601.parse_datetime(t).isoformat()
+        
         # Rank
         rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
         try:
@@ -141,7 +148,7 @@ class AutoChessCog(BaseCog):
         # MMR
         mmr = 0
         
-        return rank_int, matches, wins, mmr
+        return rank_int, matches, wins, mmr, last_updated
         
     @autochess.command(name="users")
     async def show_users(self, ctx: commands.Context) -> None:
