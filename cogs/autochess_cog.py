@@ -1,5 +1,6 @@
 import asyncio
 from functools import partial
+from datetime import datetime
 
 import discord
 import requests
@@ -15,7 +16,7 @@ from utils.converters import SteamID64Converter
 from utils.exceptions import CommandError
 from utils.serialize import dump_json
 from utils.checks import admins_only
-
+from utils.datetimeutils import format_time_difference
 
 USERS_FILE = "db/autochess/users.json"
 RANKS = {
@@ -129,9 +130,18 @@ class AutoChessCog(BaseCog):
         soup = BeautifulSoup(r.text, features="lxml")
         
         # Last updated
-        t = soup.find("span", {"class": "date"}).text
-        t = t.splitlines()[1].strip()
-        last_updated = ciso8601.parse_datetime(t).isoformat()
+        for p in soup.findAll("span", {"class": "date"}):
+            if "text-muted" in p.attrs["class"]:
+                continue
+            if "data-enablefromnow" in p.attrs:
+                # This is the "last updated" timestamp
+                t = p.attrs["data-date"]
+                break
+        else:
+            raise CommandError("Unable to parse stats!")
+
+
+        last_updated = ciso8601.parse_datetime(t).isoformat() # NOTE: Not necessary? Just save string from website?
         
         # Rank
         rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
@@ -157,28 +167,47 @@ class AutoChessCog(BaseCog):
     async def show_users(self, ctx: commands.Context) -> None:
         
         # Sort players by rank
+        # VERY inefficient. TODO: Find better solution
         _users = sorted(self.users.values(), key=lambda u: u["rank"], reverse=True)
         sorted_users = {}
-        for user, vals in zip(self.users, _users):
-            if self.users[user] == vals:
-                sorted_users[user] = vals
+        for vals in _users:
+            for k, v in self.users.items():
+                if v == vals:
+                    sorted_users[k] = vals
+                    break
         
         # Format player ranking list
         out = []
         for idx, (user_id, v) in enumerate(sorted_users.items(), start=1):
             name = self.bot.get_user(int(user_id)).name
+            
             rank = RANKS_REVERSE.get(v["rank"])
+            
             rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
-
+            
             matches = v['matches']
-            out.append(f"**{idx}. {name}**\nRank: {rank_emoji} {rank}\nMatches: {matches}\n")
-        out_str = "\n".join(out)
+            
+            # Format datetime. Show "x hours ago" if less than 1 day since update
+            _l_u = ciso8601.parse_datetime(v["last_updated"])
+            diff = datetime.now() - _l_u
+            if diff.days < 1:
+                _last_updated = format_time_difference(_l_u)
+                last_updated = f"{_last_updated['hours']} ago"
+            else:
+                last_updated = _l_u.strftime("%a %b %d %Y")
+
+            out.append(f"**{idx}. {name}**\n"
+                f"Rank: {rank_emoji} {rank}\n"
+                f"Matches: {matches}\n"
+                f"Last updated: {last_updated}")
+        out_str = "\n\n".join(out)
         
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
 
     @autochess.command(name="update")
     async def update_ranks(self, ctx: commands.Context) -> None:
         await ctx.send("Updating all users... This might take a while")
-        for user_id, (steamid, *_) in self.users.items():
-            await ctx.invoke(self.add_user, int(user_id), steamid)
+        for user_id, v in self.users.items():
+            await self._do_add_user(self.bot.get_user(int(user_id)), v["steamid"])
             await asyncio.sleep(10) # I need to experiment with this delay
+        await ctx.send("Successfully updated all users!")
