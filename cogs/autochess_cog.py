@@ -1,6 +1,6 @@
 import asyncio
 from functools import partial
-from datetime import datetime
+from datetime import datetime, timezone
 
 import discord
 import requests
@@ -189,7 +189,7 @@ class AutoChessCog(BaseCog):
             
             # Format datetime. Show "x hours ago" if less than 1 day since update
             _l_u = ciso8601.parse_datetime(v["last_updated"])
-            diff = datetime.now() - _l_u
+            diff = datetime.now(timezone.utc) - _l_u
             if diff.days < 1:
                 _last_updated = format_time_difference(_l_u)
                 last_updated = f"{_last_updated['hours']} ago"
