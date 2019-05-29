@@ -4,6 +4,7 @@ from urllib.parse import urlparse, ParseResult
 from functools import partial
 
 import requests
+import discord
 
 from discord.ext import commands
 from discord.ext.commands.converter import IDConverter, _get_from_guilds
@@ -51,6 +52,50 @@ class MemberOrURLConverter(IDConverter):
 
         if result is None:
             raise BadArgument(f"{argument} is neither a Member nor a valid URL")
+
+        return result
+
+class UserOrMeConverter(IDConverter):
+    """Converts to a :class:`User`.
+
+    All lookups are via the global user cache.
+
+    The lookup strategy is as follows (in order):
+
+    1. Lookup by ID.
+    2. Lookup by mention.
+    3. Lookup by "me", "self" arguments
+    3. Lookup by name#discrim
+    4. Lookup by name
+    """
+    async def convert(self, ctx, argument):
+        match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
+        result = None
+        state = ctx._state
+        
+        if match is not None:
+            user_id = int(match.group(1))
+            result = ctx.bot.get_user(user_id)
+        else:
+            arg = argument
+            # Check if argument contains one of the following phrases
+            if arg in ["me", "-", ".", "self"]:
+                # Return message author's user
+                result = ctx.bot.get_user(ctx.message.author.id) 
+            # check for discriminator if it exists
+            if len(arg) > 5 and arg[-5] == '#':
+                discrim = arg[-4:]
+                name = arg[:-5]
+                predicate = lambda u: u.name == name and u.discriminator == discrim
+                result = discord.utils.find(predicate, state._users.values())
+                if result is not None:
+                    return result
+
+            predicate = lambda u: u.name == arg
+            result = discord.utils.find(predicate, state._users.values())
+
+        if result is None:
+            raise BadArgument('User "{}" not found'.format(argument))
 
         return result
 
@@ -107,6 +152,7 @@ class SoundURLConverter(URLConverter):
 
 class ImgURLConverter(URLConverter):
     EXTENSIONS = [".jpeg", ".jpg", ".png", ".gif", ".webp"]
+
 
 class SteamID64Converter(commands.Converter):
     async def convert(self, ctx: commands.Context, arg: str) -> Optional[str]:
