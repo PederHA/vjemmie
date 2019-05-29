@@ -197,14 +197,26 @@ class AutoChessCog(BaseCog):
             
             matches = v['matches']
             
-            # Format datetime. Show "x hours ago" if less than 1 day since update
+            # Format datetime.
             _l_u = ciso8601.parse_datetime(v["last_updated"])
             diff = datetime.now(timezone.utc) - _l_u
+            
+            # Show "x hours ago" if <1 day since update
             if diff.days < 1:
                 _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
                 lu_hours = int(_last_updated["hours"])
                 s = "s" if lu_hours > 1 else ""
                 last_updated = f"{lu_hours} hour{s} ago"
+            
+            # Show "yesterday" if 1 day since update
+            elif diff.days == 1:
+                last_updated = "yesterday"
+            
+            # Show "x days ago" if <=1 week since update
+            elif diff.days <= 7:
+                last_updated = f"{diff.days} days ago"
+            
+            # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
             else:
                 last_updated = _l_u.strftime("%a %b %d %Y")
 
