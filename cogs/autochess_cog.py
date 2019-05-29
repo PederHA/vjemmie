@@ -12,7 +12,7 @@ from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
 from config import GENERAL_DB_PATH
 from utils.caching import get_cached
-from utils.converters import SteamID64Converter
+from utils.converters import SteamID64Converter, UserOrMeConverter
 from utils.exceptions import CommandError
 from utils.serialize import dump_json
 from utils.checks import admins_only
@@ -95,12 +95,12 @@ class AutoChessCog(BaseCog):
 
     @autochess.command(name="addme")
     async def add_user_self(self, ctx: commands.Context, steamid: SteamID64Converter) -> None:
-        """Add yourself to the bot!"""
-        await ctx.invoke(self.add_user, steamid, ctx.message.author)
+        """Alias for `!add <own user> <steamid>`"""
+        await ctx.invoke(self.add_user, ctx.message.author, steamid)
 
     @autochess.command(name="add")
     @admins_only()
-    async def add_user(self, ctx: commands.Context, steamid: SteamID64Converter, user: commands.UserConverter=None) -> None:
+    async def add_user(self, ctx: commands.Context, user: UserOrMeConverter, steamid: SteamID64Converter) -> None:
         """Add a DAC user to the bot."""
         await self._do_add_user(user, steamid)
         await ctx.send(f"Added {user} with SteamID {steamid}!")
@@ -162,12 +162,22 @@ class AutoChessCog(BaseCog):
         mmr = 0
         
         return rank_int, matches, wins, mmr, last_updated
-        
-    @autochess.command(name="users")
+    
+    async def request_opgg_renew(self, user: discord.User, steamid: str) -> None:
+        renew_url = f"https://autochess.op.gg/api/user/{steamid}/request-renew"
+        to_run = partial(requests.get, renew_url)
+        r = await self.bot.loop.run_in_executor(None, to_run)
+        if r.status_code != 200:
+            raise CommandError(f"Failed to renew stats for {user.name}")
+        return r
+
+    @autochess.command(name="users", aliases=["players"])
     async def show_users(self, ctx: commands.Context) -> None:
+        """Display all added AutoChess players."""
         
         # Sort players by rank
         # VERY inefficient. TODO: Find better solution
+        # NOTE: solution could be to store Discord User ID in values
         _users = sorted(self.users.values(), key=lambda u: u["rank"], reverse=True)
         sorted_users = {}
         for vals in _users:
@@ -207,9 +217,31 @@ class AutoChessCog(BaseCog):
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
 
     @autochess.command(name="update")
-    async def update_ranks(self, ctx: commands.Context) -> None:
-        await ctx.send("Updating all users... This might take a while")
-        for user_id, v in self.users.items():
-            await self._do_add_user(self.bot.get_user(int(user_id)), v["steamid"])
-            await asyncio.sleep(10) # I need to experiment with this delay
+    async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
+        """Update a specific user or all users's profiles."""
+        # Parse argument
+        if not arg or arg in ["help", "?", "h", "--help", "-help"]:
+            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")
+        elif arg in ["all", "everyone", "global"]:
+            users = self.users.items()
+            await ctx.send("Updating all users... This might take a while")
+        else:
+            user = await UserOrMeConverter().convert(ctx, arg)
+            autochess_data = self.users.get(arg)
+            users = {user.id: autochess_data}
+        
+        for user_id, v in users:
+            user = self.bot.get_user(int(user_id))
+            steamid = v["steamid"]
+            
+            # Send a "renew" request to OP.GG first
+            await self.request_opgg_renew(user, steamid)
+            
+            # Get updated user stats
+            await self._do_add_user(user, steamid)
+            
+            # Sleep for an, as of yet, undetermined amount of time to minimize risk
+            # of getting banned for scraping OP.GG's website
+            await asyncio.sleep(10) # I need to experiment delay duration
+        
         await ctx.send("Successfully updated all users!")
