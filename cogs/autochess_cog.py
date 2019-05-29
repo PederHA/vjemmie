@@ -62,12 +62,12 @@ RANKS = {
 RANKS_REVERSE = {v: k for k, v in RANKS.items()}
 
 RANK_EMOJIS = {
-    "Pawn": "♟️",
-    "Knight": "♞",
-    "Bishop": "♝",
-    "Rook": "♜",
-    "King": "♚",
-    "Queen": "♛"
+    "Pawn": "♙",
+    "Knight": "♘",
+    "Bishop": "♗",
+    "Rook": "♖",
+    "King": "♔",
+    "Queen": "♕"
 }
 
 class AutoChessCog(BaseCog):
