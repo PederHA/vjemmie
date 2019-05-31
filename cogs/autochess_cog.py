@@ -105,7 +105,7 @@ class AutoChessCog(BaseCog):
     @admins_only()
     async def add_user(self, ctx: commands.Context, user: UserOrMeConverter, steamid: SteamID64Converter) -> None:
         """Add a DAC user to the bot."""
-        # Make sure OP.GG profile for SteamID is generated and up to date
+        # Attempt to update OP.GG profile before fetching stats
         try:
             await self.request_opgg_renew(user, steamid)
         except:
@@ -197,50 +197,58 @@ class AutoChessCog(BaseCog):
         # Format player ranking list
         out = []
         for idx, (user_id, v) in enumerate(sorted_users.items(), start=1):
-            name = self.bot.get_user(int(user_id)).name
-            
-            rank = RANKS_REVERSE.get(v["rank"])
-            
-            rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
-            
-            matches = v['matches']
-            
-            # Format datetime.
-            _l_u = ciso8601.parse_datetime(v["last_updated"])
-            diff = datetime.now(timezone.utc) - _l_u
-            
-            # Show "x hours/minutes/seconds ago" if <1 day since update
-            if diff.days < 1:
-                _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
-                last_updated = "Just now" # default, in case all time dict values are 0
-                for k, v in _last_updated.items():
-                    if v < 1:
-                        continue
-                    if v == 1:
-                        k = k[:-1] # "1 hour" instead of "1 hours"
-                    last_updated = f"{v} {k} ago"
-                    break
-
-            # Show "yesterday" if 1 day since update
-            elif diff.days == 1:
-                last_updated = "yesterday"
-            
-            # Show "x days ago" if <=1 week since update
-            elif diff.days <= 7:
-                last_updated = f"{diff.days} days ago"
-            
-            # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
-            else:
-                last_updated = _l_u.strftime("%a %b %d %Y")
-
-            out.append(f"**{idx}. {name}**\n"
-                f"Rank: {rank_emoji} {rank}\n"
-                f"Matches: {matches}\n"
-                f"Last updated: {last_updated}")
+            user_stats_fmt = await self.format_user_stats(user_id, v, idx)
+            out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
         
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
+    
+    async def format_user_stats(self, user_id: int, user_stats: dict, rank_n: int=None) -> str:
+        name = self.bot.get_user(int(user_id)).name
+        
+        rank = RANKS_REVERSE.get(user_stats["rank"])
+        
+        rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
+        
+        matches = user_stats["matches"]
+        
+        # Format datetime.
+        _l_u = ciso8601.parse_datetime(user_stats["last_updated"])
+        diff = datetime.now(timezone.utc) - _l_u
+        
+        # Show "x hours/minutes/seconds ago" if <1 day since update
+        if diff.days < 1:
+            _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
+            last_updated = "Just now" # default, in case all time dict values are 0
+            for k, v in _last_updated.items():
+                if v < 1:
+                    continue
+                if v == 1:
+                    k = k[:-1] # "1 hour" instead of "1 hours"
+                last_updated = f"{v} {k} ago"
+                break
 
+        # Show "yesterday" if 1 day since update
+        elif diff.days == 1:
+            last_updated = "yesterday"
+        
+        # Show "x days ago" if <=1 week since update
+        elif diff.days <= 7:
+            last_updated = f"{diff.days} days ago"
+        
+        # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
+        else:
+            last_updated = _l_u.strftime("%a %b %d %Y")
+        
+        r = f"{rank_n}. " if rank_n else ""
+        out = (
+            f"**{r}{name}**\n"
+            f"Rank: {rank_emoji} {rank}\n"
+            f"Matches: {matches}\n"
+            f"Last updated: {last_updated}"
+            )
+        return out
+    
     @autochess.command(name="update")
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
