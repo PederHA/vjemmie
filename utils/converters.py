@@ -2,6 +2,7 @@ import re
 from typing import Optional
 from urllib.parse import urlparse, ParseResult
 from functools import partial
+from collections import defaultdict
 
 import requests
 import discord
@@ -155,6 +156,8 @@ class ImgURLConverter(URLConverter):
 
 
 class SteamID64Converter(commands.Converter):
+    attempts = defaultdict(int)
+
     async def convert(self, ctx: commands.Context, arg: str) -> Optional[str]:
         exc_text = f"Unable to find user {arg}"
         
@@ -166,10 +169,18 @@ class SteamID64Converter(commands.Converter):
         
         try:
             steamid = r.text.split("data-steamid64=")[1].split('"', 2)[1]
-        except IndexError:
+            if not steamid.isnumeric():
+                raise ValueError
+        except (IndexError, ValueError):
             raise CommandError(exc_text)
         else:
-            if not steamid.isnumeric():
-                raise CommandError(exc_text)
+            return steamid
+        finally:
+            id_ = ctx.message.author.id
+            # Allow user 3 attempts to fetch their SteamID before starting cooldown
+            self.attempts[id_] += 1
+            if self.attempts[id_] <= 3:
+                ctx.command.reset_cooldown(ctx)
             else:
-                return steamid
+                # Clear attempts counter, but start cooldown
+                self.attempts[id_] = 0 
