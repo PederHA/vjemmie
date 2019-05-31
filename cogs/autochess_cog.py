@@ -95,6 +95,7 @@ class AutoChessCog(BaseCog):
             raise CommandError("No subcommand specified!")
 
     @autochess.command(name="addme")
+    @commands.cooldown(rate=1, per=600, type=commands.BucketType.user)
     async def add_user_self(self, ctx: commands.Context, steamid: SteamID64Converter) -> None:
         """Alias for `!add <own user> <steamid>`"""
         await ctx.invoke(self.add_user, ctx.message.author, steamid)
@@ -230,6 +231,7 @@ class AutoChessCog(BaseCog):
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
 
     @autochess.command(name="update")
+    @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
         """Update a specific user or all users's profiles."""
         # Parse argument
