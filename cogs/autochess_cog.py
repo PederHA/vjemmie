@@ -206,9 +206,14 @@ class AutoChessCog(BaseCog):
             # Show "x hours ago" if <1 day since update
             if diff.days < 1:
                 _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
-                lu_hours = int(_last_updated["hours"])
-                s = "s" if lu_hours > 1 else ""
-                last_updated = f"{lu_hours} hour{s} ago"
+                #lu_hours = int(_last_updated["hours"])
+                #s = "s" if lu_hours > 1 else ""
+                for k, v in _last_updated.items():
+                    s = "s" if v > 1 else ""
+                    last_updated = f"{v} {k}{s} ago"
+                    if v > 0:
+                        break
+                #last_updated = f"{lu_hours} hour{s} ago"
             
             # Show "yesterday" if 1 day since update
             elif diff.days == 1:
