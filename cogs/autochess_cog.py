@@ -71,6 +71,7 @@ RANK_EMOJIS = {
 }
 
 class AutoChessCog(BaseCog):
+    """Dota Autochess commands."""
     EMOJI = "♟️"
     FILES = [USERS_FILE]
     DIRS = ["db/autochess"]
