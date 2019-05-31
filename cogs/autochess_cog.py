@@ -69,6 +69,7 @@ RANK_EMOJIS = {
     "King": "♔",
     "Queen": "♕"
 }
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
 
 class AutoChessCog(BaseCog):
     """Dota Autochess commands."""
@@ -166,9 +167,9 @@ class AutoChessCog(BaseCog):
     
     async def request_opgg_renew(self, user: discord.User, steamid: str) -> None:
         renew_url = f"https://autochess.op.gg/api/user/{steamid}/request-renew"
-        to_run = partial(requests.get, renew_url)
+        to_run = partial(requests.post, renew_url, headers={"User-Agent": USER_AGENT})
         r = await self.bot.loop.run_in_executor(None, to_run)
-        if r.status_code != 200:
+        if r.status_code != 201:
             raise CommandError(f"Failed to renew stats for {user.name}")
         return r
 
