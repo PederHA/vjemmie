@@ -105,6 +105,9 @@ class AutoChessCog(BaseCog):
     @admins_only()
     async def add_user(self, ctx: commands.Context, user: UserOrMeConverter, steamid: SteamID64Converter) -> None:
         """Add a DAC user to the bot."""
+        # Make sure OP.GG profile for SteamID is generated and up to date
+        await self.request_opgg_renew(user, steamid)
+        await asyncio.sleep(5) # Sleep to allow OP.GG time to generate profile
         await self._do_add_user(user, steamid)
         await ctx.send(f"Added {user} with SteamID {steamid}!")
     
