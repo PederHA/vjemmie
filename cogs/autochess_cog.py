@@ -142,7 +142,6 @@ class AutoChessCog(BaseCog):
         else:
             raise CommandError("Unable to parse stats!")
 
-
         last_updated = ciso8601.parse_datetime(t).isoformat() # NOTE: Not necessary? Just save string from website?
         
         # Rank
@@ -242,7 +241,10 @@ class AutoChessCog(BaseCog):
             await ctx.send("Updating all users... This might take a while")
         else:
             user = await UserOrMeConverter().convert(ctx, arg)
-            autochess_data = self.users.get(arg)
+            autochess_data = self.users.get(str(user.id))
+            if not autochess_data:
+                raise CommandError(f"{user.name} has no AutoChess profile!\n"
+                f"You can add this person by typing **`{self.bot.command_prefix}autochess add {user.name} <steamid>`**")
             users = {user.id: autochess_data}
         
         for user_id, v in users:
@@ -257,6 +259,6 @@ class AutoChessCog(BaseCog):
             
             # Sleep for an, as of yet, undetermined amount of time to minimize risk
             # of getting banned for scraping OP.GG's website
-            await asyncio.sleep(10) # I need to experiment delay duration
+            await asyncio.sleep(10) # I need to experiment with delay duration
         
         await ctx.send("Successfully updated all users!")
