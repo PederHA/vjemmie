@@ -89,8 +89,8 @@ class UserOrMeConverter(IDConverter):
                 name = arg[:-5]
                 predicate = lambda u: u.name == name and u.discriminator == discrim
                 result = discord.utils.find(predicate, state._users.values())
-                if result is not None:
-                    return result
+            if result is not None:
+                return result
 
             predicate = lambda u: u.name == arg
             result = discord.utils.find(predicate, state._users.values())
