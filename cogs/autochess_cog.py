@@ -266,7 +266,8 @@ class AutoChessCog(BaseCog):
         # Parse argument
         # Send command help text
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
-            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")   
+            self.reset_command_cooldown(ctx)
+            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")  
         # Update all users
         elif arg in ["all", "everyone", "global"]:
             users = self.users
