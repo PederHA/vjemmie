@@ -18,7 +18,8 @@ from discord.ext import commands
 
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
-    GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
+    GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE,
+    COMMAND_INVOCATION_CHANNEL)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
                               FileTypeError)
@@ -633,7 +634,6 @@ class BaseCog(commands.Cog):
         if not out_str:
             raise CommandError("Cog has no commands!")
 
-        
         if rtn:
             return out_str
         
@@ -969,3 +969,8 @@ class BaseCog(commands.Cog):
     def reset_command_cooldown(self, ctx: commands.Context) -> None:
         cmd = ctx.command
         cmd.reset_cooldown(ctx)
+
+    async def get_command_invocation_ctx(self) -> commands.Context:
+        channel = self.bot.get_channel(COMMAND_INVOCATION_CHANNEL)
+        ctx = await self.bot.get_context(await channel.fetch_message(channel.last_message_id))
+        return ctx
