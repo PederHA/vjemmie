@@ -1,5 +1,6 @@
 from discord.ext import commands
 import asyncio
+from config import YES_ARGS
 
 async def confirm_yes(bot: commands.Bot, ctx: commands.Context, msg: str) -> bool:
     await ctx.send(f"{msg} [y/n]")
@@ -11,7 +12,7 @@ async def confirm_yes(bot: commands.Bot, ctx: commands.Context, msg: str) -> boo
         pass
     else:
         r = reply.content.lower()
-        if r in ["y", "yes", "+", "ja", "si"]:
+        if r in YES_ARGS:
             return True 
     return False
 
@@ -23,7 +24,7 @@ async def wait_for_user_reply(bot: commands.Bot,
                               options: list=None,
                               timeout_msg: str=None) -> bool:
     if not options:
-        options = ["y", "yes", "+", "ja", "si"]
+        options = YES_ARGS
     
     if not timeout_msg:
         timeout_msg = "User did not reply in time."
@@ -38,6 +39,6 @@ async def wait_for_user_reply(bot: commands.Bot,
         await ctx.send(timeout_msg)
     else:
         r = reply.content.lower()
-        if r in ["y", "yes", "+", "ja", "si"]:
+        if r in options:
             return True
     return False

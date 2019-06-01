@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only, load_blacklist, save_blacklist
+from config import YES_ARGS
 
 
 class AdminCog(BaseCog):
@@ -25,11 +26,11 @@ class AdminCog(BaseCog):
         
     async def run_activity_rotation(self) -> None:
         ctx = await self.get_command_invocation_ctx()
-        
+        p = self.bot.command_prefix
         acitivities = [
-            "!about",
-            "!help",
-            "!commands",
+            f"{p}about",
+            f"{p}help",
+            f"{p}commands",
             partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True)
         ]
         
@@ -191,7 +192,7 @@ class AdminCog(BaseCog):
                 await ctx.send("No reply from user")
             else:
                 r = reply.content.lower()
-                if r in ["y", "yes"]:
+                if r in YES_ARGS:
                     save_blacklist([]) # Clear blacklist
                     out_msg = "Cleared blacklist"
                 else:

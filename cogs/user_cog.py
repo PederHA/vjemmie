@@ -7,7 +7,7 @@ import psutil
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
-from config import AUTHOR_MENTION
+from config import AUTHOR_MENTION, NO_ARGS
 from utils.exceptions import CategoryError, CogError, CommandError
 
 
@@ -23,7 +23,7 @@ class UserCog(BaseCog):
         """Sends information about a specific cog's commands"""
         
         # Enable advanced !help output
-        if simple in ["n", "-", "advanced"]:
+        if simple in NO_ARGS + ["advanced"]:
             simple = False
         
         # Only include cogs that have commands that pass checks for current ctx
