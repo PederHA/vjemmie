@@ -1,6 +1,7 @@
 import asyncio
 from functools import partial
 from datetime import datetime, timezone
+from typing import Union
 
 import discord
 import requests
@@ -179,9 +180,9 @@ class AutoChessCog(BaseCog):
             raise CommandError(f"Failed to renew stats for {user.name}")
         return r
 
-    @autochess.command(name="users", aliases=["players"])
+    @autochess.command(name="users", aliases=["players", "leaderboard"])
     async def show_users(self, ctx: commands.Context) -> None:
-        """Display all added AutoChess players."""
+        """Display leaderboard for added AC players."""
         
         # Sort players by rank
         # VERY inefficient. TODO: Find better solution
@@ -203,7 +204,16 @@ class AutoChessCog(BaseCog):
         
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
     
-    async def format_user_stats(self, user_id: int, user_stats: dict, rank_n: int=None) -> str:
+    @autochess.command(name="stats")
+    async def show_stats(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
+        """Show stats for a single user."""
+        if not user:
+            user = await UserOrMeConverter().convert(ctx, user)
+        user_stats = self.users.get(str(user.id))
+        out = await self.format_user_stats(user.id, user_stats)
+        await self.send_embed_message(ctx, "AutoChess Stats", out)    
+    
+    async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None) -> str:
         name = self.bot.get_user(int(user_id)).name
         
         rank = RANKS_REVERSE.get(user_stats["rank"])
@@ -253,7 +263,6 @@ class AutoChessCog(BaseCog):
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
         """Update a specific user or all users's profiles."""
-        
         # Parse argument
         # Send command help text
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
