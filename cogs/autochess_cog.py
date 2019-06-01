@@ -265,11 +265,12 @@ class AutoChessCog(BaseCog):
         """Update a specific user or all users's profiles."""
         # Parse argument
         # Send command help text
+        ALL_ARGS = ["all", "everyone", "global"]
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
             self.reset_command_cooldown(ctx)
             return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")  
         # Update all users
-        elif arg in ["all", "everyone", "global"]:
+        elif arg in ALL_ARGS:
             users = self.users
             await ctx.send("Updating all users... This might take a while")     
         # Update single user
@@ -302,7 +303,7 @@ class AutoChessCog(BaseCog):
             # of getting banned for scraping OP.GG's website
             await asyncio.sleep(10)
         
-        if not arg:
+        if arg in ALL_ARGS:
             u = "all users"
         else:
             u = user.name
