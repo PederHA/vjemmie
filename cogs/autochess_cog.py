@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-from config import GENERAL_DB_PATH
+from config import GENERAL_DB_PATH, ALL_ARGS
 from utils.caching import get_cached
 from utils.converters import SteamID64Converter, UserOrMeConverter
 from utils.exceptions import CommandError
@@ -210,10 +210,10 @@ class AutoChessCog(BaseCog):
         if not user:
             user = await UserOrMeConverter().convert(ctx, user)
         user_stats = self.users.get(str(user.id))
-        out = await self.format_user_stats(user.id, user_stats)
+        out = await self.format_user_stats(user.id, user_stats, show_updated=True)
         await self.send_embed_message(ctx, "AutoChess Stats", out)    
     
-    async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None) -> str:
+    async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None, show_updated: bool=False) -> str:
         name = self.bot.get_user(int(user_id)).name
         
         rank = RANKS_REVERSE.get(user_stats["rank"])
@@ -222,6 +222,23 @@ class AutoChessCog(BaseCog):
         
         matches = user_stats["matches"]
         
+        if show_updated:
+            last_updated = f"\nLast updated: {await self._format_last_updated(user_stats)}"
+        else:
+            last_updated = ""
+        
+        r = f"{rank_n}. " if rank_n else ""
+        
+        out = (
+            f"**{r}{name}**\n"
+            f"Rank: {rank_emoji} {rank}\n"
+            f"Matches: {matches}"
+            f"{last_updated}"
+            )
+        
+        return out
+    
+    async def _format_last_updated(self, user_stats: dict) -> str:
         # Format datetime.
         _l_u = ciso8601.parse_datetime(user_stats["last_updated"])
         diff = datetime.now(timezone.utc) - _l_u
@@ -250,14 +267,7 @@ class AutoChessCog(BaseCog):
         else:
             last_updated = _l_u.strftime("%a %b %d %Y")
         
-        r = f"{rank_n}. " if rank_n else ""
-        out = (
-            f"**{r}{name}**\n"
-            f"Rank: {rank_emoji} {rank}\n"
-            f"Matches: {matches}\n"
-            f"Last updated: {last_updated}"
-            )
-        return out
+        return last_updated
     
     @autochess.command(name="update")
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
@@ -265,7 +275,6 @@ class AutoChessCog(BaseCog):
         """Update a specific user or all users's profiles."""
         # Parse argument
         # Send command help text
-        ALL_ARGS = ["all", "everyone", "global"]
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
             self.reset_command_cooldown(ctx)
             return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")  
