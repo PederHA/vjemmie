@@ -213,11 +213,16 @@ class AdminCog(BaseCog):
     @admins_only()
     async def delete_messages(self, 
                               ctx: commands.Context, 
-                              member: Optional[str]=None,
+                              member: str=None,
                               content: Optional[str]=None) -> None:
+        
         after = datetime.now() - timedelta(hours=2)
-        # Any 1 char member name is interpreted as None
-        member = await commands.MemberConverter().convert(ctx, member) if len(member)!=1 else None
+
+        try:
+            member = await commands.MemberConverter().convert(ctx, member)
+        except:
+            member = None
+    
         n = 0
         async for msg in ctx.message.channel.history(limit=250, after=after):
             if content and content in msg.content and msg.content != ctx.message.content:
