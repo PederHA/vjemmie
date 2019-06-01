@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Union
+from functools import partial
 
 import discord
 from discord.ext import commands
@@ -11,6 +12,7 @@ from utils.checks import admins_only, load_blacklist, save_blacklist
 
 class AdminCog(BaseCog):
     DISABLE_HELP = True
+    ACTIVITY_ROTATION = True
     
     """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
@@ -18,8 +20,26 @@ class AdminCog(BaseCog):
         """Sets activity and prints a message when cog is instantiated 
         and added to the bot.
         """
-        await self._change_activity()
         print("Bot logged in")
+        await self.run_activity_rotation()
+        
+    async def run_activity_rotation(self) -> None:
+        ctx = await self.get_command_invocation_ctx()
+        
+        acitivities = [
+            "!about",
+            "!help",
+            "!commands",
+            partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True)
+        ]
+        
+        while self.ACTIVITY_ROTATION:
+            for ac in acitivities:
+                if isinstance(ac, str):
+                    await self._change_activity(ac)
+                else:
+                    await self._change_activity(f"Uptime: {await ac()}")
+                await asyncio.sleep(30)
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
@@ -31,9 +51,7 @@ class AdminCog(BaseCog):
         """Called when bot leaves a guild."""
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
     
-    async def _change_activity(self, activity_name: str=None) -> None:
-        if not activity_name:
-            activity_name = f"{self.bot.command_prefix}about"
+    async def _change_activity(self, activity_name: str) -> None:
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
     
@@ -49,7 +67,15 @@ class AdminCog(BaseCog):
         activity_name : `Optional[str]`, optional
             Name of activity.
         """
-        await self._change_activity(activity_name)
+        if activity_name:
+            # Disable activity rotation when manually changing bot activity
+            self.ACTIVITY_ROTATION = False 
+            await self._change_activity(activity_name)
+        elif not activity_name and not self.ACTIVITY_ROTATION:
+            # Run activity rotation
+            self.ACTIVITY_ROTATION = True
+            await self.run_activity_rotation()
+        # Do nothing if activity rotation is active and no argument is passed in
     
     @commands.command(name="serverlist")
     @admins_only()
