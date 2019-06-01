@@ -253,12 +253,16 @@ class AutoChessCog(BaseCog):
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
         """Update a specific user or all users's profiles."""
+        
         # Parse argument
+        # Send command help text
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
-            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")
+            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")   
+        # Update all users
         elif arg in ["all", "everyone", "global"]:
-            users = self.users.items()
-            await ctx.send("Updating all users... This might take a while")
+            users = self.users
+            await ctx.send("Updating all users... This might take a while")     
+        # Update single user
         else:
             user = await UserOrMeConverter().convert(ctx, arg)
             autochess_data = self.users.get(str(user.id))
@@ -266,8 +270,9 @@ class AutoChessCog(BaseCog):
                 raise CommandError(f"{user.name} has no AutoChess profile!\n"
                 f"You can add this person by typing **`{self.bot.command_prefix}autochess add {user.name} <steamid>`**")
             users = {user.id: autochess_data}
-        
-        for user_id, v in users:
+
+        # Update chosen users   
+        for user_id, v in users.items():
             user = self.bot.get_user(int(user_id))
             steamid = v["steamid"]
             
@@ -279,6 +284,11 @@ class AutoChessCog(BaseCog):
             
             # Sleep for an, as of yet, undetermined amount of time to minimize risk
             # of getting banned for scraping OP.GG's website
-            await asyncio.sleep(10) # I need to experiment with delay duration
+            await asyncio.sleep(10)
         
-        await ctx.send("Successfully updated all users!")
+        if not arg:
+            u = "all users"
+        else:
+            u = user.name
+        await ctx.send(f"Successfully updated {u}!")
+        
