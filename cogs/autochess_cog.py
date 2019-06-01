@@ -273,7 +273,13 @@ class AutoChessCog(BaseCog):
             await ctx.send("Updating all users... This might take a while")     
         # Update single user
         else:
-            user = await UserOrMeConverter().convert(ctx, arg)
+            # Attempt to get user. Reset cmd cooldown if user is not found
+            try:
+                user = await UserOrMeConverter().convert(ctx, arg)
+            except Exception as e:
+                await self.cog_command_error(ctx, e)
+                return self.reset_command_cooldown(ctx)
+            
             autochess_data = self.users.get(str(user.id))
             if not autochess_data:
                 raise CommandError(f"{user.name} has no AutoChess profile!\n"
