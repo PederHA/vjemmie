@@ -1,5 +1,6 @@
 from utils.ext_models import SoundSubdir
 
+VERSION = "0.1.0"
 
 #///////////////////
 # Database        /
@@ -60,3 +61,9 @@ DOWNLOADS_DIR = SoundSubdir("downloads", ["dl", "downloaded", "download"])
 # Dynamic list of SoundSubdir instances. Import this one!
 SOUND_SUB_DIRS = [v for v in dict(locals()).values() if isinstance(v, SoundSubdir)]
 
+#///////////////////
+# Arguments       /
+#/////////////////
+YES_ARGS = ["y", "yes", "+", "ja", "si"]
+NO_ARGS = ["n", "no", "-", "nei"]
+ALL_ARGS = ["all", "everyone", "global"]
