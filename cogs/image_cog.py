@@ -15,7 +15,7 @@ from deepfryer.fryer import ImageFryer
 from utils.checks import owners_only, pfm_cmd
 from utils.exceptions import (BotException, FileSizeError,
                               InvalidURLError, NonImgUrlError,
-                              WordExceededLimit)
+                              WordExceededLimit, CommandError)
 
 
 class ImageCog(BaseCog):
@@ -190,7 +190,7 @@ class ImageCog(BaseCog):
         img_nobg = await self.bot.loop.run_in_executor(None, to_run)
         
         if not img_nobg:
-            return await ctx.send("Could not remove background! Try again later.")
+            raise CommandError("Could not remove background! Try again later.")
 
         embed = await self.get_embed_from_img_upload(ctx, img_nobg, "nobg.png")
         await ctx.send(embed=embed)
@@ -207,7 +207,7 @@ class ImageCog(BaseCog):
             img_nobg.seek(0)
             return img_nobg
         else:
-            raise Exception(response)
+            raise ConnectionError(response)
    
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
