@@ -70,6 +70,8 @@ class UserOrMeConverter(IDConverter):
     4. Lookup by name
     """
     async def convert(self, ctx, argument):
+        if argument is None:
+            return ctx.bot.get_user(ctx.message.author.id)
         match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
         result = None
         state = ctx._state
@@ -99,6 +101,7 @@ class UserOrMeConverter(IDConverter):
             raise BadArgument('User "{}" not found'.format(argument))
 
         return result
+
 
 class ParsedURL(ParseResult):
     @property
@@ -159,8 +162,7 @@ class SteamID64Converter(commands.Converter):
     attempts = defaultdict(int)
 
     async def convert(self, ctx: commands.Context, arg: str) -> Optional[str]:
-        exc_text = f"Unable to find user {arg}"
-        
+        # Look up arg on steamid.io
         lookup = partial(requests.post, "https://steamid.io/lookup", data={"input": arg})
         r = await ctx.bot.loop.run_in_executor(None, lookup)
         
@@ -172,7 +174,7 @@ class SteamID64Converter(commands.Converter):
             if not steamid.isnumeric():
                 raise ValueError
         except (IndexError, ValueError):
-            raise CommandError(exc_text)
+            raise CommandError(f"Unable to find user {arg}")
         else:
             return steamid
         finally:
