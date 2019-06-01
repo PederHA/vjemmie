@@ -958,5 +958,5 @@ class BaseCog(commands.Cog):
         return await self.get_embed(ctx, image_url=url)
 
     def reset_command_cooldown(self, ctx: commands.Context) -> None:
-        cmd = self.bot.get_command(ctx.invoked_with)
+        cmd = ctx.command
         cmd.reset_cooldown(ctx)
