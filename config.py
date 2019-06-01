@@ -40,6 +40,7 @@ IMAGE_CHANNEL_ID = 549649397420392567 # Image rehosting channel
 LOG_CHANNEL_ID = 340921036201525248 # Error logging channel
 DOWNLOAD_CHANNEL_ID = 563312629045788692 # Download logging channel
 GUILD_HISTORY_CHANNEL = 565674480660119592 # Joining/leaving guilds
+COMMAND_INVOCATION_CHANNEL = 584386122004561920 # Channel to use as base for ctx (see BaseCog.get_command_invocation_ctx())
 
 #///////////////////
 # Soundboard      /
