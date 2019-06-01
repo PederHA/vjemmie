@@ -598,9 +598,11 @@ class BaseCog(commands.Cog):
             
             group = False
             if isinstance(command, commands.Group):
-                # We use a set here, because each alias of a subcommand is treated
-                # as an individual command, leading to the output string containing 
-                # duplicate commands if dict values are simply converted to a list
+                """
+                We use a set here, because each alias of a subcommand is treated
+                as an individual command, leading to the output string containing 
+                duplicate commands if dict values are simply converted to a list
+                """
                 cmds = list(set(command.all_commands.values()))
                 cmds.sort(key=lambda k: k.name)
                 cmds.insert(0, command)
@@ -609,15 +611,21 @@ class BaseCog(commands.Cog):
                 cmds = [command]
             
             for cmd in cmds:          
-                # Show/hide command signature (displays aliases, args, etc.)
+                # Show bot command prefix if command is not a subcommand
                 subcommand = group and type(cmd) == commands.Command
                 prefix = f"{self.bot.command_prefix}" if not subcommand else ""
+                
+                # Add indent to subcommands
+                indent = f"-{self.EMBED_FILL_CHAR*2}" if type(cmd) == commands.Command and subcommand else ""
+                # Add right side padding if no indent
+                padding = "\xa0"*2 if not indent else ""
+                
+                # Hide command signature from simple output
                 if simple:
                     cmd_name = cmd.name.ljust(20,"\xa0")
                 else:
                     cmd_name = f"{cmd.name} {cmd.signature}".ljust(35, "\xa0")
-                indent = f"-{self.EMBED_FILL_CHAR*2}" if type(cmd) == commands.Command and subcommand else ""
-                padding = "\xa0"*2 if not indent else ""
+                
                 out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {cmd.short_doc}")
 
         out_str = "\n".join(out)    
