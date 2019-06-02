@@ -1,7 +1,7 @@
 import asyncio
 from functools import partial
 from datetime import datetime, timezone
-from typing import Union
+from typing import Union, Tuple
 
 import discord
 import requests
@@ -115,7 +115,7 @@ class AutoChessCog(BaseCog):
         await self._do_add_user(user, steamid)
         await ctx.send(f"Added {user} with SteamID {steamid}!")
     
-    async def _do_add_user(self, user: discord.User, steamid: str) -> None:
+    async def _do_add_user(self, user: discord.User, steamid: str) -> Tuple[int, int, int, int, str]:
         rank, matches_played, wins, mmr, last_updated = await self.scrape_op_gg_stats(steamid)
         users = self.users
         users[str(user.id)] = {
@@ -145,13 +145,11 @@ class AutoChessCog(BaseCog):
                 continue
             if "data-enablefromnow" in p.attrs:
                 # This is the "last updated" timestamp
-                t = p.attrs["data-date"]
+                last_updated = p.attrs["data-date"]
                 break
         else:
             raise CommandError("Unable to parse stats!")
-
-        last_updated = ciso8601.parse_datetime(t).isoformat() # NOTE: Not necessary? Just save string from website?
-        
+    
         # Rank
         rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
         try:
@@ -302,7 +300,10 @@ class AutoChessCog(BaseCog):
             steamid = v["steamid"]
             
             # Send a "renew" request to OP.GG first
-            await self.request_opgg_renew(user, steamid)
+            try:
+                await self.request_opgg_renew(user, steamid)
+            except:
+                pass  # Renew fails if profile is already up-to-date
             
             # Get updated user stats
             await self._do_add_user(user, steamid)
