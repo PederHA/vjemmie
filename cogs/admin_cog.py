@@ -11,16 +11,8 @@ from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only, load_blacklist, save_blacklist
 from config import YES_ARGS
 
-def _b(self):
-    for f in self._fields:
-        attr = getattr(self, f)
-        if bool(attr) and attr not in ["is_coro"]:
-            return True
-    else:
-        return False
 
 Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
-Activity.__bool__ = _b
 
 class AdminCog(BaseCog):
     DISABLE_HELP = True
@@ -44,11 +36,10 @@ class AdminCog(BaseCog):
             Activity(f"{p}commands"),
             Activity("Uptime: ", partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True), is_coro=True)   
         ]
-
         while self.ACTIVITY_ROTATION:
             for ac in acitivities:
-                if not ac:
-                    continue
+                if not ac.text and not ac.callable:
+                    continue # Skip if activity has no text or callable
                 if ac.callable:
                     if ac.is_coro:
                         r = await ac.callable()
