@@ -724,6 +724,7 @@ class BaseCog(commands.Cog):
                                  limit: int=None,
                                  msg_text: str=None,
                                  *,
+                                 thumbnail_url: str=None,
                                  color: Union[str, int]=None,
                                  footer: bool=True,
                                  timestamp: bool=True,
@@ -768,7 +769,7 @@ class BaseCog(commands.Cog):
             h = header if keep_header else Embed.Empty
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, title=header, description=field, footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, title=header, description=field, footer=False, timestamp=False, color=color, thumbnail_url=thumbnail_url)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
                 await self.get_embed(ctx, title=h, description=field, footer=footer, timestamp=timestamp, color=color)
@@ -786,7 +787,8 @@ class BaseCog(commands.Cog):
                     description=text_fields[0],
                     footer=footer,
                     timestamp=timestamp,
-                    color=color)
+                    color=color,
+                    thumbnail_url=thumbnail_url)
             ]
 
         # Return embed objects if enabled
