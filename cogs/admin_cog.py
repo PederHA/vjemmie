@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Union
 from functools import partial
+from collections import namedtuple
 
 import discord
 from discord.ext import commands
@@ -10,6 +11,16 @@ from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only, load_blacklist, save_blacklist
 from config import YES_ARGS
 
+def _b(self):
+    for f in self._fields:
+        attr = getattr(self, f)
+        if not bool(attr):
+            return False
+    else:
+        return True
+
+Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
+Activity.__bool__ = _b
 
 class AdminCog(BaseCog):
     DISABLE_HELP = True
@@ -28,18 +39,24 @@ class AdminCog(BaseCog):
         ctx = await self.get_command_invocation_ctx()
         p = self.bot.command_prefix
         acitivities = [
-            f"{p}about",
-            f"{p}help",
-            f"{p}commands",
-            partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True)
+            Activity(f"{p}about"),
+            Activity(f"{p}help"),
+            Activity(f"{p}commands"),
+            Activity("Uptime: ", partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True), is_coro=True)   
         ]
-        
+
         while self.ACTIVITY_ROTATION:
             for ac in acitivities:
-                if isinstance(ac, str):
-                    await self._change_activity(ac)
+                if not ac:
+                    continue
+                if ac.callable:
+                    if ac.is_coro:
+                        r = await ac.callable()
+                    else:
+                        r = ac.callable()
+                    await self._change_activity(f"{ac.text}{r}")
                 else:
-                    await self._change_activity(f"Uptime: {await ac()}")
+                    await self._change_activity(ac.text)
                 await asyncio.sleep(30)
     
     @commands.Cog.listener()
