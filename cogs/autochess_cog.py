@@ -178,7 +178,6 @@ class AutoChessCog(BaseCog):
         r = await self.bot.loop.run_in_executor(None, to_run)
         if r.status_code != 201:
             raise CommandError(f"Failed to renew stats for {user.name}")
-        return r
 
     @autochess.command(name="users", aliases=["players", "leaderboard"])
     async def show_users(self, ctx: commands.Context) -> None:
