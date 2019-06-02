@@ -186,9 +186,12 @@ class AutoChessCog(BaseCog):
         # NOTE: solution could be to store Discord User ID in values
         _users = sorted(self.users.values(), key=lambda u: u["rank"], reverse=True)
         sorted_users = {}
+        rank_1_user = None
         for vals in _users:
             for k, v in self.users.items():
                 if v == vals:
+                    if not rank_1_user:
+                        rank_1_user = self.bot.get_user(int(k))
                     sorted_users[k] = vals
                     break
         
@@ -199,7 +202,7 @@ class AutoChessCog(BaseCog):
             out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
         
-        await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str)
+        await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str, thumbnail_url=rank_1_user.avatar_url._url)
     
     @autochess.command(name="stats")
     async def show_stats(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
@@ -208,7 +211,7 @@ class AutoChessCog(BaseCog):
             user = await UserOrMeConverter().convert(ctx, user)
         user_stats = self.users.get(str(user.id))
         out = await self.format_user_stats(user.id, user_stats, show_updated=True)
-        await self.send_embed_message(ctx, "AutoChess Stats", out)    
+        await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)    
     
     async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None, show_updated: bool=False) -> str:
         name = self.bot.get_user(int(user_id)).name
