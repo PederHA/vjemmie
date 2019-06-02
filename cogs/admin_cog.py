@@ -14,10 +14,10 @@ from config import YES_ARGS
 def _b(self):
     for f in self._fields:
         attr = getattr(self, f)
-        if not bool(attr):
-            return False
+        if bool(attr) and attr not in ["is_coro"]:
+            return True
     else:
-        return True
+        return False
 
 Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
 Activity.__bool__ = _b
