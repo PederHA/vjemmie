@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 
-def load_json(fp: str, default=list) -> list:
+def load_json(fp: str, default_factory=list) -> list:
     f = open(fp, "r")
     try:
         data =  json.load(f)
@@ -21,10 +21,10 @@ def load_json(fp: str, default=list) -> list:
             )
             df.write(contents)
         f = open(fp, "w")
-        f.write(f"{default()}")
+        f.write(f"{default_factory()}")
         f.close()
-        return default()
+        return default_factory()
 
-def dump_json(fp: str, obj: Any) -> None:
+def dump_json(fp: str, obj: Any, default: Any=None) -> None:
     with open(fp, "w") as f:
-        json.dump(obj, f, indent=4)
+        json.dump(obj, f, indent=4, default=default)
