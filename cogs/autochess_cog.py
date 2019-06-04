@@ -2,6 +2,7 @@ import asyncio
 from functools import partial
 from datetime import datetime, timezone
 from typing import Union, Tuple
+from dataclasses import dataclass
 
 import discord
 import requests
@@ -72,27 +73,52 @@ RANK_EMOJIS = {
 }
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
 
+@dataclass
+class AutochessProfile:
+    steamid: Union[str, int] = None
+    userid: int = 0
+    rank: int = 0
+    mmr: int = 0
+    matches: int = 0
+    wins: int = 0
+    wins_recent30: int = 0
+    top3_recent30: int = 0
+    average_rank: float = 0
+    last_updated: str = ""
+
 class AutoChessCog(BaseCog):
     """Dota Autochess commands."""
     EMOJI = "♟️"
     FILES = [USERS_FILE]
     DIRS = ["db/autochess"]
-
-    DB = DatabaseHandler(GENERAL_DB_PATH)
     
+    DB = DatabaseHandler(GENERAL_DB_PATH)
+
     def __init__(self, bot: commands.Bot) -> None:
         self.setup(default_factory=dict)
         super().__init__(bot)
-    
+        self._USERS_MODIFIED = None
+        self._USERS = {}
+
     @property
     def users(self) -> dict:
-        return get_cached(USERS_FILE, "autochess")
+        u = {}
+        u_dict, timestamp = get_cached(USERS_FILE, "autochess", timestamp=True)
+        if not self._USERS_MODIFIED or self._USERS_MODIFIED != timestamp:
+            for k, v in u_dict.items():
+                u[k] = AutochessProfile(**v)
+            self._USERS = u
+            self._USERS_MODIFIED = timestamp
+        else:
+            u = self._USERS
+        return u
 
     def dump_users(self, users: dict) -> None:
-        dump_json(USERS_FILE, users)
-            
+        dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
+
     @commands.group(name="autochess", aliases=["ac", "dac"])
     async def autochess(self, ctx: commands.Context) -> None:
+        print(self.users)
         if not ctx.invoked_with:
             raise CommandError("No subcommand specified!")
 
@@ -114,23 +140,16 @@ class AutoChessCog(BaseCog):
         await asyncio.sleep(5) # Sleep to allow OP.GG time to generate profile
         await self._do_add_user(user, steamid)
         await ctx.send(f"Added {user} with SteamID {steamid}!")
-    
-    async def _do_add_user(self, user: discord.User, steamid: str) -> Tuple[int, int, int, int, str]:
-        rank, matches_played, wins, mmr, last_updated = await self.scrape_op_gg_stats(steamid)
+
+    async def _do_add_user(self, user: discord.User, steamid: str) -> None:
+        profile = await self.scrape_op_gg_stats(steamid, user.id)
         users = self.users
-        users[str(user.id)] = {
-                          "steamid": steamid, 
-                          "rank": rank,
-                          "mmr": mmr, 
-                          "matches": matches_played, 
-                          "wins": wins,
-                          "last_updated": last_updated
-                          }
+        users[str(user.id)] = profile
         self.dump_users(users)
-    
-    async def scrape_op_gg_stats(self, steamid) -> None:
+
+    async def scrape_op_gg_stats(self, steamid, userid) -> AutochessProfile:
         url = f"https://autochess.op.gg/user/{steamid}"
-        
+
         to_run = partial(requests.get, url)
         r = await self.bot.loop.run_in_executor(None, to_run)
 
@@ -138,7 +157,7 @@ class AutoChessCog(BaseCog):
             raise CommandError("No response from stats API.")
 
         soup = BeautifulSoup(r.text, features="lxml")
-        
+
         # Last updated
         for p in soup.findAll("span", {"class": "date"}):
             if "text-muted" in p.attrs["class"]:
@@ -149,15 +168,34 @@ class AutoChessCog(BaseCog):
                 break
         else:
             raise CommandError("Unable to parse stats!")
-    
+
         # Rank
         rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
+
+        # Average rank
+        average_rank = float(soup.find("span", {
+            "class": "content",
+            "style": "color:#202d37;"
+        }).text.split("#")[1].splitlines()[0])
+
+        # Wins in recent 30 games
+        wins_recent30 = int(soup.find("span", {
+            "class": "content",
+            "style": "color:#5383e8"
+        }).text.splitlines()[0])
+
+        # Top 3 recent 30 games
+        top3_recent30 = int(soup.find("span", {
+            "class": "content",
+            "style": "color:#00bba3"
+        }).text.splitlines()[0])
+        
         try:
             # Get integer representation of rank
             rank_int = RANKS[rank_str] # Knight 7 = 15, Bishop 1 = 18, etc.
         except KeyError:
             raise CommandError("Stats API returned invalid data!")
-        
+
         # Matches played
         matches = soup.find("div", {"class": "text-muted"}).text.strip().splitlines()[0].split(" ")[0]
         matches = int(matches)
@@ -167,9 +205,22 @@ class AutoChessCog(BaseCog):
 
         # MMR
         mmr = 0
-        
-        return rank_int, matches, wins, mmr, last_updated
-    
+
+        profile = AutochessProfile(
+            steamid=steamid,
+            userid=userid,
+            rank=rank_int,
+            mmr=mmr,
+            matches=matches,
+            wins=wins,
+            wins_recent30=wins_recent30,
+            top3_recent30=top3_recent30,
+            average_rank=average_rank,
+            last_updated=last_updated
+        )
+
+        return profile
+
     async def request_opgg_renew(self, user: discord.User, steamid: str) -> None:
         renew_url = f"https://autochess.op.gg/api/user/{steamid}/request-renew"
         to_run = partial(requests.post, renew_url, headers={"User-Agent": USER_AGENT})
@@ -180,11 +231,11 @@ class AutoChessCog(BaseCog):
     @autochess.command(name="users", aliases=["players", "leaderboard"])
     async def show_users(self, ctx: commands.Context) -> None:
         """Display leaderboard for added AC players."""
-        
+
         # Sort players by rank
         # VERY inefficient. TODO: Find better solution
         # NOTE: solution could be to store Discord User ID in values
-        _users = sorted(self.users.values(), key=lambda u: u["rank"], reverse=True)
+        _users = sorted(self.users.values(), key=lambda u: u.rank, reverse=True)
         sorted_users = {}
         rank_1_user = None
         for vals in _users:
@@ -194,16 +245,16 @@ class AutoChessCog(BaseCog):
                         rank_1_user = self.bot.get_user(int(k))
                     sorted_users[k] = vals
                     break
-        
+
         # Format player ranking list
         out = []
         for idx, (user_id, v) in enumerate(sorted_users.items(), start=1):
             user_stats_fmt = await self.format_user_stats(user_id, v, idx)
             out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
-        
+
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str, thumbnail_url=rank_1_user.avatar_url._url)
-    
+
     @autochess.command(name="stats")
     async def show_stats(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
         """Show stats for a single user."""
@@ -211,38 +262,38 @@ class AutoChessCog(BaseCog):
             user = await UserOrMeConverter().convert(ctx, user)
         user_stats = self.users.get(str(user.id))
         out = await self.format_user_stats(user.id, user_stats, show_updated=True)
-        await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)    
-    
+        await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)
+
     async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None, show_updated: bool=False) -> str:
         name = self.bot.get_user(int(user_id)).name
-        
-        rank = RANKS_REVERSE.get(user_stats["rank"])
-        
+
+        rank = RANKS_REVERSE.get(user_stats.rank)
+
         rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
-        
-        matches = user_stats["matches"]
-        
+
+        matches = user_stats.matches
+
         if show_updated:
             last_updated = f"\nLast updated: {await self._format_last_updated(user_stats)}"
         else:
             last_updated = ""
-        
+
         r = f"{rank_n}. " if rank_n else ""
-        
+
         out = (
             f"**{r}{name}**\n"
             f"Rank: {rank_emoji} {rank}\n"
             f"Matches: {matches}"
             f"{last_updated}"
             )
-        
+
         return out
-    
+
     async def _format_last_updated(self, user_stats: dict) -> str:
         # Format datetime.
-        _l_u = ciso8601.parse_datetime(user_stats["last_updated"])
+        _l_u = ciso8601.parse_datetime(user_stats.last_updated)
         diff = datetime.now(timezone.utc) - _l_u
-        
+
         # Show "x hours/minutes/seconds ago" if <1 day since update
         if diff.days < 1:
             _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
@@ -258,17 +309,17 @@ class AutoChessCog(BaseCog):
         # Show "yesterday" if 1 day since update
         elif diff.days == 1:
             last_updated = "yesterday"
-        
+
         # Show "x days ago" if <=1 week since update
         elif diff.days <= 7:
             last_updated = f"{diff.days} days ago"
-        
+
         # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
         else:
             last_updated = _l_u.strftime("%a %b %d %Y")
-        
+
         return last_updated
-    
+
     @autochess.command(name="update")
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
@@ -277,11 +328,11 @@ class AutoChessCog(BaseCog):
         # Send command help text
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:
             self.reset_command_cooldown(ctx)
-            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")  
+            return await ctx.send(f"""Command usage: **`{self.bot.command_prefix}update <user> or "all"`**.""")
         # Update all users
         elif arg in ALL_ARGS:
             users = self.users
-            await ctx.send("Updating all users... This might take a while")     
+            await ctx.send("Updating all users... This might take a while")
         # Update single user
         else:
             # Attempt to get user. Reset cmd cooldown if user is not found
@@ -290,34 +341,33 @@ class AutoChessCog(BaseCog):
             except Exception as e:
                 await self.cog_command_error(ctx, e)
                 return self.reset_command_cooldown(ctx)
-            
+
             autochess_data = self.users.get(str(user.id))
             if not autochess_data:
                 raise CommandError(f"{user.name} has no AutoChess profile!\n"
                 f"You can add this person by typing **`{self.bot.command_prefix}autochess add {user.name} <steamid>`**")
             users = {user.id: autochess_data}
 
-        # Update chosen users   
+        # Update chosen users
         for user_id, v in users.items():
             user = self.bot.get_user(int(user_id))
-            steamid = v["steamid"]
-            
+            steamid = v.steamid
+
             # Send a "renew" request to OP.GG first
             try:
                 await self.request_opgg_renew(user, steamid)
             except:
                 pass  # Renew fails if profile is already up-to-date
-            
+
             # Get updated user stats
             await self._do_add_user(user, steamid)
-            
+
             # Sleep for an, as of yet, undetermined amount of time to minimize risk
             # of getting banned for scraping OP.GG's website
             await asyncio.sleep(10)
-        
+
         if arg in ALL_ARGS:
             u = "all users"
         else:
             u = user.name
         await ctx.send(f"Successfully updated {u}!")
-        
