@@ -18,7 +18,7 @@ MAX_SIZE = 5
 CACHE = None
 CachedContent = recordclass("CachedContent", "contents content_type modified")
 
-def get_cached(path: str, category: str=None) -> Union[str, dict]:
+def get_cached(path: str, category: str=None, timestamp: bool=False) -> Union[str, dict]:
     if not CACHE:
         _do_create_cache()
     
@@ -29,7 +29,8 @@ def get_cached(path: str, category: str=None) -> Union[str, dict]:
     
     if cached:
         last_modified = cached.modified
-        modified = os.path.getmtime(path)
+    
+    modified = os.path.getmtime(path)
 
     if not cached or last_modified != modified:
         extension = os.path.splitext(path)[1]
@@ -40,6 +41,10 @@ def get_cached(path: str, category: str=None) -> Union[str, dict]:
     else:
         contents = cached.contents
     
+    # Make tuple of contents and modification timestamp if param timestamp==True
+    if timestamp:
+        contents = (contents, modified)
+
     return contents
 
 
