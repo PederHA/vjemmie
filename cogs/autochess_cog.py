@@ -12,7 +12,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from cogs.db_cog import DatabaseHandler
-from config import GENERAL_DB_PATH, ALL_ARGS
+from config import GENERAL_DB_PATH, ALL_ARGS, YES_ARGS
 from utils.caching import get_cached
 from utils.converters import SteamID64Converter, UserOrMeConverter
 from utils.exceptions import CommandError
@@ -228,8 +228,10 @@ class AutoChessCog(BaseCog):
             raise CommandError(f"Failed to renew stats for {user.name}")
 
     @autochess.command(name="users", aliases=["players", "leaderboard"])
-    async def show_users(self, ctx: commands.Context) -> None:
+    async def show_users(self, ctx: commands.Context, full: str=None) -> None:
         """Display leaderboard for added AC players."""
+        full = full in YES_ARGS + ["full", "complete", "f"]
+
         # Sort users by rank
         users = sorted(self.users.values(), key=lambda u: u.rank, reverse=True)
         rank_1_user = self.bot.get_user(users[0].userid)
@@ -237,7 +239,7 @@ class AutoChessCog(BaseCog):
         # Format player ranking list
         out = []
         for idx, user in enumerate(users, start=1):
-            user_stats_fmt = await self.format_user_stats(user, rank_n=idx)
+            user_stats_fmt = await self.format_user_stats(user, rank_n=idx, full=full)
             out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
 
@@ -249,10 +251,10 @@ class AutoChessCog(BaseCog):
         if not user:
             user = await UserOrMeConverter().convert(ctx, user)
         user_stats = self.users.get(str(user.id))
-        out = await self.format_user_stats(user_stats, show_updated=True)
+        out = await self.format_user_stats(user_stats, show_updated=True, full=True)
         await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)
 
-    async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False) -> str:
+    async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False, full: bool=False) -> str:
         # Leaderboard rank if passed in
         r = f"{rank_n}. " if rank_n else ""
         
@@ -270,14 +272,20 @@ class AutoChessCog(BaseCog):
             last_updated = f"\nLast updated: {await self._format_last_updated(user)}"
         else:
             last_updated = ""
-
+        
+        # Additional stats
+        if full:
+            f = (f"Wins (recent 30): {user.wins_recent30}\n"
+                 f"Top 3 (recent 30): {user.top3_recent30}\n"
+                 f"Average placement: #{user.average_rank}")
+        else:
+            f = ""
+        
         out = (
             f"**{r}{name}**\n"
             f"Rank: {rank_emoji} {rank}\n"
             f"Matches: {user.matches}\n"
-            f"Wins (recent 30): {user.wins_recent30}\n"
-            f"Top 3 (recent 30): {user.top3_recent30}\n"
-            f"Average placement: #{user.average_rank}"
+            f"{f}"
             f"{last_updated}"
             )
 
