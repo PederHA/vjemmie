@@ -275,7 +275,7 @@ class AutoChessCog(BaseCog):
         
         # Additional stats
         if full:
-            f = (f"Wins (recent 30): {user.wins_recent30}\n"
+            f = (f"\nWins (recent 30): {user.wins_recent30}\n"
                  f"Top 3 (recent 30): {user.top3_recent30}\n"
                  f"Average placement: #{user.average_rank}")
         else:
@@ -284,7 +284,7 @@ class AutoChessCog(BaseCog):
         out = (
             f"**{r}{name}**\n"
             f"Rank: {rank_emoji} {rank}\n"
-            f"Matches: {user.matches}\n"
+            f"Matches: {user.matches}"
             f"{f}"
             f"{last_updated}"
             )
