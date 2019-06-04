@@ -253,25 +253,31 @@ class AutoChessCog(BaseCog):
         await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)
 
     async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False) -> str:
+        # Leaderboard rank if passed in
+        r = f"{rank_n}. " if rank_n else ""
+        
+        # Discord username
         name = self.bot.get_user(int(user.userid)).name
 
+        # Rank in text-form e.g. "Knight 7"
         rank = RANKS_REVERSE.get(user.rank)
 
+        # Unicode char representing rank e.g. "♘"
         rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
 
-        matches = user.matches
-
+        # Time since last stats profile update
         if show_updated:
             last_updated = f"\nLast updated: {await self._format_last_updated(user)}"
         else:
             last_updated = ""
 
-        r = f"{rank_n}. " if rank_n else ""
-
         out = (
             f"**{r}{name}**\n"
             f"Rank: {rank_emoji} {rank}\n"
-            f"Matches: {matches}"
+            f"Matches: {user.matches}\n"
+            f"Wins (recent 30): {user.wins_recent30}\n"
+            f"Top 3 (recent 30): {user.top3_recent30}\n"
+            f"Average placement: #{user.average_rank}"
             f"{last_updated}"
             )
 
