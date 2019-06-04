@@ -118,7 +118,6 @@ class AutoChessCog(BaseCog):
 
     @commands.group(name="autochess", aliases=["ac", "dac"])
     async def autochess(self, ctx: commands.Context) -> None:
-        print(self.users)
         if not ctx.invoked_with:
             raise CommandError("No subcommand specified!")
 
