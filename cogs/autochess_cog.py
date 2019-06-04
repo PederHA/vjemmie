@@ -83,7 +83,7 @@ class AutochessProfile:
     wins: int = 0
     wins_recent30: int = 0
     top3_recent30: int = 0
-    average_rank: float = 0
+    average_rank: float = 0.0
     last_updated: str = ""
 
 class AutoChessCog(BaseCog):
@@ -231,25 +231,14 @@ class AutoChessCog(BaseCog):
     @autochess.command(name="users", aliases=["players", "leaderboard"])
     async def show_users(self, ctx: commands.Context) -> None:
         """Display leaderboard for added AC players."""
-
-        # Sort players by rank
-        # VERY inefficient. TODO: Find better solution
-        # NOTE: solution could be to store Discord User ID in values
-        _users = sorted(self.users.values(), key=lambda u: u.rank, reverse=True)
-        sorted_users = {}
-        rank_1_user = None
-        for vals in _users:
-            for k, v in self.users.items():
-                if v == vals:
-                    if not rank_1_user:
-                        rank_1_user = self.bot.get_user(int(k))
-                    sorted_users[k] = vals
-                    break
+        # Sort users by rank
+        users = sorted(self.users.values(), key=lambda u: u.rank, reverse=True)
+        rank_1_user = self.bot.get_user(users[0].userid)
 
         # Format player ranking list
         out = []
-        for idx, (user_id, v) in enumerate(sorted_users.items(), start=1):
-            user_stats_fmt = await self.format_user_stats(user_id, v, idx)
+        for idx, user in enumerate(users, start=1):
+            user_stats_fmt = await self.format_user_stats(user, rank_n=idx)
             out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
 
@@ -261,20 +250,20 @@ class AutoChessCog(BaseCog):
         if not user:
             user = await UserOrMeConverter().convert(ctx, user)
         user_stats = self.users.get(str(user.id))
-        out = await self.format_user_stats(user.id, user_stats, show_updated=True)
+        out = await self.format_user_stats(user_stats, show_updated=True)
         await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)
 
-    async def format_user_stats(self, user_id: Union[int, str], user_stats: dict, rank_n: int=None, show_updated: bool=False) -> str:
-        name = self.bot.get_user(int(user_id)).name
+    async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False) -> str:
+        name = self.bot.get_user(int(user.userid)).name
 
-        rank = RANKS_REVERSE.get(user_stats.rank)
+        rank = RANKS_REVERSE.get(user.rank)
 
         rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
 
-        matches = user_stats.matches
+        matches = user.matches
 
         if show_updated:
-            last_updated = f"\nLast updated: {await self._format_last_updated(user_stats)}"
+            last_updated = f"\nLast updated: {await self._format_last_updated(user)}"
         else:
             last_updated = ""
 
