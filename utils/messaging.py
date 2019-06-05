@@ -17,8 +17,7 @@ async def confirm_yes(bot: commands.Bot, ctx: commands.Context, msg: str) -> boo
     return False
 
 
-async def wait_for_user_reply(bot: commands.Bot,
-                              ctx: commands.Context,
+async def wait_for_user_reply(ctx: commands.Context,
                               msg: str, 
                               *,
                               options: list=None,
@@ -34,7 +33,7 @@ async def wait_for_user_reply(bot: commands.Bot,
     def pred(m) -> bool:
         return m.author == ctx.message.author and m.channel == ctx.message.channel
     try:
-        reply = await bot.wait_for("message", check=pred, timeout=10.0)
+        reply = await ctx.bot.wait_for("message", check=pred, timeout=10.0)
     except asyncio.TimeoutError:
         await ctx.send(timeout_msg)
     else:

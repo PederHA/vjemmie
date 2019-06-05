@@ -119,7 +119,7 @@ class TestCog(BaseCog):
             msg = ("Not connected to a voice channel! "
             "You must be in a voice channel to run all tests.\n"
             "Are you sure you want to proceed with incomplete testing?")
-            if await wait_for_user_reply(self.bot, ctx, msg):
+            if await wait_for_user_reply(ctx, msg):
                 await ctx.send(
                     "Proceeding with incomplete testing!\n"
                     "**NOTE:** In order to run all tests you must be connected to a voice channel!")
@@ -319,19 +319,12 @@ class TestCog(BaseCog):
             raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
         return await self._do_test(cmd, *args, **kwargs, ctx=ctx)
 
-    
+
     #########################################
     #####             TESTS             #####
     #########################################
 
     # AdminCog
-    async def test_admincog_change_activity(self, ctx: commands.Context) -> None:
-        cmd = self.bot.get_command("change_activity")
-        await self.do_test_command(ctx, cmd, "test activity")
-        await asyncio.sleep(0.5)
-        # Reset to default activity
-        await ctx.invoke(cmd)
-
     @discord_io
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "serverlist")
