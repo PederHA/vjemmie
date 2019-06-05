@@ -205,13 +205,12 @@ class SoundDirectory:
 
     @property
     def sound_list(self) -> list:
-        return sorted(
-            [
+        return {sound_file: self.path for sound_file in [
             i.rsplit(".", 1)[0]
             for i in os.listdir(self.path)
             if any(i.endswith(ext) for ext in VALID_FILE_TYPES) # Only include known compatible containers
-            ],
-            key=lambda f: f.lower()) # Sort case insensitive
+            ]
+            }
 
 
 class SoundCog(BaseCog):
@@ -257,11 +256,12 @@ class SoundCog(BaseCog):
         
         Raises Exception if the folder contains no .mp3 files.
         """
-
-        s = list(chain(*[sf.sound_list for sf in self.sub_dirs]))
-        if not s:
+        d = {}
+        for sf in self.sub_dirs:
+            d.update(sf.sound_list)
+        if not d:
             raise ValueError("No local sound files exist!")
-        return s
+        return d
 
     async def cleanup(self, guild):
         try:
@@ -366,13 +366,6 @@ class SoundCog(BaseCog):
 
         player = self.get_player(ctx)
 
-        async def parse_sound_name(arg) -> Tuple[str, str]:
-            for sub_dir in self.sub_dirs:
-                if arg in sub_dir.sound_list:
-                    return sub_dir.path, arg
-            else:
-                raise AttributeError(f"Could not find sound with name {arg}")
-
         arg = " ".join(args)
 
         # Play audio from online source
@@ -386,14 +379,15 @@ class SoundCog(BaseCog):
             # Try to parse provided sound name
             try:
                 if arg:
-                    subdir, sound_name = await parse_sound_name(arg)
+                    sound_name = arg
+                    try:
+                        subdir = self.sound_list[sound_name]
+                    except KeyError:
+                        raise KeyError(f"Could not find sound by the name of **`{arg}`**") 
+                    subdir = self.sound_list[sound_name]
                 else:
-                    # Fails if no local sound files exist
-                    subdir, sound_name = await parse_sound_name(random.choice(self.sound_list))
-            
-            # Just raise SoundCog.sound_list exception
-            except ValueError as e:
-                raise
+                    # Select random sound if no argument
+                    subdir, sound_name = random.choice(self.sound_list.items())
             
             # Attempt to suggest sound files with similar names if no results
             except AttributeError:
