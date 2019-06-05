@@ -541,9 +541,10 @@ class SoundCog(BaseCog):
 
         # Send large directory sound lists as DM
         if len(_out) > SOUNDLIST_FILE_LIMIT:
-            msg = (
-            f"Category contains {len(_out)} sound files. It is recommended to try using **`!search`** first.\n"
-            f"Are you sure you want to go through with listing all sounds in category `{category}`?"
+            msg = (  
+            f"The **`{category}`** category contains {len(_out)} sound files. "
+            f"It is recommended to try using the **`{self.bot.command_prefix}search`** command first.\n"
+            f"Are you sure you want to show all sounds in this category?"
             )
             if not await wait_for_user_reply(ctx, msg, timeout=20.0):
                 return await ctx.send("Aborting.")
