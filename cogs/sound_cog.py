@@ -7,7 +7,7 @@ import wave
 import json
 from collections import deque
 from functools import partial
-from itertools import islice, chain
+from itertools import islice, chain, count
 from pathlib import Path
 from queue import Queue
 from typing import Iterator, Optional, Tuple, DefaultDict, Dict, Union, List
@@ -674,7 +674,7 @@ class SoundCog(BaseCog):
                 await ctx.invoke(cmd, sound_name)
 
     @commands.command(name="add_sound")
-    async def add_sound(self, ctx: commands.Context, url: str=None) -> None:
+    async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
         """Downloads a sound file from msg attachment or URL
         
         Parameters
@@ -697,11 +697,11 @@ class SoundCog(BaseCog):
         # Use attachment URL if possible
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
-            url = attachment.url
+            filename, url = url, attachment.url
 
         # Download and save sound file
         try:
-            filename = await self._do_download_sound(ctx, url)        
+            filename = await self._do_download_sound(ctx, url, filename=filename)        
         
         except AttributeError:
             return await self.send_error_msg(ctx,
@@ -710,10 +710,7 @@ class SoundCog(BaseCog):
         
         except ValueError:
             return await self.send_error_msg(ctx,
-                f"Invalid file type. Must be one of: **{FILETYPES}**")        
-        
-        except FileExistsError:
-            return await self.send_error_msg(ctx, "File already exists")
+                f"Invalid file type. Must be one of: **{FILETYPES}**")
         
         else:
             # Post download confirmation
@@ -723,7 +720,7 @@ class SoundCog(BaseCog):
             if hasattr(ctx.author.voice, "channel"):
                 await ctx.invoke(self.play, filename)
 
-    async def _do_download_sound(self, ctx: commands.Context, url: str) -> str:
+    async def _do_download_sound(self, ctx: commands.Context, url: str, *, filename: str=None) -> str:
         """Attempts to download sound file from URL.
         
         Fails if file already exists or file is not a 
@@ -736,8 +733,13 @@ class SoundCog(BaseCog):
         url : `str`
             HTTP(s) URL of target file
         """       
-        # Get file extension
-        filename, ext = await self.get_filename_extension_from_url(url)
+        # Get filename and extension
+        fname, ext = await self.get_filename_extension_from_url(url)
+        if not filename:
+            filename = fname
+        else:
+            filename = sanitize_filename(filename)
+        
         if not ext:
             raise AttributeError
 
@@ -745,10 +747,16 @@ class SoundCog(BaseCog):
         if ext not in FILETYPES:
             raise ValueError
         
-        # Check if file already exists
-        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"
-        if Path(filepath).exists():
-            raise FileExistsError                
+        # Get file path
+        for i in count():
+            # Increment until a unique filename is found
+            if not i:
+                i = ""
+            fname = f"{filename}{i}"
+            filepath = f"{DOWNLOADS_DIR}/{fname}{ext}"
+            if not Path(filepath).exists():
+                filename = fname
+                break              
         
         # Attempt to download file
         sound_file = await self.download_from_url(ctx, url)
