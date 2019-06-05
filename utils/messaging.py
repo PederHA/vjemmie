@@ -21,6 +21,7 @@ async def wait_for_user_reply(ctx: commands.Context,
                               msg: str, 
                               *,
                               options: list=None,
+                              timeout: float=10.0,
                               timeout_msg: str=None) -> bool:
     if not options:
         options = YES_ARGS
@@ -33,7 +34,7 @@ async def wait_for_user_reply(ctx: commands.Context,
     def pred(m) -> bool:
         return m.author == ctx.message.author and m.channel == ctx.message.channel
     try:
-        reply = await ctx.bot.wait_for("message", check=pred, timeout=10.0)
+        reply = await ctx.bot.wait_for("message", check=pred, timeout=timeout)
     except asyncio.TimeoutError:
         await ctx.send(timeout_msg)
     else:
