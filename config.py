@@ -49,6 +49,9 @@ COMMAND_INVOCATION_CHANNEL = 584386122004561920 # Channel to use as base for ctx
 
 SOUND_DIR = "sounds" # Base sound directory
 SoundSubdir.SOUND_DIR = SOUND_DIR # Don't touch this.
+# Maximum limit of sound files a directory can have before `!soundlist`
+# sends its output as a DM instead of in the ctx.channel
+SOUNDLIST_FILE_LIMIT = 150 
 
 # Sound subdirectories
 #                    Directory  Aliases
