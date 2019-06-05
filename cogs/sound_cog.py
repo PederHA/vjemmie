@@ -29,9 +29,11 @@ from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
 from utils.checks import admins_only
+from utils.messaging import wait_for_user_reply
+from utils.exceptions import CommandError
 from cogs.base_cog import BaseCog
 
-from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR
+from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -525,24 +527,40 @@ class SoundCog(BaseCog):
         # Directory names are all lowercase
         category = category.lower()
 
-        # Check if a subdirectory matches `category` argument, then send list of sounds
+        # Find subdirectory matching `category` argument
         for sub_dir in self.sub_dirs:
             if category in sub_dir.aliases:
-                _out = ""
-                for sound in sub_dir.sound_list:
-                    _out += f"{sound}\n"
-                if not _out:
-                    return await ctx.send(
-                        f"Category **`{category}`** is empty!"
-                        )
-                return await self.send_embed_message(
-                    ctx, sub_dir.header, _out, color=sub_dir.color
-                    )
+                break
         # Raise exception if no sound directory matches category
         else:
-            await self.send_error_msg(ctx, f"No such category **`{category}`**.\n"
-                                           f"Categories: {categories}"
-                                           )
+            raise CommandError(f"No such category **`{category}`**.\n"
+                               f"Categories: {categories}")
+        
+        # Compile list of sounds
+        _out = [sound for sound in sub_dir.sound_list]
+
+        # Send large directory sound lists as DM
+        if len(_out) > SOUNDLIST_FILE_LIMIT:
+            msg = (
+            f"Category contains {len(_out)} sound files. It is recommended to try using **`!search`** first.\n"
+            f"Are you sure you want to go through with listing all sounds in category `{category}`?"
+            )
+            if not await wait_for_user_reply(ctx, msg, timeout=20.0):
+                return await ctx.send("Aborting.")
+            await ctx.send("Soundlist will be sent as DM.")
+            channel = await ctx.message.author.create_dm()
+        else:
+            channel = None
+        
+        out = "\n".join(_out)
+        
+        if not out:
+            return await ctx.send(
+                f"Category **`{category}`** is empty!"
+                )
+        
+        return await self.send_embed_message(
+            ctx, sub_dir.header, out, color=sub_dir.color, channel=channel)
 
     @commands.command(name="search")
     async def search(self, 
