@@ -29,7 +29,7 @@ async def wait_for_user_reply(ctx: commands.Context,
     if not timeout_msg:
         timeout_msg = "User did not reply in time."
     
-    await ctx.send(f"{msg} [{options[0]}/n]") # we never actually check for "n" answer
+    await ctx.send(f"{msg} **[{options[0]}/n]**") # we never actually check for "n" answer
     
     def pred(m) -> bool:
         return m.author == ctx.message.author and m.channel == ctx.message.channel
