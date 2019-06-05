@@ -625,40 +625,16 @@ class SoundCog(BaseCog):
         tts = gtts.gTTS(text=text, lang=language)
 
         await ctx.trigger_typing()
-        
-        def check_filename(filename: str) -> bool:
-            if len(filename) < 4:
-                raise ValueError
-            if Path(f"{TTS_DIR}/{filename}.mp3").exists():
-                raise FileExistsError
 
         # Check argument to param filename
         if filename:
-            sound_name = sanitize_filename(filename)    
+            filename = sanitize_filename(filename)    
         # Use first word of text if no filename
         else:
-            sound_name = sanitize_filename(text.split(" ")[0])
+            filename = sanitize_filename(text.split(" ")[0])
 
         # Check filename. If filename is taken or invalid, generate filename from text    
-        try:
-            check_filename(sound_name)
-        except Exception as e:
-            # I could do except ValueError, except FileExistsError etc.
-            # But I cba defining a func or lambda for the unique filename
-            # generation, so we'll just use isinstance
-            msg = ""
-            if isinstance(e, ValueError):
-                if filename: # Only display this error if a filename is given
-                    msg = f"Filename {filename} is too short. Minimum 4 characters is required."
-            elif isinstance(e, FileExistsError):
-                msg = f"A file with name **`{filename}`** already exists."
-            else:
-                raise
-            if msg:
-                msg +=  " A unique filename will be generated instead."
-                await ctx.send(msg)
-            # First 10 chars - spaces + int(timestamp)
-            sound_name = sanitize_filename(f"{text.replace(' ', '')[:10]}_{int(time())}")
+        sound_name = self.get_unique_filename(TTS_DIR, filename, ".mp3")
 
         # Save mp3 file
         to_run = partial(tts.save, f"{TTS_DIR}/{sound_name}.mp3")
@@ -748,15 +724,8 @@ class SoundCog(BaseCog):
             raise ValueError
         
         # Get file path
-        for i in count():
-            # Increment until a unique filename is found
-            if not i:
-                i = ""
-            fname = f"{filename}{i}"
-            filepath = f"{DOWNLOADS_DIR}/{fname}{ext}"
-            if not Path(filepath).exists():
-                filename = fname
-                break              
+        filename = self.get_unique_filename(DOWNLOADS_DIR, filename, ext)
+        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"           
         
         # Attempt to download file
         sound_file = await self.download_from_url(ctx, url)
@@ -769,6 +738,16 @@ class SoundCog(BaseCog):
         await self.log_file_download(ctx, url=url, filename=f"{filename}.{ext}")        
         
         return filename
+    
+    def get_unique_filename(self, directory: str, filename: str, ext: str=None) -> str:
+        for i in count():
+            # Increment until a unique filename is found
+            if not i:
+                i = ""
+            fname = f"{filename}{i}"
+            filepath = f"{directory}/{fname}{ext}"
+            if not Path(filepath).exists():
+                return fname
 
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: URLConverter=None) -> None:
