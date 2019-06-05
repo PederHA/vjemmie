@@ -56,6 +56,8 @@ YTDL_DIR = SoundSubdir("ytdl", ["youtube", "utube", "yt"])
 TTS_DIR = SoundSubdir("tts", ["text-to-speech", "texttospeech"])
 GENERAL_DIR = SoundSubdir("general", ["other", "normal", "uncategorized"])
 DOWNLOADS_DIR = SoundSubdir("downloads", ["dl", "downloaded", "download"])
+CHERNOBYL_DIR = SoundSubdir("chernobyl", ["cherno", "ch"])
+
 ## Add subdirectory as SoundSubdir here ##
 
 # Dynamic list of SoundSubdir instances. Import this one!
