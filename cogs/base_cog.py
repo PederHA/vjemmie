@@ -729,6 +729,7 @@ class BaseCog(commands.Cog):
                                  footer: bool=True,
                                  timestamp: bool=True,
                                  keep_header: bool=False,
+                                 channel: Union[discord.DMChannel, discord.TextChannel]=None,
                                  return_embeds: bool=False
                                  ) -> Optional[List[discord.Embed]]:
         """Splits a string into <1024 char chunks and creates an
@@ -796,6 +797,9 @@ class BaseCog(commands.Cog):
             return embeds
 
         # Send each embed object to ctx.channel
+        if channel:
+            ctx = channel
+        
         for embed in embeds:
             if embed == embeds[0]:
                 await ctx.send(content=msg_text, embed=embed)
