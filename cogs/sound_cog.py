@@ -588,7 +588,12 @@ class SoundCog(BaseCog):
                 _out_str = "\n".join(_out)
                 _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=True)
                 embeds.extend(_rtn_embeds)
-
+        
+        # Require searches to be specific in order to avoid spamming a channel
+        if len(embeds) > 3:
+            n_results = sum([len(e.description.splitlines()) for e in embeds])
+            raise CommandError(f"Search returned {n_results} results. A more specific search query is required.")        
+        
         # Return embeds if enabled
         if rtn:
             return embeds
