@@ -204,15 +204,21 @@ class SoundDirectory:
         self.aliases = aliases
         self.path = path
         self.color = color
+        self.last_modified = None
+        self._sound_list = None
 
     @property
     def sound_list(self) -> list:
-        return {sound_file: self.path for sound_file in [
-            i.rsplit(".", 1)[0]
-            for i in os.listdir(self.path)
-            if any(i.endswith(ext) for ext in VALID_FILE_TYPES) # Only include known compatible containers
-            ]
-            }
+        modified = os.path.getmtime(self.path)
+        if not self._sound_list or modified != self.last_modified:
+            self.last_modified = modified
+            self._sound_list = {sound_file: self.path for sound_file in [
+                i.rsplit(".", 1)[0]
+                for i in os.listdir(self.path)
+                if any(i.endswith(ext) for ext in VALID_FILE_TYPES) # Only include known compatible containers
+                ]
+                }
+        return self._sound_list
 
 
 class SoundCog(BaseCog):
