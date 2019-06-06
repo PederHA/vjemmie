@@ -22,7 +22,7 @@ from config import (  # DISABLE_HELP,
     COMMAND_INVOCATION_CHANNEL)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
-                              FileTypeError)
+                              FileTypeError, InvalidVoiceChannel)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -400,7 +400,8 @@ class BaseCog(commands.Cog):
         # Don't log traceback of these exception types
         IGNORE_EXC = [
             commands.errors.MissingRequiredArgument,
-            CategoryError
+            CategoryError,
+            InvalidVoiceChannel
         ]
         
         if (any(isinstance(error, err) for err in SHOW) or
