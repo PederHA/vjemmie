@@ -64,13 +64,14 @@ class UserCog(BaseCog):
                         "Or type `!commands` to show all available commands.")
 
     @commands.command(name="commands")
-    async def show_commands(self, ctx:commands.Context) -> None:
+    async def show_commands(self, ctx:commands.Context, verbosity: str="simple") -> None:
         """Display all bot commands."""
         l = []
+        simple = verbosity not in ["advanced", "y", "args"]
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
             with suppress(CommandError):
-                cmds = await cog._get_cog_commands(ctx, "simple", rtn=True)
+                cmds = await cog._get_cog_commands(ctx, simple, rtn=True)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
         
         if not l:
