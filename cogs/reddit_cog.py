@@ -113,6 +113,7 @@ class RedditCog(BaseCog):
     
     @reddit.command(name="get", aliases=["sub"])
     async def reddit_get_sub_post(self, ctx: commands.Context, subreddit: str, time: str=None, sorting: str=None) -> None:
+        """Get a random post from <subreddit>"""
         await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     @reddit.command(name="add", aliases=["add_sub"])
