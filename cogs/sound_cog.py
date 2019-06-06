@@ -36,7 +36,7 @@ from cogs.base_cog import BaseCog
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
 
 ytdlopts = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio/best', # Try format "250" ?
     'outtmpl': f'{YTDL_DIR}/%(title)s.%(ext)s',
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -575,20 +575,19 @@ class SoundCog(BaseCog):
                      ctx: commands.Context, 
                      *search_query: str, 
                      rtn: bool=False) -> Optional[List[discord.Embed]]:
+        # Join args into space-separated search query string
         search_query = " ".join(search_query)
+        if not search_query or all(char == " " for char in search_query):
+            raise CommandError("Search query cannot be an empty string.")
+        
+        # Get search results formatted as Discord embed objects
         embeds = []
-
         for sf in self.sub_dirs:
-            _out = []
-            for sound in sf.sound_list:
-                if search_query.lower() in sound.lower():
-                    # Append sound name to _out list
-                    _out.append(sound)
+            _out = [sound for sound in sf.sound_list if search_query.lower() in sound.lower()]
             if _out:
                 _out_str = "\n".join(_out)
                 _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=True)
-                for embed in _rtn_embeds:
-                    embeds.append(embed)
+                embeds.extend(_rtn_embeds)
 
         # Return embeds if enabled
         if rtn:
