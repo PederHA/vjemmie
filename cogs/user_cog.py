@@ -72,7 +72,7 @@ class UserCog(BaseCog):
             # Ignore cogs returning no commands due to failed checks or lack of commands
             with suppress(CommandError):
                 cmds = await cog._get_cog_commands(ctx, simple, rtn=True)
-                l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
+                l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}\n")
                 
         if not l:
             raise CommandError("No commands are available!")
