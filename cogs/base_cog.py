@@ -33,9 +33,6 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 EmbedField = namedtuple("EmbedField", "name value inline", defaults=[True])
 
 
-class FileSizeError(Exception):
-    """File Size too small or too large"""
-
 class BaseCog(commands.Cog):
     """Base Cog from which all other cogs are subclassed."""
 
