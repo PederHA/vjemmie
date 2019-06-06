@@ -30,7 +30,7 @@ from youtube_dl import YoutubeDL
 
 from utils.checks import admins_only
 from utils.messaging import wait_for_user_reply
-from utils.exceptions import CommandError
+from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel 
 from cogs.base_cog import BaseCog
 
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
@@ -58,12 +58,6 @@ ytdl = YoutubeDL(ytdlopts)
 VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
-class VoiceConnectionError(commands.CommandError):
-    """Custom Exception class for connection errors."""
-
-
-class InvalidVoiceChannel(VoiceConnectionError):
-    """Exception for cases of invalid Voice Channels."""
 
 class YTDLSource(discord.PCMVolumeTransformer):
 

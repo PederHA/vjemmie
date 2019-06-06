@@ -1,3 +1,5 @@
+from discord.ext import commands
+
 class WordExceededLimit(Exception):
     pass
 
@@ -38,6 +40,11 @@ class BotException(Exception):
 class FatalBotException(Exception):
     pass
 
+class VoiceConnectionError(commands.CommandError):
+    """Custom Exception class for connection errors."""
+
+class InvalidVoiceChannel(VoiceConnectionError):
+    """Exception for cases of invalid Voice Channels."""
 
 __all__ = [
     k for k, v in dict(locals()).items()
