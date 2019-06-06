@@ -246,13 +246,15 @@ class SoundCog(BaseCog):
                          color=self.generate_hex_color_code(subdir.folder))
                          for subdir in SOUND_SUB_DIRS
                          ]
-
+        self._sub_dirs_last_modified = {}
+        
         # Per-guild audio players. Key: Guild ID
         self.players: Dict[int, AudioPlayer] = {}
 
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
 
+        self._sound_list = {}
 
     @property
     def sound_list(self) -> list:
@@ -264,12 +266,17 @@ class SoundCog(BaseCog):
         
         Raises Exception if the folder contains no .mp3 files.
         """
-        d = {}
         for sf in self.sub_dirs:
-            d.update(sf.sound_list)
-        if not d:
+            try:
+                if self._sub_dirs_last_modified[sf.path] == sf.last_modified:
+                    continue
+            except KeyError:
+                pass
+            self._sound_list.update(sf.sound_list)
+            self._sub_dirs_last_modified[sf.path] = sf.last_modified
+        if not self._sound_list:
             raise ValueError("No local sound files exist!")
-        return d
+        return self._sound_list
 
     async def cleanup(self, guild):
         try:
