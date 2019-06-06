@@ -23,6 +23,8 @@ from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only
 from utils.caching import get_cached
+from utils.exceptions import CommandError
+from utils.parsing import is_valid_command_name
 
 reddit_client = praw.Reddit(
     client_id=REDDIT_ID,
@@ -138,6 +140,8 @@ class RedditCog(BaseCog):
 
         try:
             aliases = aliases.split(" ") if aliases else []
+            if not all(is_valid_command_name(alias) for alias in aliases) or not is_valid_command_name(subreddit):
+                raise CommandError("Command name can only include letters a-z and numbers 0-9.")
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
             self._add_sub(new_command)
         except discord.DiscordException:
@@ -330,8 +334,8 @@ class RedditCog(BaseCog):
             color="red",
             timestamp=False)
 
-    @reddit.command(name="add_alias", aliases=["alias"])
-    async def change_sub_command(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
+    @reddit.command(name="alias", aliases=["add_alias"])
+    async def add_subreddit_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
         """Add alias for <subreddit>
         
         Parameters
@@ -347,7 +351,7 @@ class RedditCog(BaseCog):
         subreddit = subreddit.lower()
 
         # Only accept aliases with letters a-z
-        if not alias.isalpha():
+        if not is_valid_command_name(alias):
             raise discord.DiscordException("Invalid alias name. Can only contain letters a-z.")
         
         # Check if subreddit exists as a bot command
@@ -360,7 +364,7 @@ class RedditCog(BaseCog):
         self.dump_subs()
         await self._reload_sub_commands()
         await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
-
+    
     async def _reload_sub_commands(self):
         """Reloads all subreddit commands.
         """
