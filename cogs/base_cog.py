@@ -65,6 +65,9 @@ class BaseCog(commands.Cog):
     DIRS = []
     FILES = []
 
+    # Help strings
+    SIGNATURE_HELP = "**Signature Legend**\n●`<arg>` is a required argument\n●`[arg]` is an optional argument\n\n"
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.add_help_command()
@@ -628,10 +631,14 @@ class BaseCog(commands.Cog):
                 out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {cmd.short_doc}")
 
         out_str = "\n".join(out)    
-        
+
         if not out_str:
             raise CommandError("Cog has no commands!")
-
+        
+        if not simple and not rtn:
+            # Add command signature legend string if advanced output is enabled
+            out_str = self.SIGNATURE_HELP + out_str
+        
         if rtn:
             return out_str
         

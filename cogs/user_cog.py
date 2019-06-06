@@ -73,15 +73,18 @@ class UserCog(BaseCog):
             with suppress(CommandError):
                 cmds = await cog._get_cog_commands(ctx, simple, rtn=True)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}")
-        
+                
         if not l:
             raise CommandError("No commands are available!")
         
         out = "\n".join(l)
-           
+        if not simple:
+            # Add command signature legend to top of embed if advanced output is enabled
+            out = self.SIGNATURE_HELP + out
+
         await self.send_embed_message(ctx, "Commands", out, color="red")
     
-    
+
     @commands.command(name="invite", aliases=["get_invite"])
     async def invitelink(self, ctx: commands.Context) -> None:
         """Get discord bot invite URL"""
