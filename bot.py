@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Command
 
 from cogs import COGS
 from botsecrets import BOT_TOKEN
-from utils.patching.arguments import patch_command_signature
+from utils.patching.commands import patch_command_signature
 
 patch_command_signature(Command)
 
