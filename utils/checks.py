@@ -2,8 +2,8 @@ import json
 
 from discord.ext import commands
 
-from config import DOWNLOADS_ALLOWED, OWNER_ID
-
+from config import (DGVGK_SERVER_ID, DOWNLOADS_ALLOWED, OWNER_ID,
+                    PFM_SERVER_ID, TEST_SERVER_ID)
 
 
 # Blacklist serialization functions
@@ -48,28 +48,30 @@ def guild_predicate(ctx, guild_id):
 def pfm_cmd():
     """PFM guild decorator"""
     def predicate(ctx):
-        return guild_predicate(ctx, 133332608296681472)
+        return guild_predicate(ctx, PFM_SERVER_ID)
     return commands.check(predicate)
 
 
 def dgvgk_cmd():
     """DGVGK guild decorator"""
     def predicate(ctx):
-        return guild_predicate(ctx, 178865018031439872)
+        return guild_predicate(ctx, DGVGK_SERVER_ID)
     return commands.check(predicate)
 
 
 def test_server_cmd():
     """Test/dev guild decorator"""
     def predicate(ctx):
-        return guild_predicate(ctx, 340921036201525248)
+        return guild_predicate(ctx, TEST_SERVER_ID)
     return commands.check(predicate)
+
 
 def download_cmd():
     """Decorator for download commands"""
     def predicate(ctx):
         return ctx.cog.DOWNLOADS_ALLOWED
     return commands.check(predicate)
+
 
 def disabled_cmd():
     """Decorator to disable a command for _everyone_"""
