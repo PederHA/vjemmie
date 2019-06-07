@@ -9,9 +9,9 @@ from discord.ext.commands import Bot, Command
 
 from cogs import COGS
 from botsecrets import BOT_TOKEN
-from utils.patching.arguments import patch_command
+from utils.patching.arguments import patch_command_signature
 
-patch_command(Command)
+patch_command_signature(Command)
 
 def main(token, cogs) -> None:       
     # Bot setup
