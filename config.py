@@ -9,6 +9,7 @@ VERSION = "0.1.0"
 GENERAL_DB_PATH = "pfm.db"
 PFM_MEMES_DB_PATH = "memes/pfm_memes.db"
 INSERT_STUFF_HERE = None
+BLACKLIST_PATH = "db/blacklist.json"
 
 
 # COGS
