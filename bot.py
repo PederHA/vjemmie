@@ -5,10 +5,13 @@ with suppress(ImportError):
     import uvloop
     uvloop.install()
 
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Command
 
 from cogs import COGS
 from botsecrets import BOT_TOKEN
+from utils.patching.arguments import patch_command
+
+patch_command(Command)
 
 def main(token, cogs) -> None:       
     # Bot setup
