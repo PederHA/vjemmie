@@ -1,20 +1,19 @@
 import json
 
 from discord.ext import commands
-
 from config import (DGVGK_SERVER_ID, DOWNLOADS_ALLOWED, OWNER_ID,
-                    PFM_SERVER_ID, TEST_SERVER_ID)
+                    PFM_SERVER_ID, TEST_SERVER_ID, BLACKLIST_PATH)
+from utils.caching import get_cached
+from utils.serialize import dump_json
 
 
 # Blacklist serialization functions
-def load_blacklist() -> list:
-    with open("db/blacklist.json", "r") as f:
-        blacklist = json.load(f)
-        return blacklist
+def load_blacklist_cached() -> list:
+    return get_cached(BLACKLIST_PATH, "blacklist")
+
 
 def save_blacklist(blacklist: list) -> None:
-    with open("db/blacklist.json", "w") as f:
-        json.dump(blacklist, f)
+    dump_json(BLACKLIST_PATH, blacklist)
 
 
 # Decorator check
