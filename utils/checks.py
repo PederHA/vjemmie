@@ -8,7 +8,7 @@ from utils.serialize import dump_json
 
 
 # Blacklist serialization functions
-def load_blacklist_cached() -> list:
+def load_blacklist() -> list:
     return get_cached(BLACKLIST_PATH, "blacklist")
 
 
