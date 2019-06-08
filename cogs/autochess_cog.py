@@ -163,7 +163,13 @@ class AutoChessCog(BaseCog):
 
         # Rank
         rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
-
+        
+        # Get integer representation of rank
+        try:
+            rank_int = RANKS[rank_str] # Knight 7 = 15, Bishop 1 = 18, etc.
+        except KeyError:
+            raise CommandError("Stats API returned invalid data!")
+        
         # Average rank
         average_rank = float(soup.find("span", {
             "class": "content",
@@ -181,12 +187,6 @@ class AutoChessCog(BaseCog):
             "class": "content",
             "style": "color:#00bba3"
         }).text.splitlines()[0])
-        
-        try:
-            # Get integer representation of rank
-            rank_int = RANKS[rank_str] # Knight 7 = 15, Bishop 1 = 18, etc.
-        except KeyError:
-            raise CommandError("Stats API returned invalid data!")
 
         # Matches played
         matches = soup.find("div", {"class": "text-muted"}).text.strip().splitlines()[0].split(" ")[0]
