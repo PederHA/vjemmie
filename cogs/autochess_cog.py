@@ -1,7 +1,7 @@
 import asyncio
 from functools import partial
 from datetime import datetime, timezone
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict
 from dataclasses import dataclass
 
 import discord
@@ -97,21 +97,14 @@ class AutoChessCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.setup(default_factory=dict)
         super().__init__(bot)
-        self._USERS_MODIFIED = None
-        self._USERS = {}
 
     @property
-    def users(self) -> dict:
-        u = {}
-        u_dict, timestamp = get_cached(USERS_FILE, "autochess", timestamp=True)
-        if not self._USERS_MODIFIED or self._USERS_MODIFIED != timestamp:
-            for k, v in u_dict.items():
-                u[k] = AutochessProfile(**v)
-            self._USERS = u
-            self._USERS_MODIFIED = timestamp
-        else:
-            u = self._USERS
-        return u
+    def users(self) -> Dict[str, AutochessProfile]:
+        users = {}
+        _users_raw = get_cached(USERS_FILE, "autochess")
+        for k, v in _users_raw.items():
+            users[k] = AutochessProfile(**v)
+        return users
 
     def dump_users(self, users: dict) -> None:
         dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
@@ -325,7 +318,7 @@ class AutoChessCog(BaseCog):
     @autochess.command(name="update")
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
     async def update_ranks(self, ctx: commands.Context, arg: str=None) -> None:
-        """Update a specific user or all users's profiles."""
+        """Update a specific user or all users."""
         # Parse argument
         # Send command help text
         if not arg or arg in ["help", "?", "h", "--help", "-help"]:

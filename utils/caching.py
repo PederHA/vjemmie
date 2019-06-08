@@ -8,7 +8,6 @@ from functools import partial
 from recordclass import recordclass
 from recordclass.recordobject import recordclasstype
 
-CacheType = Union[str, dict]
 
 class CacheError(Exception):
     """Exceptions stemming from operations 
@@ -20,7 +19,7 @@ MAX_SIZE = 5
 CACHE = None
 CachedContent = recordclass("CachedContent", "contents content_type modified")
 
-def get_cached(path: str, category: str=None, timestamp: bool=False) -> Union[CacheType, Tuple[CacheType, str]]:
+def get_cached(path: str, category: str=None) -> Union[str, dict, list]:
     """Get contents of a file. 
     The file contents are cached in memory, and all subsequent calls
     to `get_cached()` with identical `path` & `category` arguments
@@ -35,19 +34,15 @@ def get_cached(path: str, category: str=None, timestamp: bool=False) -> Union[Ca
         Path + filename
     category : `str`, optional
         Category to cache file under, by default None
-    timestamp : `bool`, optional
-        If True, a tuple of file contents and modification time
-        is returned, by default False
+        Uses default category if None is passed in.
+        The default category "default" can be overridden
+        by calling `setup(default=<your category here>)`.
     
     Returns
     -------
-    `Union[CacheType, Tuple[CacheType, str]]`
-        Cached file contents as str or dict, depending on filetype.
-        If timestamp==True, returns tuple of (contents, timestamp).
-        
-        NOTE: This is due a stupid hack for AutoChessCog rather than a 
-        burning desire to make a messy interface. Because yes, this
-        is messy.
+    `Union[str, dict, list]`
+        Contents of the file, as list or dict if filetype is .json,
+        otherwise str.
     """
     # Setup cache if none exists
     if not CACHE:
@@ -78,10 +73,6 @@ def get_cached(path: str, category: str=None, timestamp: bool=False) -> Union[Ca
     # Otherwise return cached content
     else:
         contents = cached.contents
-
-    # Make tuple of contents and modification timestamp if param timestamp==True
-    if timestamp:
-        contents = (contents, modified)
 
     return contents
 
