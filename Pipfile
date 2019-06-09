@@ -24,6 +24,8 @@ markovify = "*"
 psutil = "*"
 "beautifulsoup4" = "*"
 "ciso8601" = "*"
+websockets = "*"
+"boto3" = "*"
 
 [dev-packages]
 pylint = "*"
