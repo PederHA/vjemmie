@@ -91,7 +91,7 @@ class AutoChessCog(BaseCog):
     EMOJI = "♟️"
     FILES = [USERS_FILE]
     DIRS = ["db/autochess"]
-    
+
     DB = DatabaseHandler(GENERAL_DB_PATH)
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -141,7 +141,6 @@ class AutoChessCog(BaseCog):
 
     async def scrape_op_gg_stats(self, steamid, userid) -> AutochessProfile:
         url = f"https://autochess.op.gg/user/{steamid}"
-
         to_run = partial(requests.get, url)
         r = await self.bot.loop.run_in_executor(None, to_run)
 
@@ -162,14 +161,13 @@ class AutoChessCog(BaseCog):
             raise CommandError("Unable to parse stats!")
 
         # Rank
-        rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
-        
-        # Get integer representation of rank
+        _rank_str = soup.find("h3").text # Knight 7, Bishop 1, Rook 5, etc.
+        # Get rank as integer, so we can sort players by rank more easily
         try:
-            rank_int = RANKS[rank_str] # Knight 7 = 15, Bishop 1 = 18, etc.
+            rank = RANKS[_rank_str] # Knight 7 = 15, Bishop 1 = 18, etc.
         except KeyError:
             raise CommandError("Stats API returned invalid data!")
-        
+
         # Average rank
         average_rank = float(soup.find("span", {
             "class": "content",
@@ -189,8 +187,9 @@ class AutoChessCog(BaseCog):
         }).text.splitlines()[0])
 
         # Matches played
-        matches = soup.find("div", {"class": "text-muted"}).text.strip().splitlines()[0].split(" ")[0]
-        matches = int(matches)
+        matches = int(soup.find("div", {
+                "class": "text-muted"
+            }).text.strip().splitlines()[0].split(" ")[0])
 
         # Wins
         wins = 0
@@ -201,7 +200,7 @@ class AutoChessCog(BaseCog):
         profile = AutochessProfile(
             steamid=steamid,
             userid=userid,
-            rank=rank_int,
+            rank=rank,
             mmr=mmr,
             matches=matches,
             wins=wins,
@@ -250,7 +249,7 @@ class AutoChessCog(BaseCog):
     async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False, full: bool=False) -> str:
         # Leaderboard rank if passed in
         r = f"{rank_n}. " if rank_n else ""
-        
+
         # Discord username
         name = self.bot.get_user(int(user.userid)).name
 
@@ -265,7 +264,7 @@ class AutoChessCog(BaseCog):
             last_updated = f"\nLast updated: {await self._format_last_updated(user)}"
         else:
             last_updated = ""
-        
+
         # Additional stats
         if full:
             f = (f"\nWins (recent 30): {user.wins_recent30}\n"
@@ -273,7 +272,7 @@ class AutoChessCog(BaseCog):
                  f"Average placement: #{user.average_rank}")
         else:
             f = ""
-        
+
         out = (
             f"**{r}{name}**\n"
             f"Rank: {rank_emoji} {rank}\n"
