@@ -396,8 +396,9 @@ class SoundCog(BaseCog):
                     subdir = self.sound_list[sound_name]
                 else:
                     # Select random sound if no argument
-                    subdir, sound_name = random.choice(self.sound_list.items())
-            
+                    sound_name = random.choice(list(self.sound_list))
+                    subdir = self.sound_list[sound_name]
+                    
             # Attempt to suggest sound files with similar names if no results
             except AttributeError:
                 embeds = await ctx.invoke(self.search, arg, rtn=True)
