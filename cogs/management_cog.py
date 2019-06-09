@@ -9,10 +9,13 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
+import boto3
 
+from botsecrets import EC2_INSTANCE_ID
 from cogs.base_cog import BaseCog, EmbedField
 from cogs.sound_cog import AudioPlayer
 from utils.checks import admins_only, disabled_cmd
+from utils.serialize import dump_json
 from itertools import chain
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -127,8 +130,7 @@ class ManagementCog(BaseCog):
                 "enabled": enabled,
                 "disabled": disabled
                 }
-        with open("db/cogs.json", "w") as f:
-            json.dump(out_dict, f, indent=4)
+        dump_json("db/cogs.json", out_dict)
 
     @commands.command(name="fs")
     async def get_dirs_files(self, ctx: commands.Context) -> None:
@@ -146,8 +148,32 @@ class ManagementCog(BaseCog):
         embed = await self.get_embed(ctx, fields=[f_field, d_field])
         await ctx.send(embed=embed)
 
-
+    # Should this be in StatsCog or AdminCog ?
     @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context) -> None:  
-        ws_ping = round(self.bot.ws.latency*100)
-        await ctx.send(f"Ping: {ws_ping}ms")
+    async def ping(self, ctx: commands.Context) -> str:  
+        ping_ms = round(self.bot.ws.latency*100)
+        await ctx.send(f"Ping: {ping_ms}ms")
+        return ping_ms
+
+    @commands.command(name="ip")
+    @admins_only()
+    async def get_ip_address(self, ctx: commands.Context) -> str:
+        """
+        Fetches public IPv4 address of EC2 instance bot is running on.
+
+        IMPORTANT NOTE
+        --------------
+        AWS credentials must be setup through the AWS CLI before this
+        command can be used.
+        """
+        # Create ec2 resource object
+        ec2 = boto3.resource("ec2")
+
+        # Get EC2 instance the bot is running on
+        bot_ec2 = ec2.Instance(EC2_INSTANCE_ID)
+
+        # Get bot's public IPv4 address
+        ip_address = bot_ec2.public_ip_address
+
+        await ctx.send(f"Public IP address: {ip_address}")
+        return ip_address
