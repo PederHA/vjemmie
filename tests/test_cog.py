@@ -389,6 +389,7 @@ class TestCog(BaseCog):
     @voice
     async def test_soundcog_play(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "play", "dota")
+        await self.do_test_command(ctx, "play")
 
     @voice
     async def test_soundcog_queue(self, ctx: commands.Context) -> None:
