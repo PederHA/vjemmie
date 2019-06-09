@@ -103,7 +103,7 @@ class BaseCog(commands.Cog):
             cmd = commands.command(name=self.cog_name)(cmd_coro)
             self.bot.add_command(cmd)
 
-    async def format_output(self, items: Iterable[str], *, formatting: str="", item_name: str=None, enum: bool=False) -> str:
+    async def format_markdown_list(self, items: Iterable[str], *, formatting: str="", item_name: str=None, enum: bool=False) -> str:
         """
         Creates a multi-line codeblock in markdown formatting
         listing items in iterable `items` on separate lines.
@@ -129,7 +129,7 @@ class BaseCog(commands.Cog):
 
         Example
         -------
-        >>>format_output(["foo", "bar", "baz"], "generic items")
+        >>>format_markdown_list(["foo", "bar", "baz"], "generic items")
         '```
         Available generic items:
 
@@ -141,17 +141,20 @@ class BaseCog(commands.Cog):
         if formatting not in md_formats:
             formatting = ""
 
-        output = f"```{formatting}\n"
-        if item_name is not None:
-            output += f"Available {item_name}:\n\n"
+        _out = []
+        _out.append(f"```{formatting}\n")
+        
+        if item_name:
+            _out.append(f"Available {item_name}:\n\n")
+        
         idx = ""
         for i, item in enumerate(items, 1):
             if enum:
                 idx = f"{i}. "
-            output += f"{idx}{item}\n"
+            _out.append(f"{idx}{item}\n")
         else:
-            output += "```"
-        return output
+            _out.append("```")
+        return "\n".join(_out)
 
     async def make_codeblock(self, content:str, md_format: str=None) -> str:
         md_format = md_format if md_format in md_formats else ""

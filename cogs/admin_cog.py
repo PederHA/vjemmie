@@ -176,7 +176,7 @@ class AdminCog(BaseCog):
         # TODO: Add other lists (commands, cogs, etc.)
         if out_list:
             out_list = [self.bot.get_user(user_id).name for user_id in out_list]
-            out_msg = await self.format_output(out_list)
+            out_msg = await self.format_markdown_list(out_list)
         else:
             out_msg = await self.make_codeblock("Blacklist is empty")
         await ctx.send(out_msg)        
