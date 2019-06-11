@@ -141,10 +141,10 @@ class AutochessProfile:
         _l_u = ciso8601.parse_datetime(self.last_updated)
         diff = datetime.now(timezone.utc) - _l_u
 
-        # Show "x hours/minutes/seconds ago" if <1 day since update
+        # Show "x {hours/minutes/seconds} ago" if <1 day since update
         if diff.days < 1:
             _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
-            last_updated = "Just now" # default, in case all time dict values are 0
+            # Choose largest time unit, then break
             for k, v in _last_updated.items():
                 if v < 1:
                     continue
@@ -152,7 +152,10 @@ class AutochessProfile:
                     k = k[:-1] # "1 hour" instead of "1 hours"
                 last_updated = f"{v} {k} ago"
                 break
-
+            else:
+                # default, in case all time dict values are 0
+                last_updated = "just now" 
+        
         # Show "yesterday" if 1 day since update
         elif diff.days == 1:
             last_updated = "yesterday"
