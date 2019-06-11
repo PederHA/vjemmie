@@ -392,7 +392,7 @@ class SoundCog(BaseCog):
                     try:
                         subdir = self.sound_list[sound_name]
                     except KeyError:
-                        raise KeyError(f"Could not find sound by the name of **`{arg}`**") 
+                        raise CommandError(f"Could not find sound by the name of **`{arg}`**") 
                     subdir = self.sound_list[sound_name]
                 else:
                     # Select random sound if no argument
@@ -407,7 +407,7 @@ class SoundCog(BaseCog):
                 for embed in embeds:
                     await ctx.send(embed=embed)
                 return
-
+            
             source = await YTDLSource.create_local_source(ctx, subdir, sound_name)
             await player.queue.put(source)
 
@@ -632,12 +632,12 @@ class SoundCog(BaseCog):
         """
 
         # gTTS exception handling.
-        # The language list has a tendency to break, and requires an update of the gTTS library
+        # The language list has a tendency to break, which requires gTTS to be updated
         try:
             valid_langs = gtts.lang.tts_langs()
         except:
-            await self.send_log(f"**URGENT**: Update gTTS. <pip install -U gTTS> {self.AUTHOR_MENTION}")
-            raise discord.DiscordException("Google Text-to-Speech needs to be updated. Try again later.")
+            await self.send_log(f"**URGENT**: Update gTTS. {self.AUTHOR_MENTION}")
+            raise discord.DiscordException("Text-to-speech module is unavailable. Try again later.")
 
         # User error and help arguments
         if not text:
