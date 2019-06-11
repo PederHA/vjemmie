@@ -85,6 +85,88 @@ class AutochessProfile:
     top3_recent30: int = 0
     average_rank: float = 0.0
     last_updated: str = ""
+    
+    def format_stats(self, bot: commands.Bot, *, rank_n: int=None, show_updated: bool=False, full: bool=False) -> str:
+        """Creates a formatted string from a user's AutoChess stats.
+
+        NOTE
+        ----
+        I am looking for a more elegant solution than passing in the bot instance.
+        Potential solutions:
+
+        1. Make `name` a kw-only arg, and falling back on User ID if
+           no name is passed into `format_stats()`.
+        2. Add Discord username as an AutochessProfile constructor
+           parameter.
+        """
+        
+        # Leaderboard rank if passed in
+        r = f"{rank_n}. " if rank_n else ""
+
+        # Discord username
+        name = bot.get_user(int(self.userid)).name
+
+        # Rank in text-form e.g. "Knight 7"
+        rank = RANKS_REVERSE.get(self.rank)
+
+        # Unicode char representing rank e.g. "♘"
+        rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
+
+        # Time since last stats profile update
+        if show_updated:
+            last_updated = f"\nLast updated: {self._format_last_updated()}"
+        else:
+            last_updated = ""
+
+        # Additional stats
+        if full:
+            f = (f"\nWins (recent 30): {self.wins_recent30}\n"
+                 f"Top 3 (recent 30): {self.top3_recent30}\n"
+                 f"Average placement: #{self.average_rank}")
+        else:
+            f = ""
+
+        out = (
+            f"**{r}{name}**\n"
+            f"Rank: {rank_emoji} {rank}\n"
+            f"Matches: {self.matches}"
+            f"{f}"
+            f"{last_updated}"
+            )
+
+        return out
+
+    def _format_last_updated(self) -> str:
+        # Format datetime.
+        _l_u = ciso8601.parse_datetime(self.last_updated)
+        diff = datetime.now(timezone.utc) - _l_u
+
+        # Show "x hours/minutes/seconds ago" if <1 day since update
+        if diff.days < 1:
+            _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
+            last_updated = "Just now" # default, in case all time dict values are 0
+            for k, v in _last_updated.items():
+                if v < 1:
+                    continue
+                if v == 1:
+                    k = k[:-1] # "1 hour" instead of "1 hours"
+                last_updated = f"{v} {k} ago"
+                break
+
+        # Show "yesterday" if 1 day since update
+        elif diff.days == 1:
+            last_updated = "yesterday"
+
+        # Show "x days ago" if <=1 week since update
+        elif diff.days <= 7:
+            last_updated = f"{diff.days} days ago"
+
+        # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
+        else:
+            last_updated = _l_u.strftime("%a %b %d %Y")
+
+        return last_updated
+
 
 class AutoChessCog(BaseCog):
     """Dota Autochess commands."""
@@ -231,88 +313,28 @@ class AutoChessCog(BaseCog):
         # Format player ranking list
         out = []
         for idx, user in enumerate(users, start=1):
-            user_stats_fmt = await self.format_user_stats(user, rank_n=idx, full=full)
+            user_stats_fmt = user.format_stats(self.bot, rank_n=idx, full=full)
             out.append(user_stats_fmt)
         out_str = "\n\n".join(out)
 
         await self.send_embed_message(ctx, "DGVGK Autochess Rankings", out_str, thumbnail_url=rank_1_user.avatar_url._url)
 
     @autochess.command(name="stats")
-    async def show_stats(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
+    async def show_stats(self, ctx: commands.Context, user: str=None) -> None:
         """Show stats for a single user."""
-        if not user:
-            user = await UserOrMeConverter().convert(ctx, user)
-        user_stats = self.users.get(str(user.id))
-        out = await self.format_user_stats(user_stats, show_updated=True, full=True)
-        await self.send_embed_message(ctx, "AutoChess Stats", out, thumbnail_url=user.avatar_url._url)
-
-    async def format_user_stats(self, user: AutochessProfile, *, rank_n: int=None, show_updated: bool=False, full: bool=False) -> str:
-        # Leaderboard rank if passed in
-        r = f"{rank_n}. " if rank_n else ""
-
-        # Discord username
-        name = self.bot.get_user(int(user.userid)).name
-
-        # Rank in text-form e.g. "Knight 7"
-        rank = RANKS_REVERSE.get(user.rank)
-
-        # Unicode char representing rank e.g. "♘"
-        rank_emoji = RANK_EMOJIS.get(rank.split(" ")[0], "")
-
-        # Time since last stats profile update
-        if show_updated:
-            last_updated = f"\nLast updated: {await self._format_last_updated(user)}"
-        else:
-            last_updated = ""
-
-        # Additional stats
-        if full:
-            f = (f"\nWins (recent 30): {user.wins_recent30}\n"
-                 f"Top 3 (recent 30): {user.top3_recent30}\n"
-                 f"Average placement: #{user.average_rank}")
-        else:
-            f = ""
-
-        out = (
-            f"**{r}{name}**\n"
-            f"Rank: {rank_emoji} {rank}\n"
-            f"Matches: {user.matches}"
-            f"{f}"
-            f"{last_updated}"
-            )
-
-        return out
-
-    async def _format_last_updated(self, user_stats: dict) -> str:
-        # Format datetime.
-        _l_u = ciso8601.parse_datetime(user_stats.last_updated)
-        diff = datetime.now(timezone.utc) - _l_u
-
-        # Show "x hours/minutes/seconds ago" if <1 day since update
-        if diff.days < 1:
-            _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
-            last_updated = "Just now" # default, in case all time dict values are 0
-            for k, v in _last_updated.items():
-                if v < 1:
-                    continue
-                if v == 1:
-                    k = k[:-1] # "1 hour" instead of "1 hours"
-                last_updated = f"{v} {k} ago"
-                break
-
-        # Show "yesterday" if 1 day since update
-        elif diff.days == 1:
-            last_updated = "yesterday"
-
-        # Show "x days ago" if <=1 week since update
-        elif diff.days <= 7:
-            last_updated = f"{diff.days} days ago"
-
-        # Formatted date (e.g. Thu May 02 2019) if >1 week since last update
-        else:
-            last_updated = _l_u.strftime("%a %b %d %Y")
-
-        return last_updated
+        # Get user
+        user = await UserOrMeConverter().convert(ctx, user)
+        
+        # Attempt to get AutochessProfile object for specified user
+        user_stats: AutochessProfile = self.users.get(str(user.id))
+        
+        # Prompt command invoker to add user if the user is not found.
+        if not user_stats:
+            raise CommandError(f"**{user}** has no associated AutoChess profile!\n"
+            f"To add this user:  `{self.bot.command_prefix}autochess add {user} <steamid>`")
+        
+        stats = user_stats.format_stats(self.bot, show_updated=True, full=True)
+        await self.send_embed_message(ctx, "AutoChess Stats", stats, thumbnail_url=user.avatar_url._url)
 
     @autochess.command(name="update")
     @commands.cooldown(rate=1, per=600, type=commands.BucketType.default)
