@@ -389,7 +389,8 @@ class AutoChessCog(BaseCog):
             # of getting banned for scraping OP.GG's website
             await asyncio.sleep(10)
         else:
-            await msg.delete()
+            if msg:
+                await msg.delete()
         
         if arg in ALL_ARGS:
             u = "all users"
