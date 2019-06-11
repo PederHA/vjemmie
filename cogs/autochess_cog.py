@@ -351,7 +351,7 @@ class AutoChessCog(BaseCog):
         # Update all users
         elif arg in ALL_ARGS:
             users = self.users
-            await ctx.send("Updating all users... This might take a while")
+            await ctx.send("Updating all users... This might take a while", delete_after=10.0)
         # Update single user
         else:
             # Attempt to get user. Reset cmd cooldown if user is not found
@@ -368,7 +368,11 @@ class AutoChessCog(BaseCog):
             users = {user.id: autochess_data}
 
         # Update chosen users
-        for user_id, v in users.items():
+        msg = None
+        for idx, (user_id, v) in enumerate(users.items(), start=1):
+            if msg:
+                await msg.delete()
+            msg = await ctx.send(f"Updating user {idx} of {len(users)}")
             user = self.bot.get_user(int(user_id))
             steamid = v.steamid
 
@@ -384,7 +388,9 @@ class AutoChessCog(BaseCog):
             # Sleep for an, as of yet, undetermined amount of time to minimize risk
             # of getting banned for scraping OP.GG's website
             await asyncio.sleep(10)
-
+        else:
+            await msg.delete()
+        
         if arg in ALL_ARGS:
             u = "all users"
         else:
