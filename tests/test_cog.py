@@ -325,7 +325,7 @@ class TestCog(BaseCog):
     @discord_io
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "serverlist")
-
+    
     # AutoChessCog
     async def test_autochesscog_stats_self(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "autochess stats")
@@ -354,8 +354,10 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "mlady")
 
     # FunCog
-    async def test_funcog_roll(self, ctx: commands.Context) -> None:
+    async def test_funcog_roll_1_100(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "roll", 1, 100)
+    
+    async def test_funcog_roll_foo_bar_fails(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "roll", "foo", "bar", raises=CommandError)
 
     async def test_funcog_random(self, ctx: commands.Context) -> None:
@@ -371,6 +373,8 @@ class TestCog(BaseCog):
     @voice
     async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate")
+    
+    async def test_pubgcog_crate_c_fails(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate", "c", raises=CommandError)
 
     # RedditCog
@@ -400,9 +404,12 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "connect")
 
     @voice
-    async def test_soundcog_play(self, ctx: commands.Context) -> None:
+    async def test_soundcog_play_specific(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "play", "dota")
-        await self.do_test_command(ctx, "play")
+    
+    @voice
+    async def test_soundcog_play_random(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "play") # Tests random sound selection
 
     @voice
     async def test_soundcog_queue(self, ctx: commands.Context) -> None:
@@ -420,15 +427,21 @@ class TestCog(BaseCog):
 
     async def test_soundcog_search(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson")
+    
+    async def test_soundcog_search_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list, assert_type=True)
+    
+    async def test_soundcog_search_result(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
     
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
+    
+    async def test_statscog_uptime_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime", rtn=True, assertion=str, assert_type=True)
 
-    async def test_statscog_changelog(self, ctx: commands.Context) -> None:
+    async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog", rtn_type=list, assertion=list, assert_type=True)
 
     # TwitterCog
