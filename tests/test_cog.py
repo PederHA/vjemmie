@@ -245,7 +245,7 @@ class TestCog(BaseCog):
                     assert op(r, assertion)
 
         except AssertionError:
-            await self._format_assertion_error(cmd_name, assertion, assert_type)
+            await self._format_assertion_error(r, cmd_name, assertion, assert_type)
         except Exception as e:
             passed = await self._handle_exc(cmd_name, e, raises)
         else:
@@ -267,14 +267,11 @@ class TestCog(BaseCog):
         else:
             return DEFAULT_OPERATOR
 
-    async def _format_assertion_error(self, cmd_name, assertion, assert_type) -> None:
+    async def _format_assertion_error(self, result, cmd_name, assertion, assert_type) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
-            if assert_type:
-                print(f"type(r) == {type(r)}", end=", ")
-            else:
-                print(f"r == {r}", end=", ")
-            print(f"assertion == {assertion}")
+            r = type(result) if assert_type else result
+            print(f"Expected {assertion}, got {r}")
 
     async def _handle_exc(self, cmd_name, exc, raises) -> bool:
         passed = False
