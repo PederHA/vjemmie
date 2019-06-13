@@ -201,7 +201,13 @@ class TestCog(BaseCog):
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         # Pop ctx
         ctx = kwargs.pop("ctx", None)
-
+        
+        # Get name of command or coro, str formatted args and str formatted kwargs
+        cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
+        
+        # Show args & kwargs if verbose is enabled
+        a_kw = f"{_args} {_kwargs}" if self.verbose else ""
+        
         # Object to test equality of result with
         assertion = kwargs.pop("assertion", SENTINEL)
 
@@ -221,8 +227,7 @@ class TestCog(BaseCog):
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
 
-        # Show args & kwargs if verbose is enabled
-        a_kw = f"{_args} {_kwargs}" if self.verbose else ""
+
 
         passed = False
         try:
