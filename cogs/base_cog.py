@@ -15,6 +15,7 @@ import psutil
 import requests
 from discord import Embed
 from discord.ext import commands
+from prawcore.exceptions import Forbidden as PrawForbidden
 
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
@@ -404,7 +405,8 @@ class BaseCog(commands.Cog):
         IGNORE_EXC = [
             commands.errors.MissingRequiredArgument,
             CategoryError,
-            InvalidVoiceChannel
+            InvalidVoiceChannel,
+            PrawForbidden
         ]
         
         if (any(isinstance(error, err) for err in SHOW) or
