@@ -350,12 +350,12 @@ class TestCog(BaseCog):
     # AvatarCog
     @discord_io
     async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
-        """AvatarCog command where `template_overlay==False`"""
+        """AvatarCog command where `template_overlay == False`"""
         await self.do_test_command(ctx, "fuckup")
 
     @discord_io
     async def test_avatarcog_mlady(self, ctx: commands.Context) -> None:
-        """AvatarCog command where `template_overlay==True`"""
+        """AvatarCog command where `template_overlay == True`"""
         await self.do_test_command(ctx, "mlady")
 
     # FunCog
