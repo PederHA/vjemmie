@@ -160,7 +160,7 @@ class AudioPlayer:
                 except:
                     await self.channel.send("There was an error processing your song")
                     continue
-
+            
             # Exit loop if AudioPlayer is destroyed while playing audio
             if not self.guild.voice_client:
                 break
@@ -276,7 +276,7 @@ class SoundCog(BaseCog):
             raise ValueError("No local sound files exist!")
         return self._sound_list
 
-    async def cleanup(self, guild):
+    async def cleanup(self, guild: discord.Guild) -> None:
         try:
             await guild.voice_client.disconnect()
         except AttributeError:
@@ -610,8 +610,8 @@ class SoundCog(BaseCog):
         else:
             await ctx.send("No results")
 
-    @commands.command(name="queue")
-    async def show_queue(self, ctx: commands.Context) -> None:
+    @commands.group(name="queue")
+    async def queue(self, ctx: commands.Context) -> None:
         """Display soundboard queue."""
         vc = ctx.voice_client
 
@@ -621,6 +621,10 @@ class SoundCog(BaseCog):
         player = self.get_player(ctx)
         if player.queue.empty():
             return await ctx.send("Queue is empty!")
+        
+        # Invoke subcommands
+        if ctx.invoked_subcommand:
+            return
 
         upcoming = list(islice(player.queue._queue, 0, 5))
 
@@ -628,6 +632,22 @@ class SoundCog(BaseCog):
 
         await self.send_embed_message(ctx, "Queue", out_msg, color="red")
 
+    @queue.command(name="clear")
+    async def clear_queue(self, ctx: commands.Context) -> None:
+        player = self.get_player(ctx)
+
+        if player:
+            n = player.queue.qsize()
+            player.destroy(ctx.guild)
+            
+            if n == 1:
+                s = ""
+                werewas = "was"
+            else:
+                s = "s"
+                werewas = "were"
+            
+            await ctx.send(f"Cleared queue! {n} sound{s} {werewas} cleared.")
 
     @commands.command(name="tts",
                       aliases=["texttospeech", "text-to-speech"])
