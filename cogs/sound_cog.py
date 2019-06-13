@@ -98,7 +98,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def create_local_source(cls, ctx, subdir: str, filename: str):
         # Get path to local sound file
-        path = glob.glob(f"{subdir}/{filename}.*")[0]
+        path = glob.glob(glob.escape(f"{subdir}/{filename}")+".*")[0]
 
         # Send add-to-queue confirmation
         await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
