@@ -272,7 +272,7 @@ class TestCog(BaseCog):
         else:
             return DEFAULT_OPERATOR
 
-    async def _format_assertion_error(self, result, cmd_name, assertion, assert_type) -> None:
+    async def _format_assertion_error(self, result: Any, cmd_name: str, assertion: Any, assert_type: bool) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
             r = type(result) if assert_type else result
