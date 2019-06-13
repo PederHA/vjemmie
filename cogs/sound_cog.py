@@ -161,6 +161,10 @@ class AudioPlayer:
                     await self.channel.send("There was an error processing your song")
                     continue
 
+            # Exit loop if AudioPlayer is destroyed while playing audio
+            if not self.guild.voice_client:
+                break
+            
             source.volume = self.volume
             self.current = source
 
