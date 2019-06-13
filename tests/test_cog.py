@@ -326,6 +326,22 @@ class TestCog(BaseCog):
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "serverlist")
 
+    # AutoChessCog
+    async def test_autochesscog_stats_self(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "autochess stats")
+    
+    async def test_autochesscog_stats_specific(self, ctx: commands.Context) -> None:
+        """Must be a user that is added and the bot can find through its UserOrMeConverter"""
+        await self.do_test_command(ctx, "autochess stats", "TRVLLFJVZ") # 
+    
+    async def test_autochesscog_stats_specific_notfound(self, ctx: commands.Context) -> None:
+        """Must be a user that cannot be found through UserOrMeConverter"""
+        await self.do_test_command(ctx, "autochess stats", "ASDQWERTYFOOBAR69", raises=commands.errors.BadArgument)
+    
+    async def test_autochesscog_stats_specific_notadded(self, ctx: commands.Context) -> None:
+        """Must be a user that is NOT added but can be found through UserOrMeConverter"""
+        await self.do_test_command(ctx, "autochess stats", "PFM_SoundboardProxy", raises=CommandError)    
+
     # AvatarCog
     @discord_io
     async def test_avatarcog_fuckup(self, ctx: commands.Context) -> None:
