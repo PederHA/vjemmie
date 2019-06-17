@@ -375,10 +375,10 @@ class TestCog(BaseCog):
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "drop", "erangel", "hot")
 
-    @voice
     async def test_pubgcog_crate(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate")
     
+    @voice
     async def test_pubgcog_crate_c_fails(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "crate", "c", raises=CommandError)
 
