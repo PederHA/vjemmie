@@ -618,8 +618,9 @@ class RedditCog(BaseCog):
         posts = self.submissions[ctx.guild.id][subreddit][sorting][time]
         if not posts:
             try:
-                posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
-                self.submissions[ctx.guild.id][subreddit][sorting][time] = posts
+                async with ctx.message.channel.typing():
+                    posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
+                    self.submissions[ctx.guild.id][subreddit][sorting][time] = posts
             except Forbidden:
                 return await self.send_error_msg(
                     ctx,
