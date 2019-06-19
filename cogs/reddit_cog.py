@@ -514,7 +514,7 @@ class RedditCog(BaseCog):
             subreddit = sub.display_name.lower()
             over_18 = sub.over18
         else:
-            raise TypeError("Inappropriate argument type")
+            raise TypeError('Argument "sub" must be a praw Submission or Subreddit')
         
         # Always allow if channel is marked NSFW
         if ctx.channel.nsfw:
