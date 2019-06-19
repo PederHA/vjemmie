@@ -512,10 +512,10 @@ class RedditCog(BaseCog):
         """Attempts to select a random reddit post that has not
         yet been posted in the current bot session from list of posts.
         """
-        # Try to select random post
+        l = self.submissions[guild_id][subreddit][sorting][time]
         while True:
-            post = random.choice(self.submissions[guild_id][subreddit][sorting][time])
-            self.submissions[guild_id][subreddit][sorting][time].remove(post)
+            post = random.choice(l)
+            l.remove(post)
             if is_text or self._is_image_content(post.url):
                 return post
 
