@@ -6,7 +6,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Union
+from typing import Iterable, Iterator, List, Optional, Union, Callable
 from urllib.parse import urlparse, urlsplit
 
 import aiohttp
@@ -74,18 +74,20 @@ class BaseCog(commands.Cog):
         self.add_help_command()
         self.setup()
 
-    def setup(self, default_factory=list) -> None:
+    def setup(self, default_factory: Callable=list) -> None:
         # Create required directories
         for directory in self.DIRS:
-            if not Path(directory).exists():
-                os.makedirs(directory)
+            p = Path(directory)
+            if not p.exists():
+                p.mkdir(parents=True, exist_ok=True)
         
         # Create required files
-        for _f in self.FILES:
-            if not Path(_f).exists():
-                with open(_f, "w") as f:
-                    if _f.endswith("json"):
-                        f.write(f"{default_factory()}")
+        for _file in self.FILES:
+            p = Path(_file)
+            if not p.exists():
+                p.touch()
+                if p.suffix == ".json":
+                    p.write_text(f"{default_factory()}")
     
     @property
     def cog_name(self) -> str:
