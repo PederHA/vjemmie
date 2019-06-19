@@ -71,12 +71,13 @@ class RedditCog(BaseCog):
         self.subs = self.load_subs()
         for sub in self.subs.values():
             self._add_sub(sub)
-        # Generators for changing reddit sorting.
+        
+        # Iterators for changing reddit sorting.
         self.time_cycle = cycle(self.TIME_FILTERS) # Command: !rtime
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
         
-        # AVERT YOUR EYES! ...Just ignore this, yeah?
-        self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
+        # Initiate loop that clears reddit submission cache daily
+        self.bot.loop.create_task(self.submission_refresh_loop())
 
     def load_subs(self) -> dict:
         with open("db/reddit/subs.json", "r") as f:
@@ -89,10 +90,18 @@ class RedditCog(BaseCog):
         with open("db/reddit/subs.json", "w") as f:
             if self.subs:
                 json.dump(self.subs, f, indent=4)
-
     @property
     def NSFW_WHITELIST(self):
         return get_cached("db/reddit/nsfw_whitelist.json", category="reddit")
+    
+    def clear_submission_cache(self) -> None:
+        self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
+    
+    async def submission_refresh_loop(self) -> None:
+        """Wipes reddit submission cache once daily"""
+        while True:
+            self.clear_submission_cache()
+            await asyncio.sleep(86400) # 1 day
 
     @commands.group(name="reddit")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
