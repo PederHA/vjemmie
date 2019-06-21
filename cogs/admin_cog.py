@@ -30,12 +30,14 @@ class AdminCog(BaseCog):
     async def run_activity_rotation(self) -> None:
         ctx = await self.get_command_invocation_ctx()
         p = self.bot.command_prefix
+        
         acitivities = [
             Activity(f"{p}about"),
             Activity(f"{p}help"),
             Activity(f"{p}commands"),
-            Activity("Uptime: ", partial(ctx.invoke, self.bot.get_command("uptime"), rtn=True), is_coro=True)   
+            Activity("Uptime: ", partial(ctx.invoke, self.bot.get_command("uptime")), is_coro=True)   
         ]
+
         while self.ACTIVITY_ROTATION:
             for ac in acitivities:
                 if not ac.text and not ac.callable:

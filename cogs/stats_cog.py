@@ -12,6 +12,7 @@ from itertools import islice
 from github import Github, GithubObject, Commit
 
 from utils.checks import owners_only
+from utils.datetimeutils import format_time_difference
 from botsecrets import GITHUB_TOKEN
 
 class StatsCog(BaseCog):
@@ -24,28 +25,27 @@ class StatsCog(BaseCog):
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
 
+    def get_bot_uptime(self, type:Union[dict, str]=dict) -> str:
+        up = format_time_difference(self.bot.start_time)
+        if type == dict:
+            return up
+        elif type == str:
+            up_fmt = lambda dur, unit: f"{dur}{unit} " if dur else ""
+            uptime = (f"{up_fmt(up['days'], 'd')}"
+                    f"{up_fmt(up['hours'], 'h')}"
+                    f"{up_fmt(up['minutes'], 'm')}"
+                    f"{up_fmt(up['seconds'], 's')}")
+            return uptime       
+        else:
+            raise TypeError("Return type must be 'str' or 'dict'")
+    
     @commands.command(name="uptime", aliases=["up"])
-    async def uptime(self, ctx: commands.Context, *, rtn: bool=False) -> str:
+    async def uptime(self, ctx: commands.Context) -> str:
         """Bot uptime."""
-        up = datetime.now() - self.bot.start_time
-        days = up.days
-        hours, remainder = divmod(up.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        seconds += round(up.microseconds / 1e6)
+        up = self.get_bot_uptime(type=str)
+        await ctx.send(f"Bot has been up for {up}")
+        return up # Band-aid fix to simplify access to bot uptime from other cogs
         
-        # Returns empty string if number is 0
-        up_fmt = lambda dur, unit: f"{dur}{unit} " if dur else ""
-        uptime = (f"{up_fmt(days, 'd')}"
-                  f"{up_fmt(hours, 'h')}"
-                  f"{up_fmt(minutes, 'm')}"
-                  f"{up_fmt(seconds, 's')}")
-        
-        if rtn:
-            return uptime
-        
-        await ctx.send(f"Bot has been up for {uptime}")
-        
-
     @commands.command(name="get_players")
     @owners_only()
     async def get_players(self, ctx) -> None:
@@ -122,7 +122,7 @@ class StatsCog(BaseCog):
                     )
 
         return commits
-
+       
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
