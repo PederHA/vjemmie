@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Iterable, Union
 from urllib.parse import urlparse, ParseResult
 from functools import partial
 from collections import defaultdict
@@ -12,6 +12,7 @@ from discord.ext.commands.converter import IDConverter, _get_from_guilds
 from discord.ext.commands.errors import BadArgument
 
 from utils.exceptions import CommandError
+from config import YES_ARGS
 
 
 class MemberOrURLConverter(IDConverter):
@@ -186,3 +187,24 @@ class SteamID64Converter(commands.Converter):
             else:
                 # Clear attempts counter, but start cooldown
                 self.attempts[id_] = 0 
+
+
+class BoolConverter(commands.Converter):
+    """User-extensible bool converter.
+    
+    Users can supply a list of arguments in the object's constructor that
+    represent truth-like values.
+    """ 
+    def __init__(self, options: Iterable) -> None:
+        super().__init__()
+        self.options = list(options)
+
+    async def convert(self, ctx: commands.Context, arg: Union[bool, str]) -> bool: 
+        if isinstance(arg, bool):
+            return arg
+
+        if isinstance(arg, str):
+            arg = arg.lower()
+            return arg in self.options + YES_ARGS
+
+        return False
