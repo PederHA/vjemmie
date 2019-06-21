@@ -15,6 +15,8 @@ from botsecrets import EC2_INSTANCE_ID
 from cogs.base_cog import BaseCog, EmbedField
 from cogs.sound_cog import AudioPlayer
 from utils.checks import admins_only, disabled_cmd
+from utils.converters import BoolConverter
+from utils.exceptions import CommandError
 from utils.serialize import dump_json
 from itertools import chain
 
@@ -26,16 +28,19 @@ class DateTimeEncoder(json.JSONEncoder):
 
 class ManagementCog(BaseCog):
     DISABLE_HELP = True
+    
     FILES = [
         "out/audioplayers.json",
     ]
+    
     DIRS = [
         "out"
     ]
 
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
-        super().__init__(bot) 
+        super().__init__(bot)
+        self.bot_ec2 = boto3.resource("ec2").Instance(EC2_INSTANCE_ID)
 
     @commands.command(name="reacts")
     @admins_only()
@@ -69,7 +74,6 @@ class ManagementCog(BaseCog):
         to_run = partial(self._dump_cogs, enabled, disabled)
         await self.bot.loop.run_in_executor(None, to_run)
 
-    
     async def _get_cogs_by_help_status(self) -> Tuple[list, list]:   
         enabled = []
         disabled = []
@@ -102,26 +106,34 @@ class ManagementCog(BaseCog):
         
         embed = await self.get_embed(ctx, fields=[f_field, d_field])
         await ctx.send(embed=embed)
-
+    
     @commands.command(name="ip")
     @admins_only()
-    async def get_ip_address(self, ctx: commands.Context) -> str:
+    async def ip(self, ctx: commands.Context,  *, ipv6: BoolConverter(["ipv6"])=False) -> None:
+        """Displays bot's public EC2 IPv4/6 address"""  
+        # Fetch IP non-blocking
+        to_run = partial(self.get_ec2_ip, ipv6=ipv6)
+        ip_address = await self.bot.loop.run_in_executor(None, to_run)
+        
+        v = "6" if ipv6 else "4"
+        await ctx.send(f"Public IPv{v} address: {ip_address}")
+    
+    def get_ec2_ip(self, ipv6: bool=False) -> str:
         """
-        Fetches public IPv4 address of EC2 instance bot is running on.
+        Fetches public IPv4 or IPv6 address of EC2 instance bot is running on.
 
         IMPORTANT NOTE
         --------------
-        AWS credentials must be setup through the AWS CLI before this
+        AWS credentials must be configured through the AWS CLI before this
         command can be used.
         """
-        # Create ec2 resource object
-        ec2 = boto3.resource("ec2")
-
-        # Get EC2 instance the bot is running on
-        bot_ec2 = ec2.Instance(EC2_INSTANCE_ID)
-
-        # Get bot's public IPv4 address
-        ip_address = bot_ec2.public_ip_address
-
-        await ctx.send(f"Public IP address: {ip_address}")
+        if ipv6:
+            iface = self.bot_ec2.network_interfaces[0]
+            try:
+                ip_address = iface.ipv6_addresses[0]
+            except IndexError:
+                raise AttributeError("Bot's EC2 instance has no associated IPv6 addresses!")
+        else:
+            ip_address = self.bot_ec2.public_ip_address
+        
         return ip_address
