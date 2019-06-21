@@ -35,7 +35,7 @@ class ManagementCog(BaseCog):
 
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
-        super().__init__(bot)
+        super().__init__(bot) 
 
     @commands.command(name="reacts")
     @admins_only()
@@ -51,7 +51,7 @@ class ManagementCog(BaseCog):
                         if len(reactions)>=3:
                             for reaction in reactions:
                                 await msg.add_reaction(reaction.emoji)
-
+    
     @commands.command(name="cogs", aliases=["get_cogs"])
     @admins_only() 
     async def get_cogs_status(self, ctx) -> None:
@@ -102,13 +102,6 @@ class ManagementCog(BaseCog):
         
         embed = await self.get_embed(ctx, fields=[f_field, d_field])
         await ctx.send(embed=embed)
-
-    # Should this be in StatsCog or AdminCog ?
-    @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context) -> str:  
-        ping_ms = round(self.bot.ws.latency*100)
-        await ctx.send(f"Ping: {ping_ms}ms")
-        return ping_ms
 
     @commands.command(name="ip")
     @admins_only()

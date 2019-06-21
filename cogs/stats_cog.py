@@ -123,10 +123,15 @@ class StatsCog(BaseCog):
         else:
             await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
 
-    
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
         commits = await ctx.invoke(self.changelog, 7, rtn_type=list)
         n_commits = len(commits)
         await ctx.send(f"{n_commits} commits have been made the past week.")
+
+    @commands.command(name="ping")
+    async def ping(self, ctx: commands.Context) -> str:  
+        ping_ms = round(self.bot.ws.latency*100)
+        await ctx.send(f"Ping: {ping_ms}ms")
+        return ping_ms   
