@@ -370,7 +370,14 @@ class TestCog(BaseCog):
 
     async def test_funcog_braille(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "braille", "testing braille command")
-
+    
+    # ManagementCog
+    async def test_managementcog_ip_v4(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "ip")
+    
+    async def test_managementcog_ip_v6(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "ip", ipv6=True, raises=AttributeError)    
+    
     # PUBGCog
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "drop", "erangel", "hot")
@@ -448,7 +455,7 @@ class TestCog(BaseCog):
 
     async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog")
-
+    
     async def test_statscog_ping(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "ping")
     
