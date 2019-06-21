@@ -78,14 +78,28 @@ class StatsCog(BaseCog):
                         rtn_type: Union[str, list, None]=None
                         ) -> Union[List[Commit.Commit], str, None]:
         """Display git commmit log"""
+        commits = await self.get_commits("PederHA/vjemmie", days)
+        
+        # Format commit hash + message
+        out_commits = "\n".join(
+            [
+            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.splitlines()[0]}"
+            for commit in commits
+            ]
+        )
+        
+        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
+    
+    async def get_commits(self, repo: str, days: int) -> List[Commit.Commit]:
+        """Display git commmit log"""
         # Limit number of days to get commits from
         if days > 7:
             raise ValueError("Number of days cannot exceed 7!")
         
         # Get repo
-        repo = self.github.get_repo("PederHA/vjemmie")
+        repo = self.github.get_repo(repo)
 
-        # Get commits
+        # Fetch commits non-blocking
         since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet
         to_run = partial(repo.get_commits, since=since)
         _c = await self.bot.loop.run_in_executor(None, to_run)
@@ -107,21 +121,7 @@ class StatsCog(BaseCog):
                     "Could not fetch changes from GitHub, try again later!"
                     )
 
-        # Format commit hash + message
-        out_commits = "\n".join(
-            [
-            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.splitlines()[0]}"
-            for commit in commits
-            ]
-        )
-        
-        # Check if a return type is passed in
-        if rtn_type is list:
-            return commits # List of github.Commit objects
-        elif rtn_type is str:
-            return out_commits # Message string
-        else:
-            await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
+        return commits
 
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
