@@ -92,6 +92,6 @@ SOUND_SUB_DIRS = [v for v in dict(locals()).values() if isinstance(v, SoundSubdi
 
 # ARGUMENTS
 # -----------------
-YES_ARGS = ["y", "yes", "+", "ja", "si"]
-NO_ARGS = ["n", "no", "-", "nei"]
+YES_ARGS = ["y", "yes", "+", "ja", "si", "True", "true"]
+NO_ARGS = ["n", "no", "-", "nei", "False", "false"]
 ALL_ARGS = ["all", "everyone", "global"]
