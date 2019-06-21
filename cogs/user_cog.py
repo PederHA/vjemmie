@@ -7,7 +7,8 @@ import psutil
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
-from config import AUTHOR_MENTION, NO_ARGS
+from config import AUTHOR_MENTION, YES_ARGS
+from utils.converters import BoolConverter
 from utils.exceptions import CategoryError, CogError, CommandError
 
 
@@ -19,13 +20,8 @@ class UserCog(BaseCog):
         self.bot.remove_command('help')
 
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])
-    async def send_help(self, ctx: commands.Context, cog_name: str=None, simple: str="y"):
-        """Sends information about a specific cog's commands"""
-        
-        # Enable advanced !help output
-        if simple in NO_ARGS + ["advanced"]:
-            simple = False
-        
+    async def send_help(self, ctx: commands.Context, cog_name: str=None, advanced: BoolConverter(["advanced"]+YES_ARGS)=False):
+        """Sends information about a specific cog's commands"""        
         # Only include cogs that have commands that pass checks for current ctx
         cogs = []
         for cog in await self.get_cogs():
@@ -47,7 +43,7 @@ class UserCog(BaseCog):
             cog_name = cog_name.lower()
             for cog in cogs:
                 if cog_name == cog.cog_name.lower():
-                    return await cog._get_cog_commands(ctx, simple)
+                    return await cog._get_cog_commands(ctx, advanced)
             else:
                 raise CategoryError(f"No such category **{cog_name}**.")
           
@@ -64,21 +60,23 @@ class UserCog(BaseCog):
                         "Or type `!commands` to show all available commands.")
 
     @commands.command(name="commands")
-    async def show_commands(self, ctx:commands.Context, verbosity: str="simple") -> None:
+    async def show_commands(self, 
+                            ctx:commands.Context, 
+                            advanced: BoolConverter(["advanced", "y", "args"])=False
+                            ) -> None:
         """Display all bot commands."""
         l = []
-        simple = verbosity not in ["advanced", "y", "args"]
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
             with suppress(CommandError):
-                cmds = await cog._get_cog_commands(ctx, simple, rtn=True)
+                cmds = await cog._get_cog_commands(ctx, advanced, rtn=True)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}\n")
                 
         if not l:
             raise CommandError("No commands are available!")
         
         out = "\n".join(l)
-        if not simple:
+        if advanced:
             # Add command signature legend to top of embed if advanced output is enabled
             out = self.SIGNATURE_HELP + out
 

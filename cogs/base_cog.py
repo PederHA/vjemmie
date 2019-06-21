@@ -572,7 +572,7 @@ class BaseCog(commands.Cog):
 
         return msg # Could do return await.channel.send(), but I think this is more self documenting
 
-    async def _get_cog_commands(self, ctx: commands.Context, simple: bool=True, *, rtn: bool=False) -> None:
+    async def _get_cog_commands(self, ctx: commands.Context, advanced: bool=True, *, rtn: bool=False) -> None:
         """Sends an embed listing all commands belonging the cog.
 
         The method compiles a list of commands defined by the invoking cog,
@@ -589,9 +589,9 @@ class BaseCog(commands.Cog):
         ----------
         ctx : `commands.Context`
             Discord Context object
-        simple : `bool`, optional
+        advanced : `bool`, optional
             Defines whether the command listing should display calling
-            signatures or not. (the default is True, which ommits signatures)
+            signatures or not. (the default is False, which ommits signatures)
         """  
         # Get commands for current cog
         # NOTE: Replace with walk_commands() to get subcommands?
@@ -629,11 +629,11 @@ class BaseCog(commands.Cog):
                 # Add right side padding if no indent
                 padding = "\xa0"*2 if not indent else ""
                 
-                # Hide command signature from simple output
-                if simple:
-                    cmd_name = cmd.name.ljust(20,"\xa0")
-                else:
+                # Show command signature on advanced output
+                if advanced:
                     cmd_name = f"{cmd.name} {cmd.signature}".ljust(35, "\xa0")
+                else:
+                    cmd_name = cmd.name.ljust(20,"\xa0")
                 
                 out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {cmd.short_doc}")
 
@@ -642,7 +642,7 @@ class BaseCog(commands.Cog):
         if not out_str:
             raise CommandError("Cog has no commands!")
         
-        if not simple and not rtn:
+        if advanced and not rtn:
             # Add command signature legend string if advanced output is enabled
             out_str = self.SIGNATURE_HELP + out_str
         
