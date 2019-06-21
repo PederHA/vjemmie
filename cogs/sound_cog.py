@@ -404,7 +404,7 @@ class SoundCog(BaseCog):
                     subdir = self.sound_list[sound_name]
                     
             # Attempt to suggest sound files with similar names if no results
-            except AttributeError:
+            except CommandError:
                 embeds = await ctx.invoke(self.search, arg, rtn=True)
                 dym = "Did you mean:" if embeds else ""
                 await ctx.send(f"No sound with name **`{arg}`**. {dym}")
