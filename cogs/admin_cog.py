@@ -39,9 +39,9 @@ class AdminCog(BaseCog):
             Activity(f"{p}about"),
             Activity(f"{p}help"),
             Activity(f"{p}commands"),
-            Activity("Uptime: ", partial(ctx.invoke, self.bot.get_command("uptime")), is_coro=True)   
+            Activity("Uptime: ", partial(self.bot.get_cog("StatsCog").get_bot_uptime, type=str))   
         ]
-
+        
         while self.ACTIVITY_ROTATION:
             for ac in acitivities:
                 if not ac.text and not ac.callable:
