@@ -449,6 +449,9 @@ class TestCog(BaseCog):
     async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog")
 
+    async def test_statscog_ping(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "ping")
+    
     # TwitterCog
     @network_io
     async def test_twittercog_add(self, ctx: commands.Context) -> None:
