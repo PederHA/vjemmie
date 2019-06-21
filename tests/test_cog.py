@@ -444,10 +444,10 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "uptime")
     
     async def test_statscog_uptime_type(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "uptime", rtn=True, assertion=str, assert_type=True)
+        await self.do_test_command(ctx, "uptime", assertion=str, assert_type=True)
 
     async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "changelog", rtn_type=list, assertion=list, assert_type=True)
+        await self.do_test_command(ctx, "changelog")
 
     # TwitterCog
     @network_io
