@@ -132,6 +132,8 @@ class StatsCog(BaseCog):
 
     @commands.command(name="ping")
     async def ping(self, ctx: commands.Context) -> str:  
-        ping_ms = round(self.bot.ws.latency*100)
+        ping_ms = self.get_bot_ping_ms()
         await ctx.send(f"Ping: {ping_ms}ms")
-        return ping_ms   
+
+    def get_bot_ping_ms(self) -> int:
+        return round(self.bot.ws.latency*100)
