@@ -405,11 +405,15 @@ class SoundCog(BaseCog):
                     
             # Attempt to suggest sound files with similar names if no results
             except CommandError:
-                embeds = await ctx.invoke(self.search, arg, rtn=True)
-                dym = "Did you mean:" if embeds else ""
+                embeds = await self._do_search(arg, ctx)
+                if embeds and len(embeds) <= len(self.sub_dirs):
+                    dym = "Did you mean:"  
+                else:
+                    dym = ""
                 await ctx.send(f"No sound with name **`{arg}`**. {dym}")
-                for embed in embeds:
-                    await ctx.send(embed=embed)
+                if dym:
+                    for embed in embeds:
+                        await ctx.send(embed=embed)
                 return
 
             source = await YTDLSource.create_local_source(ctx, subdir, sound_name)
@@ -578,30 +582,21 @@ class SoundCog(BaseCog):
     @commands.command(name="search")
     async def search(self, 
                      ctx: commands.Context, 
-                     *search_query: str, 
+                     *query: str, 
                      rtn: bool=False) -> Optional[List[discord.Embed]]:
+        """Search for Soundboard files."""
+        
         # Join args into space-separated search query string
-        search_query = " ".join(search_query)
-        if not search_query or all(char == " " for char in search_query):
+        query = " ".join(query)
+        if not query or all(char == " " for char in query):
             raise CommandError("Search query cannot be an empty string.")
         
-        # Get search results formatted as Discord embed objects
-        embeds = []
-        for sf in self.sub_dirs:
-            _out = [sound for sound in sf.sound_list if search_query.lower() in sound.lower()]
-            if _out:
-                _out_str = "\n".join(_out)
-                _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=True)
-                embeds.extend(_rtn_embeds)
+        embeds = await self._do_search(query, ctx)
         
         # Require searches to be specific in order to avoid spamming a channel
-        if len(embeds) > 3:
+        if len(embeds) > len(self.sub_dirs):
             n_results = sum([len(e.description.splitlines()) for e in embeds])
-            raise CommandError(f"Search returned {n_results} results. A more specific search query is required.")        
-        
-        # Return embeds if enabled
-        if rtn:
-            return embeds
+            raise CommandError(f"Search returned {n_results} results. A more specific search query is required.")
 
         # Post search results to ctx.channel otherwise
         if embeds:
@@ -609,7 +604,22 @@ class SoundCog(BaseCog):
                 await ctx.send(embed=embed)
         else:
             await ctx.send("No results")
-
+    
+    async def _do_search(self, query: str, ctx: commands.Context=None) -> List[discord.Embed]:
+        """Performs Soundboard file search. Returns list of Discord Embeds"""
+        if not ctx:
+            ctx = await self.get_command_invocation_ctx()
+        
+        embeds = []
+        for sf in self.sub_dirs:
+            _out = [sound for sound in sf.sound_list if query.lower() in sound.lower()]
+            if _out:
+                _out_str = "\n".join(_out)
+                _rtn_embeds = await self.send_embed_message(ctx, sf.header, _out_str, color=sf.color, return_embeds=True)
+                embeds.extend(_rtn_embeds)
+        
+        return embeds
+   
     @commands.group(name="queue")
     async def queue(self, ctx: commands.Context) -> None:
         """Display soundboard queue."""
@@ -640,18 +650,18 @@ class SoundCog(BaseCog):
         if not player:
             return
         
-            n = player.queue.qsize()
-            player.destroy(ctx.guild)
-            
+        n = player.queue.qsize()
+        player.destroy(ctx.guild)
+        
         # Grammar
-            if n == 1:
-                s = ""
-                werewas = "was"
-            else:
-                s = "s"
-                werewas = "were"
-            
-            await ctx.send(f"Cleared queue! {n} sound{s} {werewas} cleared.")
+        if n == 1:
+            s = ""
+            werewas = "was"
+        else:
+            s = "s"
+            werewas = "were"
+        
+        await ctx.send(f"Cleared queue! {n} sound{s} {werewas} cleared.")
 
     @commands.command(name="tts",
                       aliases=["texttospeech", "text-to-speech"])
