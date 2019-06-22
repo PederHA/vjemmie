@@ -634,12 +634,16 @@ class SoundCog(BaseCog):
 
     @queue.command(name="clear")
     async def clear_queue(self, ctx: commands.Context) -> None:
+        """Clear soundboard queue"""
         player = self.get_player(ctx)
 
-        if player:
+        if not player:
+            return
+        
             n = player.queue.qsize()
             player.destroy(ctx.guild)
             
+        # Grammar
             if n == 1:
                 s = ""
                 werewas = "was"
