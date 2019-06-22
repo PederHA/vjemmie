@@ -396,7 +396,7 @@ class SoundCog(BaseCog):
                     try:
                         subdir = self.sound_list[sound_name]
                     except KeyError:
-                        raise CommandError(f"Could not find sound by the name of **`{arg}`**") 
+                        raise CommandError(f"No sound file named **`{arg}`**") 
                     subdir = self.sound_list[sound_name]
                 else:
                     # Select random sound if no argument
