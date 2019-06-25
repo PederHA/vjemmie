@@ -15,6 +15,7 @@ from requests_html import HTML, HTMLSession
 from cogs.base_cog import BaseCog
 from utils.exceptions import CommandError
 from utils.experimental import get_ctx
+from utils.caching import get_cached
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
@@ -36,47 +37,22 @@ class TwitterCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         
-        # K: Username, V: TwitterUser
-        self.users: Dict[str, TwitterUser] = self.get_users()
-
         # Key: Username, Value: markovify text model
         self.text_models: Dict[str, markovify.NewlineText] = {}
 
         for user in self.users.values():
             self.create_commands(user)
-
-    def get_users(self) -> dict:
-        # NOTE: I am looking to move this into utils.serialization
-        # as a general-purpose JSON deserialization function that 
-        # can be used by any cogs that read and store data using JSON files
-        f = open(USERS_FILE, "r")
-        try:
-            users =  json.load(f)
-            f.close()
-        except json.decoder.JSONDecodeError:
-            contents = f.read()
-            f.close()
-            new_fn = f"{USERS_FILE.split('.', 1)[0]}_damaged.txt"
-            with open(new_fn, "w") as df:
-                print(f"{USERS_FILE} is damaged! "
-                f"Saving old file as {new_fn} and creating blank {USERS_FILE}.\n"
-                "Manual correction of errors in original file must be performed before "
-                "attempting to use it")
-                df.write(contents)
-            f = open(USERS_FILE, "w")
-            f.write("[]")
-            f.close()
-            users = {}
         
-        users_new = {}
-        if users:
-            for user, values in users.items():
-                users_new[user] = TwitterUser(*values)
-        return users_new
-                
-    def dump_users(self) -> None:
+    @property
+    def users(self) -> Dict[str, TwitterUser]:
+        users = get_cached(USERS_FILE, category="twitter")  
+        return {user: TwitterUser(*values) for user, values in users.items()}
+
+    def dump_user(self, username, twitter_profile) -> None:
+        users = self.users
+        users[username] = twitter_profile
         with open(USERS_FILE, "w") as f:
-            json.dump(self.users, f, indent=4)
+            json.dump(users, f, indent=4)
 
     def create_commands(self, user: TwitterUser) -> None:
         username = user.user.lower()
@@ -189,16 +165,15 @@ class TwitterCog(BaseCog):
                 if _user:
                     tweets = set(tuple(tweets))
                     old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in _user.tweets))
-                    tweets.update(set(old_tweets))
+                    tweets.update(old_tweets)
                     tweets = list(tweets)
                     aliases = _user.aliases
                 
-                # Update users with fetched Twitter user
-                self.users[user] = TwitterUser(user, time.time(), tweets, aliases)
+                # Create new TwitterUser object with updated tweets
+                tu = TwitterUser(user, time.time(), tweets, aliases)
                 
-                # Save users to file
-                self.dump_users()
-                
+                # Save user to file
+                self.dump_user(user, tu)        
             else:
                 raise ValueError(f"Something went wrong when fetching tweets for {user}")
             await msg.delete()
