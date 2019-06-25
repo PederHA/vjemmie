@@ -96,10 +96,8 @@ class TwitterCog(BaseCog):
 
         try:
             await self.get_tweets(ctx, user, aliases=aliases)
-        except Exception as e:
-            return await ctx.send(
-                f"Can't fetch tweets for {user}. Verify that the user exists!"
-                )
+        except:
+            raise
         else:
             self.create_commands(self.users[user])
             await ctx.send(f"Added {user}!")
@@ -113,11 +111,8 @@ class TwitterCog(BaseCog):
         if user in self.users:
             try:
                 await self.get_tweets(ctx, user)
-            except Exception as e:
-                await self.log_error(ctx, e.args)
-                await ctx.send(
-                    f"Something went wrong when attempting to fetch new tweets for {user}"
-                    )
+            except:
+                raise
             else:
                 await ctx.send(f"Updated {user} successfully!")
         else:
@@ -149,13 +144,13 @@ class TwitterCog(BaseCog):
         
         tweets = []
         msg = await ctx.send("Fetching tweets...")
+        
         try:
             to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
             async with ctx.typing():
-                new_tweets = await self.bot.loop.run_in_executor(None, to_run)
-                tweets += new_tweets
+                tweets = await self.bot.loop.run_in_executor(None, to_run)
         except ValueError:
-            raise IOError(f"Could not fetch tweets for {user}")
+            raise IOError(f"Unable not fetch tweets for {user}")
         except lxml.etree.ParserError:
             pass
         finally:
