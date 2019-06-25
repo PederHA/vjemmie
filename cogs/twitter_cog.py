@@ -14,6 +14,7 @@ from requests_html import HTML, HTMLSession
 
 from cogs.base_cog import BaseCog
 from utils.exceptions import CommandError
+from utils.experimental import get_ctx
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
@@ -118,7 +119,7 @@ class TwitterCog(BaseCog):
                 f"Type **`{self.bot.command_prefix}twitter update {user}`** to fetch newest tweets for {user}.")
 
         try:
-            await self.get_tweets(user, aliases=aliases)
+            await self.get_tweets(ctx, user, aliases=aliases)
         except Exception as e:
             return await ctx.send(
                 f"Can't fetch tweets for {user}. Verify that the user exists!"
@@ -135,7 +136,7 @@ class TwitterCog(BaseCog):
         user = user.lower()
         if user in self.users:
             try:
-                await self.get_tweets(user)
+                await self.get_tweets(ctx, user)
             except Exception as e:
                 await self.log_error(ctx, e.args)
                 await ctx.send(
@@ -161,7 +162,7 @@ class TwitterCog(BaseCog):
         await self.send_embed_message(ctx, header="Twitter users", text=users)
 
 
-    async def get_tweets(self, user: str, aliases=None) -> List[Tuple[str, str]]:
+    async def get_tweets(self, ctx: commands.Context, user: str, aliases=None) -> List[Tuple[str, str]]:
         """Retrieves tweets for a specific user.
         
         If user already has saved tweets, new tweets are added to
@@ -171,11 +172,13 @@ class TwitterCog(BaseCog):
             aliases = []
         
         tweets = []
+        msg = await ctx.send("Fetching tweets...")
         try:
             to_run = partial(self._get_tweets, user, pages=self.TWITTER_PAGES)
-            for tweet in await self.bot.loop.run_in_executor(None, to_run):
-                tweets.append(tweet)
-        except ValueError as e:
+            async with ctx.typing():
+                new_tweets = await self.bot.loop.run_in_executor(None, to_run)
+                tweets += new_tweets
+        except ValueError:
             raise IOError(f"Could not fetch tweets for {user}")
         except lxml.etree.ParserError:
             pass
@@ -198,7 +201,8 @@ class TwitterCog(BaseCog):
                 
             else:
                 raise ValueError(f"Something went wrong when fetching tweets for {user}")
-
+            await msg.delete()
+    
     def _get_tweets(self, user: str, pages: int) -> Iterable[str]:
         """Modified version of https://github.com/kennethreitz/twitter-scraper.
 
@@ -268,7 +272,8 @@ class TwitterCog(BaseCog):
     async def generate_sentence(self, user: str, length: int=140) -> str:
         # Add user if username passed in is not added to database
         if user not in self.users:
-            await self.get_tweets(user)
+            ctx = get_ctx()
+            await self.get_tweets(ctx, user)
         
         # Get tweet text only
         tweets = [tweet[1] for tweet in self.users[user].tweets]
