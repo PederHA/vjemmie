@@ -6,6 +6,7 @@ import numpy
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
+from utils.converters import BoolConverter
 from utils.exceptions import CommandError
 
 
@@ -17,7 +18,7 @@ class PUBGCog(BaseCog):
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"
     )
-    async def drop(self, ctx: commands.Context, map_:str=None, hot: str=None):
+    async def drop(self, ctx: commands.Context, map_:str=None, hot: BoolConverter(["hot", "h"])=False):
         """
         Chooses random drop location on a given map.
         """
