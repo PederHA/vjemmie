@@ -48,9 +48,9 @@ class TwitterCog(BaseCog):
         users = get_cached(USERS_FILE, category="twitter")  
         return {user: TwitterUser(*values) for user, values in users.items()}
 
-    def dump_user(self, username, twitter_profile) -> None:
+    def update_user(self, user: TwitterUser) -> None:
         users = self.users
-        users[username] = twitter_profile
+        users[user.user] = user
         with open(USERS_FILE, "w") as f:
             json.dump(users, f, indent=4)
 
@@ -153,26 +153,27 @@ class TwitterCog(BaseCog):
             raise IOError(f"Unable not fetch tweets for {user}")
         except lxml.etree.ParserError:
             pass
+        else:
+            if not tweets:
+                return
+            
+            # Add fetched tweets to existing user's tweets if they exist
+            _user = self.users.get(user)
+            if _user:
+                tweets = set(tuple(tweets))
+                old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in _user.tweets))
+                tweets.update(old_tweets)
+                tweets = list(tweets)
+                aliases = _user.aliases      
+            
+            # Create new TwitterUser object with updated tweets
+            tu = TwitterUser(user, time.time(), tweets, aliases)
+            
+            # Save updated user
+            self.update_user(tu)     
         finally:
-            if tweets:
-                # Add fetched tweets to existing user's tweets if they exist
-                _user = self.users.get(user)
-                if _user:
-                    tweets = set(tuple(tweets))
-                    old_tweets = set(tuple((tweet[0], tweet[1]) for tweet in _user.tweets))
-                    tweets.update(old_tweets)
-                    tweets = list(tweets)
-                    aliases = _user.aliases
-                
-                # Create new TwitterUser object with updated tweets
-                tu = TwitterUser(user, time.time(), tweets, aliases)
-                
-                # Save user to file
-                self.dump_user(user, tu)        
-            else:
-                raise ValueError(f"Something went wrong when fetching tweets for {user}")
             await msg.delete()
-    
+
     def _get_tweets(self, user: str, pages: int) -> Iterable[str]:
         """Modified version of https://github.com/kennethreitz/twitter-scraper.
 
