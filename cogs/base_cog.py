@@ -405,9 +405,10 @@ class BaseCog(commands.Cog):
         
         # Don't log traceback of these exception types
         IGNORE_EXC = [
-            commands.errors.MissingRequiredArgument,
+            BotPermissionError,
             CategoryError,
             InvalidVoiceChannel,
+            commands.errors.MissingRequiredArgument,
             PrawForbidden
         ]
         
