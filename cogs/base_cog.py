@@ -2,6 +2,7 @@ import hashlib
 import io
 import os.path
 import traceback
+from asyncio import TimeoutError
 from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -404,7 +405,7 @@ class BaseCog(commands.Cog):
         SHOW = SHOW + VJEMMIE_EXCEPTIONS
         
         # Don't log traceback of these exception types
-        IGNORE_EXC = [
+        IGNORE_TRACEBACK = [
             BotPermissionError,
             CategoryError,
             InvalidVoiceChannel,
@@ -412,17 +413,25 @@ class BaseCog(commands.Cog):
             PrawForbidden
         ]
         
-        if (any(isinstance(error, err) for err in SHOW) or
-            any(isinstance(error.original, err) for err in SHOW)):
+        IGNORE_EXCEPTION = [
+            TimeoutError
+        ]
+
+        if hasattr(error, "original"):
+            error = error.original
+        
+        if any(isinstance(error, err) for err in IGNORE_EXCEPTION):
+            return
+
+        if any(isinstance(error, err) for err in SHOW) and error.args:
             # Use original exception
-            if hasattr(error, "original"):
-                error = error.original
             msg = error.args[0]
         else:
             msg = "An unknown error occured"
 
         # Log traceback in logging channel if exception class is not ignored
-        log_error = not any(isinstance(error, err) for err in IGNORE_EXC)
+        log_error = not (any(error, err) for err in IGNORE_TRACEBACK)
+        
 
         await self.send_error_msg(ctx, msg, log_error=log_error)
 
