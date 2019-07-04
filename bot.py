@@ -19,7 +19,7 @@ def main(token, cogs) -> None:
 
     # Add cogs
     for cog in cogs:
-            bot.add_cog(cog(bot=bot))
+        bot.add_cog(cog(bot=bot))
 
     # Run bot
     bot.run(token)
