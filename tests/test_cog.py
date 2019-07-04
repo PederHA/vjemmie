@@ -19,7 +19,7 @@ from discord.ext import commands
 from cogs.base_cog import BaseCog
 from utils.checks import owners_only, test_server_cmd
 from utils.exceptions import CommandError
-from utils.messaging import wait_for_user_reply
+from utils.messaging import ask_user_yes_no
 
 SENTINEL = object() # Shouldn't strictly be called "sentinel", but it's not a None-value either...
 DEFAULT_OPERATOR = operator.eq
@@ -119,7 +119,7 @@ class TestCog(BaseCog):
             msg = ("Not connected to a voice channel! "
             "You must be in a voice channel to run all tests.\n"
             "Are you sure you want to proceed with incomplete testing?")
-            if await wait_for_user_reply(ctx, msg):
+            if await ask_user_yes_no(ctx, msg):
                 await ctx.send(
                     "Proceeding with incomplete testing!\n"
                     "**NOTE:** In order to run all tests you must be connected to a voice channel!")
@@ -440,11 +440,11 @@ class TestCog(BaseCog):
     async def test_soundcog_search(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "search", "steven dawson")
     
-    async def test_soundcog_search_type(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list, assert_type=True)
-    
-    async def test_soundcog_search_result(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
+    #async def test_soundcog_search_type(self, ctx: commands.Context) -> None:
+    #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list, assert_type=True)
+    #
+    #async def test_soundcog_search_result(self, ctx: commands.Context) -> None:
+    #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
     
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:

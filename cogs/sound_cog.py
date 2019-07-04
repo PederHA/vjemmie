@@ -29,7 +29,7 @@ from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
 from utils.checks import admins_only
-from utils.messaging import wait_for_user_reply
+from utils.messaging import ask_user_yes_no
 from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel 
 from cogs.base_cog import BaseCog
 
@@ -562,7 +562,7 @@ class SoundCog(BaseCog):
             f"It is recommended to try using the **`{self.bot.command_prefix}search`** command first.\n"
             f"Are you sure you want to show all sounds in this category?"
             )
-            if not await wait_for_user_reply(ctx, msg, timeout=20.0):
+            if not await ask_user_yes_no(ctx, msg):
                 return await ctx.send("Aborting.")
             await ctx.send("Soundlist will be sent as DM.")
             channel = await ctx.message.author.create_dm()
