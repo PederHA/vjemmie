@@ -17,6 +17,7 @@ import requests
 from discord import Embed
 from discord.ext import commands
 from prawcore.exceptions import Forbidden as PrawForbidden
+from youtube_dl import DownloadError
 
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
@@ -24,7 +25,7 @@ from config import (  # DISABLE_HELP,
     COMMAND_INVOCATION_CHANNEL)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
-                              FileTypeError, InvalidVoiceChannel)
+                              FileTypeError, InvalidVoiceChannel, CommandError)
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -34,6 +35,31 @@ md_formats = ['asciidoc', 'autohotkey', 'bash',
 
 EmbedField = namedtuple("EmbedField", "name value inline", defaults=[True])
 
+# Exception types
+
+# Show original exception message for these exception types, otherwise show "Unknown error"
+SHOW_ERROR = [
+    commands.errors.MissingRequiredArgument,
+    MemoryError,
+    discord.DiscordException,
+    DownloadError
+    ]
+SHOW_ERROR += VJEMMIE_EXCEPTIONS
+
+# Don't log traceback of these exception types
+IGNORE_TRACEBACK = [
+    BotPermissionError,
+    CategoryError,
+    InvalidVoiceChannel,
+    commands.errors.MissingRequiredArgument,
+    PrawForbidden,
+    CommandError,
+    DownloadError
+]
+
+IGNORE_EXCEPTION = [
+    TimeoutError
+]
 
 class BaseCog(commands.Cog):
     """Base Cog from which all other cogs are subclassed."""
@@ -387,8 +413,8 @@ class BaseCog(commands.Cog):
                 f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
                 f"Try again in {error.retry_after:.2f}s")
         
-        else:
-            return await self._handle_error(ctx, error)
+        # Default error handler
+        return await self._handle_error(ctx, error)
 
     # UNFINISHED
     async def parse_error(self, error: BaseException) -> None:
@@ -397,41 +423,20 @@ class BaseCog(commands.Cog):
 
     async def _handle_error(self, ctx: commands.Context, error: Exception) -> None:
         # Show user original error message of these exception types
-        SHOW = [
-            commands.errors.MissingRequiredArgument,
-            MemoryError,
-            discord.DiscordException
-            ]
-        SHOW = SHOW + VJEMMIE_EXCEPTIONS
-        
-        # Don't log traceback of these exception types
-        IGNORE_TRACEBACK = [
-            BotPermissionError,
-            CategoryError,
-            InvalidVoiceChannel,
-            commands.errors.MissingRequiredArgument,
-            PrawForbidden
-        ]
-        
-        IGNORE_EXCEPTION = [
-            TimeoutError
-        ]
-
         if hasattr(error, "original"):
             error = error.original
         
         if any(isinstance(error, err) for err in IGNORE_EXCEPTION):
             return
 
-        if any(isinstance(error, err) for err in SHOW) and error.args:
+        if any(isinstance(error, err) for err in SHOW_ERROR) and error.args:
             # Use original exception
             msg = error.args[0]
         else:
             msg = "An unknown error occured"
 
         # Log traceback in logging channel if exception class is not ignored
-        log_error = not (any(error, err) for err in IGNORE_TRACEBACK)
-        
+        log_error = not any(isinstance(error, err) for err in IGNORE_TRACEBACK)  
 
         await self.send_error_msg(ctx, msg, log_error=log_error)
 
