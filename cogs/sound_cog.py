@@ -3,22 +3,16 @@ import glob
 import os
 import random
 import subprocess
-import wave
-import json
-from collections import deque
-from functools import partial
-from itertools import islice, chain, count
-from pathlib import Path
-from queue import Queue
-from typing import Iterator, Optional, Tuple, DefaultDict, Dict, Union, List
-from urllib.parse import urlparse
-from collections import defaultdict
-from datetime import datetime
-from contextlib import suppress
-from time import time
 import sys
-from utils.converters import URLConverter, SoundURLConverter
-from json.decoder import JSONDecodeError
+import wave
+from collections import defaultdict
+from contextlib import suppress
+from datetime import datetime
+from functools import partial
+from itertools import count, islice
+from pathlib import Path
+from typing import DefaultDict, Dict, List, Optional, Tuple, Union
+from urllib.parse import urlparse
 
 import discord
 import gtts
@@ -29,14 +23,16 @@ from discord.opus import load_opus
 from pathvalidate import sanitize_filename
 from youtube_dl import YoutubeDL
 
+from cogs.base_cog import BaseCog
+from config import (DOWNLOADS_DIR, SOUND_DIR, SOUND_SUB_DIRS,
+                    SOUNDLIST_FILE_LIMIT, TTS_DIR, YTDL_DIR)
 from utils.checks import admins_only
+from utils.converters import SoundURLConverter, URLConverter
+from utils.exceptions import (CommandError, InvalidVoiceChannel,
+                              VoiceConnectionError)
 from utils.messaging import ask_user_yes_no
-from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel
 from utils.spotify import get_spotify_song_info
 from utils.youtube import youtube_get_top_result
-from cogs.base_cog import BaseCog
-
-from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
 
 ytdlopts = {
     'format': 'bestaudio/best', # Try format "250" ?
