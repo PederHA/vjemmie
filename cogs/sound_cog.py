@@ -23,9 +23,6 @@ from json.decoder import JSONDecodeError
 import discord
 import gtts
 import youtube_dl
-import spotipy
-from spotipy.util import prompt_for_user_token
-from spotipy.oauth2 import SpotifyClientCredentials
 from async_timeout import timeout
 from discord.ext import commands
 from discord.opus import load_opus
@@ -34,10 +31,10 @@ from youtube_dl import YoutubeDL
 
 from utils.checks import admins_only
 from utils.messaging import ask_user_yes_no
-from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel 
+from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel
+from utils.spotify import get_spotify_song_info
 from utils.youtube import youtube_get_top_result
 from cogs.base_cog import BaseCog
-from botsecrets import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
 
@@ -64,9 +61,6 @@ ytdl = YoutubeDL(ytdlopts)
 VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
-
-client_credentials_manager = SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET)
-spotify = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
@@ -450,7 +444,7 @@ class SoundCog(BaseCog):
         
         if "spotify" in arg:
             await ctx.send("Attempting to find song on YouTube...", delete_after=5.0)
-            artist, song, album = await self.bot.loop.run_in_executor(None, self.get_spotify_song_info, arg)
+            artist, song, album = await self.bot.loop.run_in_executor(None, get_spotify_song_info, arg)
             arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, f"{artist} {song}")
         
         elif ctx.invoked_with in ["yt", "ytdl"]:
@@ -458,30 +452,6 @@ class SoundCog(BaseCog):
             arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, arg)
 
         await self._play(ctx, arg)
-
-    def get_spotify_song_info(self, arg: str) -> Tuple[str, str, str]:
-        """Fetches artist, song and album from a Spotify URL or URI."""
-        if arg.startswith("spotify:track:"):
-            track_id = arg.split("spotify:track:")[1]
-        
-        elif arg.startswith("https://open.spotify.com/track/"):
-            track_id = arg.split("https://open.spotify.com/track/")[1].split("?")[0]
-        
-        elif arg.startswith("spotify:album:"):
-            raise CommandError("Spotify albums are not supported!")
-        
-        elif arg.startswith("spotify:playlist:"):
-            raise CommandError("Spotify playlists are not supported!")
-        
-        else:
-            raise CommandError("Unrecognized spotify URI/URL")
-
-        track = spotify.track(track_id)
-        artists = ", ".join([artist["name"] for artist in track["artists"]])
-        song = track["name"]
-        album = track["album"]["name"]
-
-        return artists, song, album
 
     @commands.command(name="rplay")
     async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *args) -> None:
