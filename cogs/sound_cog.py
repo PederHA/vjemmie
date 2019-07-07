@@ -18,10 +18,14 @@ from contextlib import suppress
 from time import time
 import sys
 from utils.converters import URLConverter, SoundURLConverter
+from json.decoder import JSONDecodeError
 
 import discord
 import gtts
 import youtube_dl
+import spotipy
+from spotipy.util import prompt_for_user_token
+from spotipy.oauth2 import SpotifyClientCredentials
 from async_timeout import timeout
 from discord.ext import commands
 from discord.opus import load_opus
@@ -31,7 +35,9 @@ from youtube_dl import YoutubeDL
 from utils.checks import admins_only
 from utils.messaging import ask_user_yes_no
 from utils.exceptions import CommandError, VoiceConnectionError, InvalidVoiceChannel 
+from utils.youtube import youtube_get_top_result
 from cogs.base_cog import BaseCog
+from botsecrets import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 
 from config import SOUND_DIR, SOUND_SUB_DIRS, DOWNLOADS_DIR, YTDL_DIR, TTS_DIR, SOUNDLIST_FILE_LIMIT
 
@@ -58,6 +64,9 @@ ytdl = YoutubeDL(ytdlopts)
 VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
+
+client_credentials_manager = SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET)
+spotify = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
@@ -357,6 +366,47 @@ class SoundCog(BaseCog):
                 await channel.connect()
             except asyncio.TimeoutError:
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
+    
+    async def play_local_source(self, ctx: commands.Context, player: AudioPlayer, sound_name: str) -> None:
+        """Plays audio from local source."""
+        try:
+            if sound_name:
+                try:
+                    subdir = self.sound_list[sound_name]
+                except KeyError:
+                    raise CommandError(f"No sound file named **`{sound_name}`**") 
+                subdir = self.sound_list[sound_name]
+            else:
+                # Select random sound if no argument
+                sound_name = random.choice(list(self.sound_list))
+                subdir = self.sound_list[sound_name]            
+        # Attempt to suggest sound files with similar names if no results
+        except CommandError:
+            embeds = await self._do_search(sound_name, ctx)
+            if embeds and len(embeds) <= len(self.sub_dirs):
+                dym = "Did you mean:"  
+            else:
+                dym = ""
+            await ctx.send(f"No sound with name **`{sound_name}`**. {dym}")
+            if dym:
+                for embed in embeds:
+                    await ctx.send(embed=embed)
+            return
+        else:
+            source = await YTDLSource.create_local_source(ctx, subdir, sound_name)
+            await player.queue.put(source)
+
+    async def play_ytdl_source(self, ctx: commands.Context, player: AudioPlayer, url: str) -> None:
+        """Plays audio from online source."""
+        # Check if downloading is allowed
+        if ctx.invoked_with == "ytdl":
+            await self.check_downloads_permissions(add_msg=
+                "Use **`!play`** or **`!yt`** instead.")
+            download = True
+        else:
+            download = False
+        source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=download)
+        await player.queue.put(source)        
 
     @commands.command(name="play", aliases=["ytdl", "yt"])
     async def play(self, ctx: commands.Context, *args, voice_channel: commands.VoiceChannelConverter=None) -> None:
@@ -367,11 +417,6 @@ class SoundCog(BaseCog):
             *args: Name of sound file to play. If len(args)>1, args are joined into
             single string separated by spaces.
         """
-        # Check if downloading is allowed
-        if ctx.invoked_with == "ytdl":
-            await self.check_downloads_permissions(add_msg=
-                "Use **`!play`** or **`!yt`** instead.")
-
         vc = ctx.voice_client
 
         if not vc:
@@ -381,46 +426,44 @@ class SoundCog(BaseCog):
 
         arg = " ".join(args)
 
+        # Try to convert spotify URI/URL to YouTube URL
+        if "spotify" in arg:
+            await ctx.send("Attempting to find song on YouTube...", delete_after=5.0)
+            artist, song, album = await self.bot.loop.run_in_executor(None, self.get_spotify_song_info, arg)
+            arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, f"{artist} {song}")
+            
         # Play audio from online source
         if urlparse(arg).scheme in ["http", "https"]:
-            download = True if ctx.invoked_with == "ytdl" else False
-            source = await YTDLSource.create_source(ctx, arg, loop=self.bot.loop, download=download)
-            await player.queue.put(source)
-
-        # Play local file
+            await self.play_ytdl_source(ctx, player, arg)
         else:
-            # Try to parse provided sound name
-            try:
-                if arg:
-                    sound_name = arg
-                    try:
-                        subdir = self.sound_list[sound_name]
-                    except KeyError:
-                        raise CommandError(f"No sound file named **`{arg}`**") 
-                    subdir = self.sound_list[sound_name]
-                else:
-                    # Select random sound if no argument
-                    sound_name = random.choice(list(self.sound_list))
-                    subdir = self.sound_list[sound_name]
-                    
-            # Attempt to suggest sound files with similar names if no results
-            except CommandError:
-                embeds = await self._do_search(arg, ctx)
-                if embeds and len(embeds) <= len(self.sub_dirs):
-                    dym = "Did you mean:"  
-                else:
-                    dym = ""
-                await ctx.send(f"No sound with name **`{arg}`**. {dym}")
-                if dym:
-                    for embed in embeds:
-                        await ctx.send(embed=embed)
-                return
-
-            source = await YTDLSource.create_local_source(ctx, subdir, sound_name)
-            await player.queue.put(source)
-
+            await self.play_local_source(ctx, player, arg)
+        
         # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
+    
+    def get_spotify_song_info(self, arg: str) -> Tuple[str, str, str]:
+        """Fetches artist, song and album from a Spotify URL or URI."""
+        if arg.startswith("spotify:track:"):
+            track_id = arg.split("spotify:track:")[1]
+        
+        elif arg.startswith("https://open.spotify.com/track/"):
+            track_id = arg.split("https://open.spotify.com/track/")[1].split("?")[0]
+        
+        elif arg.startswith("spotify:album:"):
+            raise CommandError("Spotify albums are not supported!")
+        
+        elif arg.startswith("spotify:playlist:"):
+            raise CommandError("Spotify playlists are not supported!")
+        
+        else:
+            raise CommandError("Unrecognized spotify URI/URL")
+
+        track = spotify.track(track_id)
+        artists = ", ".join([artist["name"] for artist in track["artists"]])
+        song = track["name"]
+        album = track["album"]["name"]
+
+        return artists, song, album
 
     @commands.command(name="rplay")
     async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *args) -> None:

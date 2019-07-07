@@ -26,6 +26,8 @@ psutil = "*"
 "ciso8601" = "*"
 websockets = "*"
 "boto3" = "*"
+spotipy = "*"
+google-api-python-client = "*"
 
 [dev-packages]
 pylint = "*"
