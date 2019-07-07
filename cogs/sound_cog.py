@@ -368,7 +368,7 @@ class SoundCog(BaseCog):
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
     
     async def play_local_source(self, ctx: commands.Context, player: AudioPlayer, sound_name: str) -> None:
-        """Plays audio from local source."""
+        """Creates audio source from local file and adds it to player queue."""
         try:
             if sound_name:
                 try:
@@ -397,7 +397,7 @@ class SoundCog(BaseCog):
             await player.queue.put(source)
 
     async def play_ytdl_source(self, ctx: commands.Context, player: AudioPlayer, url: str) -> None:
-        """Plays audio from online source."""
+        """Creates audio source from online source and adds it to player queue."""
         # Check if downloading is allowed
         if ctx.invoked_with == "ytdl":
             await self.check_downloads_permissions(add_msg=
@@ -408,14 +408,18 @@ class SoundCog(BaseCog):
         source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=download)
         await player.queue.put(source)        
 
-    @commands.command(name="play", aliases=["ytdl", "yt"])
-    async def play(self, ctx: commands.Context, *args, voice_channel: commands.VoiceChannelConverter=None) -> None:
-        """
-        Plays sound in message author's voice channel
-
-        args:
-            *args: Name of sound file to play. If len(args)>1, args are joined into
-            single string separated by spaces.
+    async def _play(self, ctx: commands.Context, arg: str, voice_channel: commands.VoiceChannelConverter=None) -> None:
+        """Plays sound in message author's voice channel
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            Command invocation context
+        arg : `str`
+            Name of local sound file or HTTP(S) URL
+        voice_channel : `commands.VoiceChannelConverter`, optional
+            Specific voice channel to play sound in, 
+            by default uses `ctx.message.author.voice.channel`
         """
         vc = ctx.voice_client
 
@@ -423,15 +427,7 @@ class SoundCog(BaseCog):
             await ctx.invoke(self.connect, channel=voice_channel)
 
         player = self.get_player(ctx)
-
-        arg = " ".join(args)
-
-        # Try to convert spotify URI/URL to YouTube URL
-        if "spotify" in arg:
-            await ctx.send("Attempting to find song on YouTube...", delete_after=5.0)
-            artist, song, album = await self.bot.loop.run_in_executor(None, self.get_spotify_song_info, arg)
-            arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, f"{artist} {song}")
-            
+        
         # Play audio from online source
         if urlparse(arg).scheme in ["http", "https"]:
             await self.play_ytdl_source(ctx, player, arg)
@@ -441,6 +437,28 @@ class SoundCog(BaseCog):
         # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
     
+    @commands.command(name="play")
+    async def play(self, ctx: commands.Context, *args):
+        """Plays local sound files."""
+        arg = " ".join(args)
+        await self._play(ctx, arg)
+
+    @commands.command(name="yt", aliases=["ytdl"])
+    async def yt(self, ctx: commands.Context, *args):
+        """Play online videos or songs. Spotify support!"""
+        arg = " ".join(args)
+        
+        if "spotify" in arg:
+            await ctx.send("Attempting to find song on YouTube...", delete_after=5.0)
+            artist, song, album = await self.bot.loop.run_in_executor(None, self.get_spotify_song_info, arg)
+            arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, f"{artist} {song}")
+        
+        elif ctx.invoked_with in ["yt", "ytdl"]:
+            await ctx.send(f"Searching YouTube for `{arg}`...", delete_after=5.0)
+            arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, arg)
+
+        await self._play(ctx, arg)
+
     def get_spotify_song_info(self, arg: str) -> Tuple[str, str, str]:
         """Fetches artist, song and album from a Spotify URL or URI."""
         if arg.startswith("spotify:track:"):
