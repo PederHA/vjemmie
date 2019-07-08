@@ -427,13 +427,13 @@ class SoundCog(BaseCog):
         # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
     
-    @commands.command(name="play")
+    @commands.command(name="play", usage="<filename>")
     async def play(self, ctx: commands.Context, *args):
         """Plays local sound files."""
         arg = " ".join(args)
         await self._play(ctx, arg)
 
-    @commands.command(name="yt", aliases=["ytdl"])
+    @commands.command(name="yt", aliases=["ytdl"], usage="<url>, <search query> or <Spotify URI>")
     async def yt(self, ctx: commands.Context, *args):
         """Play online videos or songs. Spotify support!"""
         arg = " ".join(args)
@@ -449,7 +449,7 @@ class SoundCog(BaseCog):
 
         await self._play(ctx, arg)
 
-    @commands.command(name="rplay")
+    @commands.command(name="rplay", usage="<channel_id>")
     async def remoteplay(self, ctx: commands.Context, channel: commands.VoiceChannelConverter, *args) -> None:
         """`!play` in a specific channel."""
         await ctx.invoke(self.play, *args, voice_channel=channel)
@@ -606,7 +606,7 @@ class SoundCog(BaseCog):
         return await self.send_embed_message(
             ctx, sub_dir.header, out, color=sub_dir.color, channel=channel)
 
-    @commands.command(name="search")
+    @commands.command(name="search", usage="<query>")
     async def search(self, 
                      ctx: commands.Context, 
                      *query: str, 
@@ -625,7 +625,7 @@ class SoundCog(BaseCog):
             n_results = sum([len(e.description.splitlines()) for e in embeds])
             raise CommandError(f"Search returned {n_results} results. A more specific search query is required.")
 
-        # Post search results to ctx.channel otherwise
+        # Post search results to ctx.channel
         if embeds:
             for embed in embeds:
                 await ctx.send(embed=embed)
