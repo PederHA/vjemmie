@@ -443,7 +443,7 @@ class SoundCog(BaseCog):
             artist, song, album = await self.bot.loop.run_in_executor(None, get_spotify_song_info, arg)
             arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, f"{artist} {song}")
         
-        elif ctx.invoked_with in ["yt", "ytdl"]:
+        elif urlparse(arg).scheme not in ["http", "https"]:
             await ctx.send(f"Searching YouTube for `{arg}`...", delete_after=5.0)
             arg = await self.bot.loop.run_in_executor(None, youtube_get_top_result, arg)
 
