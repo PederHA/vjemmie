@@ -650,7 +650,14 @@ class BaseCog(commands.Cog):
                 else:
                     cmd_name = cmd.name.ljust(20,"\xa0")
                 
-                out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {cmd.short_doc}")
+                # Add docstring prefix from check 
+                doc = cmd.short_doc
+                for check in cmd.checks:
+                    if hasattr(check, "doc_prefix"):
+                        doc = f"{check.doc_prefix} {cmd.short_doc}"
+                        break
+                
+                out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {doc}")
 
         out_str = "\n".join(out)    
 
