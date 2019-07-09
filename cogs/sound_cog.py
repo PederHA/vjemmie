@@ -432,7 +432,7 @@ class SoundCog(BaseCog):
         arg = " ".join(args)
         await self._play(ctx, arg)
 
-    @commands.command(name="yt", aliases=["ytdl"], usage="<url>, <search query> or <Spotify URI>")
+    @commands.command(name="yt", aliases=["ytdl", "spotify"], usage="<url>, <search query> or <Spotify URI>")
     async def yt(self, ctx: commands.Context, *args):
         """Play YouTube or Spotify content."""
         arg = " ".join(args)
