@@ -22,6 +22,7 @@ def admins_only():
         if hasattr(ctx.author, "guild_permissions"): # Disables privileged commands in PMs
             return ctx.author.guild_permissions.administrator
         return False
+    predicate.doc_prefix = "ADMIN:"
     return commands.check(predicate)
 
 
