@@ -298,7 +298,7 @@ class SoundCog(BaseCog):
     @commands.command(name="players")
     @admins_only()
     async def show_players(self, ctx: commands.Context) -> None:
-        """ADMIN ONLY: Shows active Audio Players"""
+        """ADMIN ONLY: Show active Audio Players."""
         players = "\n".join(
             [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
         )
@@ -311,8 +311,7 @@ class SoundCog(BaseCog):
     @admins_only()
     async def times_played_session(self, ctx: commands.Context) -> None:
         """
-        Displays current number of sounds played by guilds in the
-        current bot session
+        Display sound played count for current guild.
         """
         out = "\n".join([f"{self.bot.get_guild(k)}: {v}" for k, v in self.played_count.items()])
         await self.send_text_message(out, ctx)
@@ -399,7 +398,7 @@ class SoundCog(BaseCog):
         await player.queue.put(source)        
 
     async def _play(self, ctx: commands.Context, arg: str, voice_channel: commands.VoiceChannelConverter=None) -> None:
-        """Plays sound in message author's voice channel
+        """Play sound in message author's voice channel
         
         Parameters
         ----------
@@ -429,13 +428,13 @@ class SoundCog(BaseCog):
     
     @commands.command(name="play", usage="<filename>")
     async def play(self, ctx: commands.Context, *args):
-        """Plays local sound files."""
+        """Play local sound files."""
         arg = " ".join(args)
         await self._play(ctx, arg)
 
     @commands.command(name="yt", aliases=["ytdl"], usage="<url>, <search query> or <Spotify URI>")
     async def yt(self, ctx: commands.Context, *args):
-        """Play online videos or songs. Spotify support!"""
+        """Play YouTube or Spotify content."""
         arg = " ".join(args)
         
         if "spotify" in arg:
@@ -483,7 +482,7 @@ class SoundCog(BaseCog):
     @commands.command(name="volume", aliases=["vol"])
     @admins_only()
     async def change_volume(self, ctx, *, vol: int):
-        """Sets player volume (1-100)"""
+        """Set player volume (1-100)"""
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
@@ -533,7 +532,7 @@ class SoundCog(BaseCog):
                       aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.user)
     async def soundlist(self, ctx: commands.Context, category: Optional[str]=None) -> None:
-        """Lists all available sound files
+        """List soundboard files.
         
         Parameters
         ----------
@@ -671,7 +670,7 @@ class SoundCog(BaseCog):
 
     @queue.command(name="clear")
     async def clear_queue(self, ctx: commands.Context) -> None:
-        """Clear soundboard queue"""
+        """Clear soundboard queue."""
         player = self.get_player(ctx)
 
         if not player:
@@ -693,7 +692,7 @@ class SoundCog(BaseCog):
     @commands.command(name="tts",
                       aliases=["texttospeech", "text-to-speech"])
     async def texttospeech(self, ctx: commands.Context, text: str, language: str="en", filename: Optional[str]=None) -> None:
-        """Text-to-speech
+        """Create text-to-speech sound files.
         """
 
         # gTTS exception handling.
@@ -745,9 +744,9 @@ class SoundCog(BaseCog):
                 cmd  = self.bot.get_command('play')
                 await ctx.invoke(cmd, sound_name)
 
-    @commands.command(name="add_sound")
+    @commands.command(name="add_sound", usage="<url> or Attach file to message")
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
-        """Downloads a sound file from msg attachment or URL
+        """Download sound file to soundboard.
         
         Parameters
         ----------
@@ -876,7 +875,7 @@ class SoundCog(BaseCog):
     @commands.command(name="combine")
     @admins_only()
     async def join_sound_files(self, ctx: commands.Context, file_1: str, file_2: str) -> None:
-        """Combines two sound files
+        """Combine two sound files.
         
         Parameters
         ----------
