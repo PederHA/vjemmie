@@ -753,18 +753,15 @@ class BaseCog(commands.Cog):
 
     async def send_embed_message(self,
                                  ctx: commands.Context,
-                                 header: str,
-                                 text: str,
+                                 title: str,
+                                 description: str,
                                  limit: int=None,
-                                 msg_text: str=None,
-                                 *,
-                                 thumbnail_url: str=None,
-                                 color: Union[str, int]=None,
+                                 message_text: str=None,
                                  footer: bool=True,
-                                 timestamp: bool=True,
-                                 keep_header: bool=False,
-                                 channel: Union[discord.DMChannel, discord.TextChannel]=None,
-                                 return_embeds: bool=False
+                                 keep_title: bool=False,
+                                 channel: commands.TextChannelConverter=None,
+                                 return_embeds: bool=False,
+                                 **kwargs
                                  ) -> Optional[List[discord.Embed]]:
         """Splits a string into <1024 char chunks and creates an
         embed object from each chunk, which are then sent to 
@@ -772,45 +769,47 @@ class BaseCog(commands.Cog):
         
         Parameters
         ----------
-        ctx : `commands.Context`
-            Discord Context
-        header : `str`
-            Title of embed
-        text : `str`
-            Text included in embed field(s)
-        limit : `int`, optional
-            Character limit. Cannot exceed 1024.
-        footer : `bool`, optional
-            Show footer on final message.
-            Enabled by default.
-        timestamp : `bool`, optional
-            Show timestamp. 
-            Enabled by default.
-        keep_header : `bool`, optional
-            Show header on every embed message. 
-            Disabled by default.
-        return_embeds : `bool`, optional
-            Return chunked message as list of 
-            embed objects instead of sending them to ctx.channel.
-            Disabled by default.
+        ctx : commands.Context
+            Discord context
+        title : str
+            Embed title
+        description : str
+            Embed text
+        limit : int, optional
+            Embed text limit. Cannot exceed 1024.
+        message_text : str, optional
+            Message text displayed above embeds.
+        footer : bool, optional
+            Display footer on last embed
+        keep_title : bool, optional
+            Display title on every embed, by default False
+        channel : commands.TextChannelConverter, optional
+            Channel to post message to, by default ctx.message.author.channel
+        return_embeds : bool, optional
+            Return embeds instead of sending them to the channel, by default False
+        
+        Returns
+        -------
+        Optional[List[discord.Embed]]
+            List of embed objects returned if `return_embeds==True`
         """
         # Split text by line
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
         
-        text_fields = [tf async for tf in self._split_string_by_lines(text, limit)]
+        text_fields = [tf async for tf in self._split_string_by_lines(description, limit)]
 
         if len(text_fields) > 1:
-            h = header if keep_header else Embed.Empty
+            t = title if keep_title else Embed.Empty
             embeds = [
                 # Include header but no footer on first message
-                await self.get_embed(ctx, title=header, description=field, footer=False, timestamp=False, color=color, thumbnail_url=thumbnail_url)
+                await self.get_embed(ctx, title=title, description=field, footer=False, **kwargs)
                 if text_fields[0] == field else
                 # Include footer but no header on last message
-                await self.get_embed(ctx, title=h, description=field, footer=footer, timestamp=timestamp, color=color)
+                await self.get_embed(ctx, title=t, description=field, footer=footer, **kwargs)
                 if text_fields[-1] == field else
                 # No footer or header on middle message(s)
-                await self.get_embed(ctx, title=h, description=field, footer=False, timestamp=False, color=color)
+                await self.get_embed(ctx, title=t, description=field, footer=False, **kwargs)
                 for field in text_fields
             ]
         else:
@@ -818,12 +817,10 @@ class BaseCog(commands.Cog):
             embeds = [
                 await self.get_embed(
                     ctx,
-                    title=header,
+                    title=title,
                     description=text_fields[0],
                     footer=footer,
-                    timestamp=timestamp,
-                    color=color,
-                    thumbnail_url=thumbnail_url)
+                    **kwargs)
             ]
 
         # Return embed objects if enabled
@@ -835,8 +832,9 @@ class BaseCog(commands.Cog):
             ctx = channel
         
         for embed in embeds:
+            # Add message text to first message
             if embed == embeds[0]:
-                await ctx.send(content=msg_text, embed=embed)
+                await ctx.send(content=message_text, embed=embed)
             else:
                 await ctx.send(embed=embed)
 

@@ -130,7 +130,7 @@ class TwitterCog(BaseCog):
             f"Type `{self.bot.command_prefix}twitter add <user>` to add a user"
             )
 
-        await self.send_embed_message(ctx, header="Twitter users", text=users)
+        await self.send_embed_message(ctx, "Twitter users", users)
 
 
     async def get_tweets(self, ctx: commands.Context, user: str, aliases=None) -> List[Tuple[str, str]]:
