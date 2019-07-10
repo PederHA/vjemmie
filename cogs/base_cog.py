@@ -863,8 +863,12 @@ class BaseCog(commands.Cog):
 
         return fname, extension
 
-    async def is_img_url(self, url: str) -> bool:
+    async def is_img_url(self, url: Union[str, discord.Asset]) -> bool:
         """Checks if a string is an HTTP/HTTPS URL to an image file"""
+        # Get url string if url argument is a discord.Asset object
+        if isinstance(url, discord.Asset):
+            url = url._url
+        
         p = urlparse(url)
         return (
                 p.scheme in ["http", "https"] and
