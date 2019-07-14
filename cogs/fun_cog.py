@@ -115,12 +115,17 @@ class FunCog(BaseCog):
         await ctx.send(translated)
 
     def _do_uwu_translate(self, text: str) -> str:
+        # Translations are defined strictly in lower-case
         translation = {
+            "fuck": "fack",
+            "th": "f",
             "r": "w",
-            "R": "W",
             "l": "w",
-            "L": "W"
         }
+        
+        # Add upper-case translations
+        translation.update({k.upper(): v.upper() for k, v in translation.items()})
+        
         for k, v in translation.items():
             text = text.replace(k, v)
         
