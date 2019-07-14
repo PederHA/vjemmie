@@ -15,6 +15,19 @@ from cogs.base_cog import BaseCog
 from utils.exceptions import CommandError
 
 
+# Translations are defined strictly in lower-case
+UWU_TRANSLATION = {
+    "fuck": "fack",
+    "with": "wif",
+    "r": "w",
+    "l": "w",
+}
+# Upper-case translations
+UWU_TRANSLATION.update({k.upper(): v.upper() for k, v in UWU_TRANSLATION.items()})
+# Mixed-case translation
+UWU_TRANSLATION.update({k[0].upper()+k[1:]: v[0].upper()+v[1:] for k, v in UWU_TRANSLATION.items() if len(k)>1})
+
+
 class FunCog(BaseCog):
     """Commands that don't fit into any other categories."""
 
@@ -115,18 +128,7 @@ class FunCog(BaseCog):
         await ctx.send(translated)
 
     def _do_uwu_translate(self, text: str) -> str:
-        # Translations are defined strictly in lower-case
-        translation = {
-            "fuck": "fack",
-            "th": "f",
-            "r": "w",
-            "l": "w",
-        }
-        
-        # Add upper-case translations
-        translation.update({k.upper(): v.upper() for k, v in translation.items()})
-        
-        for k, v in translation.items():
+        for k, v in UWU_TRANSLATION.items():
             text = text.replace(k, v)
         
         return text
