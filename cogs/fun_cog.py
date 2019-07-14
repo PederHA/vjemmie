@@ -91,3 +91,37 @@ class FunCog(BaseCog):
         translation = str.maketrans(char_map)
         text = " ".join(text).lower()
         await ctx.send(text.translate(translation))
+
+    @commands.command(name="uwu", usage="<message string> or <message_ID>")
+    async def uwu_translate(self, ctx: commands.Context, *args) -> None:
+        arg = " ".join(args)
+        
+        if arg.isnumeric():
+            try:
+                msg = await ctx.fetch_message(arg)
+            except discord.NotFound:
+                raise CommandError("Invalid message ID!")
+            except discord.Forbidden:
+                raise CommandError("Lacking permissions to fetch message!")
+            except discord.HTTPException:
+                raise CommandError("Failed to retrieve message. Try again later!")
+            else:
+                to_translate = msg.content
+        else:
+            to_translate = arg
+        
+        translated = self._do_uwu_translate(to_translate)
+
+        await ctx.send(translated)
+
+    def _do_uwu_translate(self, text: str) -> str:
+        translation = {
+            "r": "w",
+            "R": "W",
+            "l": "w",
+            "L": "W"
+        }
+        for k, v in translation.items():
+            text = text.replace(k, v)
+        
+        return text
