@@ -11,8 +11,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
-from cogs.db_cog import DatabaseHandler
-from config import GENERAL_DB_PATH, ALL_ARGS, YES_ARGS
+from config import ALL_ARGS, YES_ARGS
 from utils.caching import get_cached
 from utils.converters import SteamID64Converter, UserOrMeConverter
 from utils.exceptions import CommandError
@@ -176,8 +175,6 @@ class AutoChessCog(BaseCog):
     EMOJI = "♟️"
     FILES = [USERS_FILE]
     DIRS = ["db/autochess"]
-
-    DB = DatabaseHandler(GENERAL_DB_PATH)
 
     def __init__(self, bot: commands.Bot) -> None:
         self.setup(default_factory=dict)
