@@ -617,7 +617,7 @@ class BaseCog(commands.Cog):
         for command in _commands:
             
             # Skip commands that fail for current context or are hidden
-            if not await command.can_run(ctx) or command.hidden:
+            if not await command.can_run(ctx) or command.hidden or not command.enabled:
                 continue
             
             group = False
