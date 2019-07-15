@@ -16,7 +16,7 @@ from utils.exceptions import CommandError
 
 
 # Translations are defined strictly in lower-case
-UWU_TRANSLATION = {
+UWU_MAPPING = {
     "fuck": "fack",
     "ath": "af",
     "eth": "ef",
@@ -27,10 +27,48 @@ UWU_TRANSLATION = {
     "l": "w"
 }
 # Upper-case translations
-UWU_TRANSLATION.update({k.upper(): v.upper() for k, v in UWU_TRANSLATION.items()})
+UWU_MAPPING.update({k.upper(): v.upper() for k, v in UWU_MAPPING.items()})
 # Mixed-case translation
-UWU_TRANSLATION.update({k[0].upper()+k[1:]: v[0].upper()+v[1:] for k, v in UWU_TRANSLATION.items() if len(k)>1})
+UWU_MAPPING.update({k[0].upper()+k[1:]: v[0].upper()+v[1:] for k, v in UWU_MAPPING.items() if len(k)>1})
 
+BRAILLE_MAPPING = {
+    "a": "⠁",
+    "b": "⠃",
+    "c": "⠉",
+    "d": "⠙",
+    "e": "⠑",
+    "f": "⠋",
+    "g": "⠛",
+    "h": "⠓",
+    "i": "⠊",
+    "j": "⠚",
+    "k": "⠅",
+    "l": "⠇",
+    "m": "⠍",
+    "n": "⠝",
+    "o": "⠕",
+    "p": "⠏",
+    "q": "⠟",
+    "r": "⠗",
+    "s": "⠎",
+    "t": "⠞",
+    "u": "⠥",
+    "v": "⠧",
+    "x": "⠭",
+    "y": "⠽",
+    "z": "⠵",
+    "w": "⠺",
+    "0": "⠼⠚",
+    "1": "⠼⠁",
+    "2": "⠼⠃",
+    "3": "⠼⠉",
+    "4": "⠼⠙",
+    "5": "⠼⠑",
+    "6": "⠼⠋",
+    "7": "⠼⠛",
+    "8": "⠼⠓",
+    "9": "⠼⠊"
+}
 
 class FunCog(BaseCog):
     """Commands that don't fit into any other categories."""
@@ -73,46 +111,23 @@ class FunCog(BaseCog):
         
         await ctx.send(random.choice(to_roll))
     
-    @commands.command(name="braille")
+    @commands.command(name="braille", usage="<text>")
     async def braille(self, ctx: commands.Context, *text: str) -> None:
         """Braille transliteration."""
-        char_map = {
-            'a': '⠁',
-            'b': '⠃',
-            'c': '⠉',
-            'd': '⠙',
-            'e': '⠑',
-            'f': '⠋',
-            'g': '⠛',
-            'h': '⠓',
-            'i': '⠊',
-            'j': '⠚',
-            'k': '⠅',
-            'l': '⠇',
-            'm': '⠍',
-            'n': '⠝',
-            'o': '⠕',
-            'p': '⠏',
-            'q': '⠟',
-            'r': '⠗',
-            's': '⠎',
-            't': '⠞',
-            'u': '⠥',
-            'v': '⠧',
-            'x': '⠭',
-            'y': '⠽',
-            'z': '⠵',
-            'w': '⠺',
-            " ": " "
-        }
-        translation = str.maketrans(char_map)
-        text = " ".join(text).lower()
-        await ctx.send(text.translate(translation))
+        text = " ".join(text)
+        trans = self.do_braille_transliterate(text)
+        await ctx.send(trans)
 
-    @commands.command(name="uwu", usage="<message string> or <message_ID>")
-    async def uwu_translate(self, ctx: commands.Context, *args) -> None:
+    def do_braille_transliterate(self, text: str) -> str:
+        text = text.lower()
+        return self._do_transliterate(text, BRAILLE_MAPPING)
+
+    @commands.command(name="uwu", aliases=["owo"], usage="<message string> or <message_ID>")
+    async def uwu(self, ctx: commands.Context, *args) -> None:
+        """UwU-style transliteration"""
         arg = " ".join(args)
         
+        # Try to fetch message if arg is a number
         if arg.isnumeric():
             try:
                 msg = await ctx.fetch_message(arg)
@@ -123,16 +138,18 @@ class FunCog(BaseCog):
             except discord.HTTPException:
                 raise CommandError("Failed to retrieve message. Try again later!")
             else:
-                to_translate = msg.content
+                to_trans = msg.content
         else:
-            to_translate = arg
+            to_trans = arg
         
-        translated = self._do_uwu_translate(to_translate)
+        trans = self.do_uwu_transliterate(to_trans)
 
-        await ctx.send(translated)
+        await ctx.send(trans)
 
-    def _do_uwu_translate(self, text: str) -> str:
-        for k, v in UWU_TRANSLATION.items():
-            text = text.replace(k, v)
-        
-        return text
+    def do_uwu_transliterate(self, text: str) -> str:
+        return self._do_transliterate(text, UWU_MAPPING)
+
+    def _do_transliterate(self, text: str, mapping: dict) -> str:
+        for k, v in mapping.items():
+            text = text.replace(k, v)  
+        return text 
