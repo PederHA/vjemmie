@@ -2,12 +2,12 @@ import argparse
 import io
 import traceback
 from functools import partial
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 import requests
 from discord.ext import commands
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageStat, ImageOps
 
 from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
@@ -260,3 +260,23 @@ class ImageCog(BaseCog):
        
         n = await get_division_n(width, height, target)
         return int(abs(width//n)), int(abs(height//n))
+
+    def read_image_text(self, image: Union[str, bytes, Image.Image]) -> str:
+        if not isinstance(image, Image.Image):
+            image = Image.open(image)
+        
+        # Convert to greyscale
+        image = image.convert("L")
+
+        # Increase image contrast
+        image = ImageEnhance.Contrast(image).enhance(2)
+
+        # Invert image if we suspect white text on dark background
+        if ImageStat.Stat(image).mean < 128:
+            image = ImageOps.invert(image)
+
+        # TODO: SCALE IMAGE
+
+        # TODO: text = pytesseract.image_to_string(image, lang="eng")
+
+        
