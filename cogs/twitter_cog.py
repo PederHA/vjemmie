@@ -35,6 +35,7 @@ class TwitterCog(BaseCog):
     MARKOV_LEN = 140
 
     def __init__(self, bot: commands.Bot) -> None:
+        self.setup(default_factory=dict)
         super().__init__(bot)
         
         # Key: Username, Value: markovify text model
@@ -45,7 +46,7 @@ class TwitterCog(BaseCog):
         
     @property
     def users(self) -> Dict[str, TwitterUser]:
-        users = get_cached(USERS_FILE, category="twitter")  
+        users = get_cached(USERS_FILE, category="twitter")
         return {user: TwitterUser(*values) for user, values in users.items()}
 
     def update_user(self, user: TwitterUser) -> None:
