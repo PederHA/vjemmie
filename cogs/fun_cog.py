@@ -18,9 +18,13 @@ from utils.exceptions import CommandError
 # Translations are defined strictly in lower-case
 UWU_TRANSLATION = {
     "fuck": "fack",
-    "with": "wif",
+    "ath": "af",
+    "eth": "ef",
+    "ith": "if",
+    "oth": "of",
+    "uth": "uf",
     "r": "w",
-    "l": "w",
+    "l": "w"
 }
 # Upper-case translations
 UWU_TRANSLATION.update({k.upper(): v.upper() for k, v in UWU_TRANSLATION.items()})
