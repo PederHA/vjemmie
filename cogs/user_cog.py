@@ -134,7 +134,7 @@ class UserCog(BaseCog):
             EmbedField(name="Soundboard files", value=f"{n_soundfiles}"),
             EmbedField(name="Memory usage", value=f"{mem_used_mb} / {mem_total_mb} MB"),
             EmbedField(name="CPU Usage", value=f"{psutil.cpu_percent()}%"),
-            EmbedField(name="Uptime", value=await ctx.invoke(self.bot.get_command("uptime"))),   
+            EmbedField(name="Uptime", value=self.bot.get_cog("StatsCog").get_bot_uptime(type=str)),
         ]
         
         embed = await self.get_embed(ctx,
