@@ -255,6 +255,25 @@ class ImageCog(BaseCog):
 
         return int(abs(width//i)), int(abs(height//i))
        
+    def resize_image(self, image: Image.Image, width: int=0, height: int=0) -> Image.Image:
+        if not width and not height:
+            raise ValueError("Width or height must be specified!")
+        
+        img_w, img_h = image.size
+
+        if height:
+            m = height / img_h
+            width = img_w * m
+        elif width:
+            m = width / img_w
+            height = img_h * m
+        
+        height, width = round(abs(height)), round(abs(width))
+
+        image = image.resize((width, height), resample=Image.BICUBIC)
+        
+        return image
+
     def read_image_text(self, image: Union[str, bytes, Image.Image]) -> str:
         if not isinstance(image, Image.Image):
             image = Image.open(image)
