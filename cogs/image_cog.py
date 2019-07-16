@@ -250,11 +250,11 @@ class ImageCog(BaseCog):
             new = width // i * height // i
             if new <= target:
                 break
-                else:
+        else:
             raise BotException("Failed to resize image!")
 
         return int(abs(width//i)), int(abs(height//i))
-       
+    
     def resize_image(self, image: Image.Image, width: int=0, height: int=0) -> Image.Image:
         if not width and not height:
             raise ValueError("Width or height must be specified!")
@@ -288,8 +288,8 @@ class ImageCog(BaseCog):
         if ImageStat.Stat(image).mean < 128:
             image = ImageOps.invert(image)
 
-        # TODO: SCALE IMAGE
+        image = self.resize_image(image, width=2000)
 
-        # TODO: text = pytesseract.image_to_string(image, lang="eng")
+        # TODO: Install pytesseract
+        #text = pytesseract.image_to_string(image, lang="eng")
 
-        
