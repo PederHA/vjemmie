@@ -23,6 +23,8 @@ UWU_MAPPING = {
     "ith": "if",
     "oth": "of",
     "uth": "uf",
+    "they": "dey",
+    "the": "de",
     "r": "w",
     "l": "w"
 }
