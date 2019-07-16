@@ -153,21 +153,3 @@ class FunCog(BaseCog):
         for k, v in mapping.items():
             text = text.replace(k, v)  
         return text 
-    
-    @commands.command(name="totext", enabled=False)
-    async def img_to_txt(self, ctx: commands.Context, arg: str=None) -> None:
-        if not arg and not ctx.message.attachments:
-            raise CommandError("An image URL or an image message attachment is required!")
-        
-        if ctx.message.attachments:
-            url = ctx.message.attachments[0]
-        else:
-            url = arg
-
-        if not await self.is_img_url(url):
-            raise CommandError("Attachment or URL is not an image!")
-        
-        img = await self.download_from_url(ctx, url)
-
-        image_text = self.bot.get_cog("ImageCog").read_image_text(img)
-
