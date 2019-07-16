@@ -119,6 +119,7 @@ class FunCog(BaseCog):
         await ctx.send(trans)
 
     def do_braille_transliterate(self, text: str) -> str:
+        """Public braille transliteration method other cogs can use."""
         text = text.lower()
         return self._do_transliterate(text, BRAILLE_MAPPING)
 
@@ -147,6 +148,7 @@ class FunCog(BaseCog):
         await ctx.send(trans)
 
     def do_uwu_transliterate(self, text: str) -> str:
+        """Public UwU transliteration method other cogs can use."""
         return self._do_transliterate(text, UWU_MAPPING)
 
     def _do_transliterate(self, text: str, mapping: dict) -> str:
