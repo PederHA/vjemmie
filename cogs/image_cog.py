@@ -2,12 +2,13 @@ import argparse
 import io
 import traceback
 from functools import partial
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 import discord
 import requests
 from discord.ext import commands
 from PIL import Image, ImageEnhance, ImageStat, ImageOps
+import numpy as np
 
 from botsecrets import REMOVEBG_KEY
 from cogs.base_cog import BaseCog
@@ -221,10 +222,10 @@ class ImageCog(BaseCog):
             return _img
         
         try:
-            new_w, new_h = await self.scale_down_img(width, height, MAX_SIZE)
+            new_w, new_h = await self.scale_to_target(width, height, MAX_SIZE)
         except:
             # Fall back on brute force resizing if algorithm fails
-            for i in range(1, 16, 1):
+            for i in range(1, 32, 1):
                 new_w, new_h = width//i, height//i
                 new_size = new_w * new_h
                 if new_size > MAX_SIZE:
@@ -232,7 +233,7 @@ class ImageCog(BaseCog):
                 else:
                     break
             else:
-                raise FileSizeError("Image is way, way, way too large")
+                raise FileSizeError("Image is too large to be resized properly!")
         
         new_img = io.BytesIO()
         image = image.resize((new_w, new_h), resample=Image.BICUBIC)
@@ -241,26 +242,19 @@ class ImageCog(BaseCog):
         new_img.seek(0)
         return new_img
 
-    async def scale_down_img(self, width, height, target) -> None:
-        """Scales down an image as close as possible to a target size"""
-        async def get_division_n(width, height, target) -> float:
-            n = 1
-            tries = 0
-            while True:
-                new = width//n * height//n
-                if new > target:
-                    n += 0.01
-                    continue
+    async def scale_to_target(self, width, height, target) -> Tuple[int, int]:
+        """Gets image dimensions as close as possible to a target size"""
+        STEP_SIZE = 0.01
+        TRIES = 2000
+        for i in np.arange(0, STEP_SIZE*TRIES, STEP_SIZE):
+            new = width // i * height // i
+            if new <= target:
+                break
                 else:
-                    return n
-                tries +=1
-                if tries > 2000:
-                    # Completely arbitrary number, but lets us have an exit clause
-                    raise BotException("Fatal exception")
-       
-        n = await get_division_n(width, height, target)
-        return int(abs(width//n)), int(abs(height//n))
+            raise BotException("Failed to resize image!")
 
+        return int(abs(width//i)), int(abs(height//i))
+       
     def read_image_text(self, image: Union[str, bytes, Image.Image]) -> str:
         if not isinstance(image, Image.Image):
             image = Image.open(image)
