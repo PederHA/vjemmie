@@ -830,7 +830,7 @@ class SoundCog(BaseCog):
             f.write(sound_file.getvalue())
 
         # Log downloaded file
-        await self.log_file_download(ctx, url=url, filename=f"{filename}.{ext}")        
+        await self.log_file_download(ctx, url=url, filename=f"{filename}{ext}")        
         
         return filename
     
