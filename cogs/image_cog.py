@@ -242,10 +242,15 @@ class ImageCog(BaseCog):
         new_img.seek(0)
         return new_img
 
-    async def scale_to_target(self, width, height, target) -> Tuple[int, int]:
+    async def scale_to_target(self, width: int, height: int, target: int) -> Tuple[int, int]:
         """Gets image dimensions as close as possible to a target size"""
         STEP_SIZE = 0.01
-        TRIES = 2000
+        TRIES = 200000
+        
+        # Scale up if image is smaller
+        if target > width * height:
+            STEP_SIZE = -STEP_SIZE
+        
         for i in np.arange(0, STEP_SIZE*TRIES, STEP_SIZE):
             new = width // i * height // i
             if new <= target:
@@ -292,6 +297,7 @@ class ImageCog(BaseCog):
 
         # TODO: Install pytesseract
         #text = pytesseract.image_to_string(image, lang="eng")
+        #return text
 
     @commands.command(name="totext", enabled=False)
     async def img_to_txt(self, ctx: commands.Context, arg: str=None) -> None:
