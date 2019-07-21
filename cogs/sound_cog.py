@@ -837,7 +837,7 @@ class SoundCog(BaseCog):
     def get_unique_filename(self, directory: str, filename: str, ext: str=None) -> str:
         # Increment i until a unique filename is found
         for i in count():
-            if i == 0: # we don't need a number if initial filename is unique
+            if i == 0: # we don't need a number if first attempted filename is unique
                 i = ""
             fname = f"{filename}{i}"
             filepath = f"{directory}/{fname}{ext}"
