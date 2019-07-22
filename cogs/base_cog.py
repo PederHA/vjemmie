@@ -101,7 +101,7 @@ class BaseCog(commands.Cog):
         self.add_help_command()
         self.setup()
 
-    def setup(self, default_factory: Callable=list) -> None:
+    def setup(self, default_factory: Callable=dict) -> None:
         # Create required directories
         for directory in self.DIRS:
             p = Path(directory)

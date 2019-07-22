@@ -35,7 +35,6 @@ class TwitterCog(BaseCog):
     MARKOV_LEN = 140
 
     def __init__(self, bot: commands.Bot) -> None:
-        self.setup(default_factory=dict)
         super().__init__(bot)
         
         # Key: Username, Value: markovify text model

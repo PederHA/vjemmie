@@ -176,10 +176,6 @@ class AutoChessCog(BaseCog):
     FILES = [USERS_FILE]
     DIRS = ["db/autochess"]
 
-    def __init__(self, bot: commands.Bot) -> None:
-        self.setup(default_factory=dict)
-        super().__init__(bot)
-
     @property
     def users(self) -> Dict[str, AutochessProfile]:
         users = {}
