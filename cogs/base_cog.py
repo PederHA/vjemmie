@@ -111,6 +111,7 @@ class BaseCog(commands.Cog):
         # Create required files
         for _file in self.FILES:
             p = Path(_file)
+            p.parent.mkdir(exist_ok=True, parents=True)
             if not p.exists():
                 p.touch()
                 if p.suffix == ".json":
@@ -874,8 +875,6 @@ class BaseCog(commands.Cog):
                 for ext in self.IMAGE_EXTENSIONS) and
                 not url.endswith(p.hostname)
                 )
-
-
 
     async def log_file_download(self,
                                 ctx: commands.Context,
