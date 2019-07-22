@@ -111,7 +111,7 @@ class BaseCog(commands.Cog):
         # Create required files
         for _file in self.FILES:
             p = Path(_file)
-            p.parent.mkdir(exist_ok=True, parents=True)
+            p.parent.mkdir(parents=True, exist_ok=True)
             if not p.exists():
                 p.touch()
                 if p.suffix == ".json":
