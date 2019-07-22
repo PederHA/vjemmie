@@ -62,7 +62,7 @@ class ImageCog(BaseCog):
         # Check if message has an attachment if no -url argument
         if not a.url:
             if not ctx.message.attachments:
-                raise AttributeError(
+                raise CommandError(
                     "Message must have a `-url` argument or an image attachment!"
                     )
             else:
