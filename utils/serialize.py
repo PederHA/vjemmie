@@ -1,8 +1,9 @@
 import json
-from typing import Any
+from typing import Any, Union
 
 
-def load_json(fp: str, default_factory=list) -> list:
+def load_json(fp: str, default_factory=Union[list, dict]) -> Union[list, dict]:
+    """Not sure wtf this is. Use `utils.get_cached` instead"""
     f = open(fp, "r")
     try:
         data =  json.load(f)
