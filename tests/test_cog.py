@@ -151,6 +151,11 @@ class TestCog(BaseCog):
         passed_fmt = "\n".join(passed)
         failed_fmt = "\n".join(failed)
 
+        print("Tests completed!")
+        print(f"{len(passed)}/{len(passed) + len(failed)} tests passed!")
+        if failed:
+            print(f"Failed:\n{failed_fmt}")
+
         if not failed:
             result = "All tests passed!"
         elif not passed:
