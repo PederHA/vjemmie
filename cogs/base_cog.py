@@ -242,7 +242,7 @@ class BaseCog(commands.Cog):
                         fields: Optional[List[EmbedField]]=None,
                         image_url: Optional[str]=None,
                         thumbnail_url: Optional[str]=None,
-                        color: Union[str, int, None]=None,
+                        color: Optional[Union[str, int, discord.Color]]=None,
                         footer: bool=True,
                         timestamp: bool=True,
                         inline: Optional[bool]=None
@@ -334,7 +334,9 @@ class BaseCog(commands.Cog):
         
         # Add color to embed
         if color:
-            embed.color = await self.get_discord_color(color)
+            if not isinstance(color, discord.Color):
+                color = await self.get_discord_color(color)
+            embed.color = color
         
         return embed
 
