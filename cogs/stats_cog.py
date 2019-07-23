@@ -126,7 +126,7 @@ class StatsCog(BaseCog):
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
-        commits = await ctx.invoke(self.changelog, 7, rtn_type=list)
+        commits = await self.get_commits("PederHA/vjemmie", days=7)
         n_commits = len(commits)
         await ctx.send(f"{n_commits} commits have been made the past week.")
 
