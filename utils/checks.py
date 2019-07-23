@@ -5,6 +5,7 @@ from config import (DGVGK_SERVER_ID, DOWNLOADS_ALLOWED, OWNER_ID,
                     PFM_SERVER_ID, TEST_SERVER_ID, BLACKLIST_PATH)
 from utils.caching import get_cached
 from utils.serialize import dump_json
+from utils.access_control import get_trusted_users
 
 
 # Blacklist serialization functions
@@ -76,5 +77,14 @@ def download_cmd():
 def disabled_cmd():
     """Decorator to disable a command for _everyone_"""
     def predicate(ctx):
+        return False
+    return commands.check(predicate)
+
+
+def trusted():
+    """Adds check that allows trusted users only."""
+    def predicate(ctx):
+        if ctx.guild:
+            return ctx.message.author.id in get_trusted_users(ctx.guild.id)
         return False
     return commands.check(predicate)

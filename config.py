@@ -11,6 +11,10 @@ PFM_MEMES_DB_PATH = "memes/pfm_memes.db"
 INSERT_STUFF_HERE = None
 BLACKLIST_PATH = "db/blacklist.json"
 
+# Keep
+DB_DIR = "db"
+TRUSTED_DIR = f"{DB_DIR}/access"
+TRUSTED_PATH = f"{TRUSTED_DIR}/trusted.json"
 
 # COGS
 # -----------------

@@ -227,8 +227,6 @@ class TestCog(BaseCog):
         # Get name of command or coro, str formatted args and str formatted kwargs
         cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
 
-
-
         passed = False
         try:
             # Await coro or command
@@ -331,6 +329,15 @@ class TestCog(BaseCog):
     async def test_admincog_serverlist(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "serverlist")
     
+    async def test_admincog_trusted_show(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "trusted show")
+
+    async def test_admincog_trusted_add(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "trusted add", self.bot.user)
+
+    async def test_admincog_trusted_remove(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "trusted remove", self.bot.user)
+
     # AutoChessCog
     async def test_autochesscog_stats_self(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "autochess stats")

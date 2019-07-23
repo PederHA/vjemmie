@@ -9,15 +9,18 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only, load_blacklist, save_blacklist
-from config import YES_ARGS
-
+from config import YES_ARGS, TRUSTED_DIR, TRUSTED_PATH
+from utils.access_control import add_trusted_user, remove_trusted_user, get_trusted_users
+from utils.exceptions import CommandError
 
 Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
 
 class AdminCog(BaseCog):
     DISABLE_HELP = True
     ACTIVITY_ROTATION = True
-    
+
+    FILES = [TRUSTED_PATH]
+
     """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -270,4 +273,42 @@ class AdminCog(BaseCog):
                 # Should improve wording of this message
                 f"No message with id {message_id} found or it is too old."
                 )
+
+    @commands.group(name="trusted")
+    async def trusted(self, ctx: commands.Context) -> None:
+        if not ctx.guild:
+            raise CommandError("This action cannot be performed in a DM channel.")
         
+        if not ctx.invoked_subcommand:
+            return
+        
+    @trusted.command(name="add")
+    @admins_only()
+    async def trusted_add(self, ctx: commands.Context, user: commands.UserConverter) -> None:
+        add_trusted_user(ctx.guild.id, user.id)
+        await ctx.send(f"Added {user.name} to {ctx.guild.name}'s trusted users!")
+
+    @trusted.command(name="remove", aliases=["delete", "rm"])
+    @admins_only()
+    async def trusted_remove(self, ctx: commands.Context, user: commands.UserConverter) -> None:
+        try:
+            remove_trusted_user(ctx.guild.id, user.id)
+        except ValueError:
+            await ctx.send(f"{user.name} is not in list of trusted users!")
+        else:
+            await ctx.send(f"Removed **`{user.name}`** from {ctx.guild.name}'s trusted users!")
+
+    @trusted.command(name="list", aliases=["show"])
+    @admins_only()
+    async def trusted_show(self, ctx: commands.Context) -> None:
+        users = get_trusted_users(ctx.guild.id)
+        
+        if not users:
+            return await ctx.send("No trusted users added.")
+        
+        # drop users whose ID can't be identified
+        users = list(filter(None.__ne__, [self.bot.get_user(user) for user in users]))
+        
+        users = "\n".join([f"{u.name}`#{u.discriminator}`" for u in users])
+        
+        await self.send_embed_message(ctx, title="Trusted Users", description=users, color=self.get_bot_color(ctx))
