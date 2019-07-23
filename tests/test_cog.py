@@ -131,23 +131,22 @@ class TestCog(BaseCog):
         failed = []
 
         # Temporarily patch ctx to disable message sending while invoking bot commands
-        with self.patch_ctx(ctx) as ctx:
+        with self.patch_ctx(ctx) as ctx_:
             # Find tests
             for k in dir(self):
                 if k.startswith("test_"):
                     coro = getattr(self, k)
-                    if not self.determine_run_coro(coro, ctx):
+                    if not self.determine_run_coro(coro, ctx_):
                         continue
                     if inspect.iscoroutinefunction(coro):
                         try:
-                            await coro(ctx)
+                            await coro(ctx_)
                         except:
                             failed.append(k)
                         else:
                             passed.append(k)
-            await self._post_tests_cleanup(ctx)
-            print("Tests completed!")
-
+        await self._post_tests_cleanup(ctx)
+       
         # Format results
         passed_fmt = "\n".join(passed)
         failed_fmt = "\n".join(failed)
@@ -184,19 +183,13 @@ class TestCog(BaseCog):
         that disables message sending while tests are running."""
         async def new_send(*args, **kwargs):
             pass
-        new_send.testing = True
+        new_send.testing = True # NOTE: Useless? What was the plan here?
 
-        original_ctx = copy.copy(ctx)
-        try:
-            enabled = self.msg_enabled
-            if not enabled:
-                # Patch ctx.send with dummy method
-                ctx.send = new_send
-                yield ctx
-            else:
-                yield ctx
-        finally:
-            ctx = original_ctx
+        new_ctx = copy.copy(ctx) 
+        if not self.msg_enabled:
+            # Patch ctx.send with dummy method
+            new_ctx.send = new_send
+        yield new_ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
         # Pop ctx
