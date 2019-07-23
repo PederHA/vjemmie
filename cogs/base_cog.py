@@ -408,7 +408,7 @@ class BaseCog(commands.Cog):
 
         # Check if error stems from lack of privileges
         if isinstance(error, commands.CheckFailure):
-            return await ctx.send("Insufficient privileges to perform command!")
+            return await ctx.send("Insufficient privileges to execute command!")
         
         # Ignore cooldown exceptions
         if isinstance(error, commands.CommandOnCooldown):
