@@ -25,7 +25,9 @@ from config import (  # DISABLE_HELP,
     COMMAND_INVOCATION_CHANNEL)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
-                              FileTypeError, InvalidVoiceChannel, CommandError)
+                              FileTypeError, InvalidVoiceChannel, CommandError, 
+                              NoContextException)
+from utils.experimental import get_ctx
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -126,6 +128,28 @@ class BaseCog(commands.Cog):
     def MAX_DL_SIZE_FMT(self) -> str:
         size_mb = self.MAX_DL_SIZE / 1_000_000
         return f"{size_mb} MB"
+
+    @property
+    def BOT_COLOR(self) -> discord.Color:
+        """experimental"""
+        default = discord.Color(0x000000)
+        
+        try:
+            ctx = get_ctx()
+        except NoContextException:
+            return default
+        
+        bot_member = ctx.guild.get_member(self.bot.user.id)
+        
+        if not bot_member:
+            return default
+        else:
+            return bot_member.color
+
+    def get_bot_color(self, ctx) -> discord.Color:
+        """Safe, but boring, implementation of `BOT_COLOR`."""
+        bot_member = ctx.guild.get_member(self.bot.user.id)
+        return bot_member.color       
 
     def add_help_command(self) -> None:
         #if self.cog_name not in self.DISABLE_HELP:
