@@ -311,8 +311,8 @@ class RedditCog(BaseCog):
             msg = "Usage:\n`!rsort` toggles between hot/top\n`!hot` & `!top` for manual selection"
         
         await self.send_embed_message(ctx, 
-                                      header="Reddit", 
-                                      text=msg, 
+                                      title="Reddit", 
+                                      description=msg, 
                                       footer=False, 
                                       timestamp=False, 
                                       color="red")
@@ -338,8 +338,8 @@ class RedditCog(BaseCog):
         
         await self.send_embed_message(
             ctx,
-            header="Reddit settings",
-            text=out,
+            title="Reddit settings",
+            description=out,
             color="red",
             timestamp=False)
 
