@@ -56,7 +56,8 @@ IGNORE_TRACEBACK = [
     commands.errors.MissingRequiredArgument,
     PrawForbidden,
     CommandError,
-    DownloadError
+    DownloadError,
+    commands.errors.DisabledCommand
 ]
 
 IGNORE_EXCEPTION = [
