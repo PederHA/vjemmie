@@ -22,7 +22,7 @@ from youtube_dl import DownloadError
 from config import (  # DISABLE_HELP,
     AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
     GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE,
-    COMMAND_INVOCATION_CHANNEL)
+    COMMAND_INVOCATION_CHANNEL, ERROR_CHANNEL_ID)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
                               FileTypeError, InvalidVoiceChannel, CommandError, 
@@ -79,6 +79,7 @@ class BaseCog(commands.Cog):
     DOWNLOAD_CHANNEL_ID = DOWNLOAD_CHANNEL_ID
     GUILD_HISTORY_CHANNEL = GUILD_HISTORY_CHANNEL
     AUTHOR_MENTION = AUTHOR_MENTION
+    ERROR_CHANNEL_ID = ERROR_CHANNEL_ID
 
     # Download options
     MAX_DL_SIZE = MAX_DL_SIZE
@@ -410,12 +411,16 @@ class BaseCog(commands.Cog):
         """
 
         # Send traceback
-        await self.send_text_message(error_msg, channel_id=self.LOG_CHANNEL_ID)
+        await self.send_text_message(error_msg, channel_id=self.ERROR_CHANNEL_ID)
         
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
-        await self.send_text_message(cause_of_error, channel_id=self.LOG_CHANNEL_ID)
+        await self.send_text_message(cause_of_error, channel_id=self.ERROR_CHANNEL_ID)
     
+    async def warn_owner(self, message: str) -> None:
+        channel = self.bot.get_channel(LOG_CHANNEL_ID)
+        await channel.send(f"{self.AUTHOR_MENTION} {message}")
+
     async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
         """Handles exceptions raised by commands defined in the cog.
 

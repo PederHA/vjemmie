@@ -46,16 +46,19 @@ PFM_SERVER_ID = 133332608296681472
 # NOTE: If self-hosting the bot, replace all channel and user IDs with own
 # Guild, Channel & User IDs
 
-# Image rehosting channel
+# Image rehosting
 IMAGE_CHANNEL_ID = 549649397420392567 
 
-# Error logging channel
+# General log
 LOG_CHANNEL_ID = 340921036201525248
 
-# File download log channel
+# Error log
+ERROR_CHANNEL_ID = 604388280200593411
+
+# File download log
 DOWNLOAD_CHANNEL_ID = 563312629045788692
 
-# Joining/leaving guilds log channel
+# Joining/leaving guilds log
 GUILD_HISTORY_CHANNEL = 565674480660119592 
 
 # Channel to use as base for ctx (see BaseCog.get_command_invocation_ctx())
