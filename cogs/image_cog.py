@@ -6,6 +6,7 @@ from typing import Optional, Union, Tuple
 
 import discord
 import requests
+import pytesseract
 from discord.ext import commands
 from PIL import Image, ImageEnhance, ImageStat, ImageOps
 import numpy as np
@@ -283,37 +284,43 @@ class ImageCog(BaseCog):
         if not isinstance(image, Image.Image):
             image = Image.open(image)
         
-        # Convert to greyscale
-        image = image.convert("L")
+        # Improves pytesseract accuracy
+        image = self.optimize_image(image)
 
-        # Increase image contrast
-        image = ImageEnhance.Contrast(image).enhance(2)
+        text = pytesseract.image_to_string(image, lang="eng")
+        
+        return text
+
+    def optimize_image(self, image: Image.Image) -> Image.Image:
+        image = image.convert("L")  # Convert to greyscale
+  
+        image = ImageEnhance.Contrast(image).enhance(2)  # Increase contrast
 
         # Invert image if we suspect white text on dark background
-        if ImageStat.Stat(image).mean < 128:
+        if ImageStat.Stat(image).mean[0] < 128:
             image = ImageOps.invert(image)
 
         image = self.resize_image(image, width=2000)
 
-        # TODO: Install pytesseract
-        #text = pytesseract.image_to_string(image, lang="eng")
-        #return text
+        return image
 
-    @commands.command(name="totext", enabled=False)
-    async def img_to_txt(self, ctx: commands.Context, arg: str=None) -> None:
-        if not arg and not ctx.message.attachments:
+    @commands.command(name="totext", enabled=True)
+    async def img_to_txt(self, ctx: commands.Context, url: str=None) -> None:
+        if not url and not ctx.message.attachments:
             raise CommandError("An image URL or an image message attachment is required!")
         
+        # Use attachment if it exists, else URL
         if ctx.message.attachments:
-            url = ctx.message.attachments[0]
-        else:
-            url = arg
+            url = ctx.message.attachments[0].url
 
+        # Download image
         if not await self.is_img_url(url):
-            raise CommandError("Attachment or URL is not an image!")
-        
+            raise CommandError("Attachment or URL is not an image!")      
         img = await self.download_from_url(ctx, url)
 
-        image_text = await self.bot.loop.run_in_executor(None, self.read_image_text, img)
-
+        try:
+            image_text = await self.bot.loop.run_in_executor(None, self.read_image_text, img)
+        except pytesseract.pytesseract.TesseractNotFoundError:
+            await self.warn_owner("Tesseract is not installed or not added to PATH!")
+            raise
         await self.send_text_message(image_text, ctx)
