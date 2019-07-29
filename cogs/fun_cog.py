@@ -13,7 +13,7 @@ from discord.ext import commands
 
 from cogs.base_cog import BaseCog
 from utils.exceptions import CommandError
-
+from utils.messaging import fetch_message
 
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
@@ -132,16 +132,8 @@ class FunCog(BaseCog):
         
         # Try to fetch message if arg is a number
         if arg.isnumeric():
-            try:
-                msg = await ctx.fetch_message(arg)
-            except discord.NotFound:
-                raise CommandError("Invalid message ID!")
-            except discord.Forbidden:
-                raise CommandError("Lacking permissions to fetch message!")
-            except discord.HTTPException:
-                raise CommandError("Failed to retrieve message. Try again later!")
-            else:
-                to_trans = msg.content
+            msg = await fetch_message(ctx, arg)
+            to_trans = msg.content
         else:
             to_trans = arg
         
