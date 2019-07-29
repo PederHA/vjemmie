@@ -142,7 +142,9 @@ class FunCog(BaseCog):
         
         trans = self.do_uwu_transliterate(to_trans)
 
-        await ctx.send(trans)
+        _iw = ctx.invoked_with
+        owo = f"{_iw[0].capitalize()}{_iw[1]}{_iw[2].capitalize()}"
+        await ctx.send(f"{trans} {owo}")
 
     def do_uwu_transliterate(self, text: str) -> str:
         """Public UwU transliteration method other cogs can use."""
