@@ -137,6 +137,9 @@ class FunCog(BaseCog):
         else:
             to_trans = arg
         
+        if not to_trans:
+            raise CommandError("No string to transliterate.")
+        
         trans = self.do_uwu_transliterate(to_trans)
 
         await ctx.send(trans)
