@@ -789,7 +789,7 @@ class SoundCog(BaseCog):
             
             # Play downloaded sound if ctx.author is in a voice channel
             if hasattr(ctx.author.voice, "channel"):
-                await asyncio.sleep(1) # Avoids weird race condition-like behavior on EC2
+                await asyncio.sleep(2) # Avoids weird race condition-like behavior on EC2
                 await ctx.invoke(self.play, filename)
 
     async def _do_download_sound(self, ctx: commands.Context, url: str, *, filename: str=None) -> str:
