@@ -102,7 +102,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # Send add-to-queue confirmation
         await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
 
-        return cls(discord.FFmpegPCMAudio(path), data={"title":filename}, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(path, options=["-muxpreload", "2"]), data={"title":filename}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
