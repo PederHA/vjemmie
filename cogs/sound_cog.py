@@ -201,14 +201,17 @@ class SoundDirectory:
         self.aliases = aliases
         self.path = path
         self.color = color
-        self.last_modified = None
-        self._sound_list = None
-
+        self.cached_at = 0.0
+        self._sound_list = {}
+    
+    @property
+    def modified_at(self) -> float:
+        return os.path.getmtime(self.path)
+    
     @property
     def sound_list(self) -> list:
-        modified = os.path.getmtime(self.path)
-        if not self._sound_list or modified != self.last_modified:
-            self.last_modified = modified
+        if not self._sound_list or self.cached_at != self.modified_at:
+            self.cached_at = self.modified_at
             self._sound_list = {sound_file: self.path for sound_file in [
                 i.rsplit(".", 1)[0]
                 for i in os.listdir(self.path)
@@ -243,7 +246,6 @@ class SoundCog(BaseCog):
                          color=self.generate_hex_color_code(subdir.folder))
                          for subdir in SOUND_SUB_DIRS
                          ]
-        self._sub_dirs_last_modified = {}
         
         # Per-guild audio players. Key: Guild ID
         self.players: Dict[int, AudioPlayer] = {}
@@ -254,23 +256,19 @@ class SoundCog(BaseCog):
         self._sound_list = {}
 
     @property
-    def sound_list(self) -> list:
+    def sound_list(self) -> dict:
         """
-        Returns list of files in the sound folder provided on class instantiation.
+        Dict of K: Sound file name, V: file directory
         
-        Returns:
-            sound_list: list of file names, all lowercase and without the .mp3 file extension.
-        
-        Raises Exception if the folder contains no .mp3 files.
+        NOTE
+        ----
+        Raises Exception if no sound files are found.
         """
         for sf in self.sub_dirs:
-            try:
-                if self._sub_dirs_last_modified[sf.path] == sf.last_modified:
-                    continue
-            except KeyError:
-                pass
-            self._sound_list.update(sf.sound_list)
-            self._sub_dirs_last_modified[sf.path] = sf.last_modified
+            if sf.cached_at == sf.modified_at:
+                continue
+            else:
+                self._sound_list.update(sf.sound_list)
         if not self._sound_list:
             raise ValueError("No local sound files exist!")
         return self._sound_list
@@ -789,7 +787,6 @@ class SoundCog(BaseCog):
             
             # Play downloaded sound if ctx.author is in a voice channel
             if hasattr(ctx.author.voice, "channel"):
-                await asyncio.sleep(2) # Avoids weird race condition-like behavior on EC2
                 await ctx.invoke(self.play, filename)
 
     async def _do_download_sound(self, ctx: commands.Context, url: str, *, filename: str=None) -> str:
