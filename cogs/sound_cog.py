@@ -747,14 +747,14 @@ class SoundCog(BaseCog):
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
         """Download sound file to soundboard.
         
+        Sound file URL is passed in as argument `url` or as a message attachment.
+        
         Parameters
         ----------
         ctx : `commands.Context`
             Discord Context object
-        url : `str`, optional
+        url : `str`
             HTTP(s) URL of file. 
-            If message has no attachment, command will raise
-            exception if URL is None.
         """
 
         # Check if downloading is allowed
@@ -771,23 +771,24 @@ class SoundCog(BaseCog):
 
         # Download and save sound file
         try:
-            filename = await self._do_download_sound(ctx, url, filename=filename)        
+            filename = await self._do_download_sound(ctx, url, filename=filename)
         
         except AttributeError:
-            return await self.send_error_msg(ctx,
+            raise CommandError(
                 "Invalid URL. Must be a direct link to a file. "
-                "Example: http://example.com/file.mp3")        
+                "Example: http://example.com/file.mp3"
+                )        
         
         except ValueError:
-            return await self.send_error_msg(ctx,
-                f"Invalid file type. Must be one of: **{FILETYPES}**")
+            raise CommandError(
+                f"Invalid file type. Must be one of: **{FILETYPES}**"
+                )
         
         else:
-            # Post download confirmation
             await ctx.send(f"Saved file **`{filename}`**")
-            
-            # Play downloaded sound if ctx.author is in a voice channel
-            if hasattr(ctx.author.voice, "channel"):
+        
+            # Play downloaded sound if command invoker is in a voice channel
+            if ctx.author.voice:
                 await ctx.invoke(self.play, filename)
 
     async def _do_download_sound(self, ctx: commands.Context, url: str, *, filename: str=None) -> str:
