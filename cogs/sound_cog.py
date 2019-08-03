@@ -26,7 +26,7 @@ from youtube_dl import YoutubeDL
 from cogs.base_cog import BaseCog
 from config import (DOWNLOADS_DIR, SOUND_DIR, SOUND_SUB_DIRS,
                     SOUNDLIST_FILE_LIMIT, TTS_DIR, YTDL_DIR)
-from utils.checks import admins_only
+from utils.checks import admins_only, trusted
 from utils.converters import SoundURLConverter, URLConverter
 from utils.exceptions import (CommandError, InvalidVoiceChannel,
                               VoiceConnectionError)
@@ -742,7 +742,8 @@ class SoundCog(BaseCog):
                 cmd  = self.bot.get_command('play')
                 await ctx.invoke(cmd, sound_name)
 
-    @commands.command(name="add_sound", usage="<url> or Attach file to message")
+    @commands.command(name="add_sound", usage="<url> or <file attachment>")
+    @trusted()
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
         """Download sound file to soundboard.
         
