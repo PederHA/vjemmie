@@ -313,8 +313,12 @@ class TestCog(BaseCog):
     async def do_test_command(self, ctx: commands.Context, cmd: commands.Command, *args, **kwargs) -> None:
         if isinstance(cmd, str):
             cmd = self.bot.get_command(cmd)
+            
+        ctx.command = cmd
+        
         if not cmd:
             raise TypeError("Command must be name of command or discord.ext.commands.Command object!")
+        
         return await self._do_test(cmd, *args, **kwargs, ctx=ctx)
 
 
