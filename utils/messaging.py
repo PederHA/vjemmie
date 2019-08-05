@@ -62,7 +62,7 @@ async def fetch_message(ctx: commands.Context, message_id: int) -> discord.Messa
     try:
         msg = await ctx.fetch_message(message_id)
     except discord.NotFound:
-        raise CommandError("Cannot find message with ID `{message_id}`!")
+        raise CommandError(f"Cannot find message with ID `{message_id}`!")
     except discord.Forbidden:
         raise CommandError("Lacking permissions to fetch message!")
     except discord.HTTPException:
