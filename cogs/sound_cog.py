@@ -840,8 +840,7 @@ class SoundCog(BaseCog):
             if i == 0: # we don't need a number if first attempted filename is unique
                 i = ""
             fname = f"{filename}{i}"
-            filepath = f"{directory}/{fname}{ext}"
-            if not Path(filepath).exists():
+            if fname not in self.sound_list:
                 return fname
 
     @commands.command(name="dl")
