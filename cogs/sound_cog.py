@@ -811,15 +811,11 @@ class SoundCog(BaseCog):
         fname, ext = await self.get_filename_extension_from_url(url)
         if not filename:
             filename = fname
-        else:
-            filename = sanitize_filename(filename)
-        
-        if not ext:
-            raise AttributeError
+        filename = sanitize_filename(filename)
 
         # Check if file type is valid
         if ext not in FILETYPES:
-            raise ValueError
+            raise CommandError("Downloaded file is of an invalid filetype.")
         
         # Get file path
         filename = self.get_unique_filename(DOWNLOADS_DIR, filename, ext)
