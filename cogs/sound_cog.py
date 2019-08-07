@@ -561,8 +561,8 @@ class SoundCog(BaseCog):
         # Prompt user to specify category if message lacks category argument
         if not category:
             await self.send_embed_message(ctx,
-                                          header="Categories", 
-                                          text=categories)
+                                          title="Categories", 
+                                          description=categories)
             await ctx.send(f"\nType **`!{ctx.invoked_with}`** + **`<category>`**")
             self.reset_command_cooldown(ctx)
             return
