@@ -57,6 +57,13 @@ ytdl = YoutubeDL(ytdlopts)
 VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
+def get_file_path(directory: str, filename: str) -> Path:
+    """Resolves a filename and directory, returns a Path."""
+    try:
+        path = list(Path(directory).glob(glob.escape(filename)+".*"))[0]
+    except IndexError:
+        raise ValueError("File does not exist!")
+    return path
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
