@@ -654,13 +654,9 @@ class BaseCog(commands.Cog):
                 continue
             
             group = False
+            
             if isinstance(command, commands.Group):
-                """
-                We use a set here, because each alias of a subcommand is treated
-                as an individual command, leading to the output string containing 
-                duplicate commands if dict values are simply converted to a list
-                """
-                cmds = list(set(command.all_commands.values()))
+                cmds = list(command.commands)
                 cmds.sort(key=lambda k: k.name)
                 cmds.insert(0, command)
                 group = True
