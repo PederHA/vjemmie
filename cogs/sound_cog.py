@@ -103,13 +103,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def create_local_source(cls, ctx, subdir: str, filename: str):
-        # Get path to local sound file
-        path = glob.glob(glob.escape(f"{subdir}/{filename}")+".*")[0]
+        path = get_file_path(subdir, filename)
 
         # Send add-to-queue confirmation
         await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
 
-        return cls(discord.FFmpegPCMAudio(path, options=["-muxpreload", "2"]), data={"title":filename}, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(str(path), options=["-muxpreload", "2"]), data={"title":filename}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
