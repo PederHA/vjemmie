@@ -54,7 +54,7 @@ ffmpegopts = {
 
 ytdl = YoutubeDL(ytdlopts)
 
-VALID_FILE_TYPES = ["mp3", ".mp4", ".webm", ".wav"] # this is probably useless
+VALID_FILE_TYPES = [".mp3", ".mp4", ".webm", ".wav"] # this is probably useless
 FILETYPES = {".mp3", ".wav", ".m4a", ".webm", ".mp4"}
 
 def get_file_path(directory: str, filename: str) -> Path:
