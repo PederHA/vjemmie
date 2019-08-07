@@ -215,15 +215,12 @@ class SoundDirectory:
         return os.path.getmtime(self.path)
     
     @property
-    def sound_list(self) -> list:
+    def sound_list(self) -> list:      
         if not self._sound_list or self.cached_at != self.modified_at:
-            self.cached_at = self.modified_at
-            self._sound_list = {sound_file: self.path for sound_file in [
-                i.rsplit(".", 1)[0]
-                for i in os.listdir(self.path)
-                if any(i.endswith(ext) for ext in VALID_FILE_TYPES) # Only include known compatible containers
-                ]
-                }
+            self.cached_at = self.modified_at       
+            self._sound_list = {file_.stem: self.path for file_ in 
+                                Path(self.path).iterdir() 
+                                if file_.suffix in VALID_FILE_TYPES}
         return self._sound_list
 
 
