@@ -846,6 +846,32 @@ class SoundCog(BaseCog):
             if fname not in self.sound_list:
                 return fname
 
+    @commands.command(name="rename")
+    @admins_only()
+    async def rename_sound(self, ctx: commands.Context, original: str, new: str) -> None:
+        """Renames a soundboard file."""
+        directory = self.sound_list.get(original)
+        
+        if new in self.sound_list:
+            # NOTE: ask user to overwrite?
+            raise CommandError(f"**`{new}`** already exists!")
+        elif original == new:
+            raise CommandError("New filename cannot be identical to the original filename.")
+        elif not directory:
+            raise CommandError(f"Cannot find **`{original}`**!")
+
+        path = get_file_path(directory, original)
+
+        # Remove invalid characters
+        new = sanitize_filename(new)
+
+        try:
+            path.rename(f"{path.parent}/{new}{path.suffix}")
+        except:
+            raise CommandError("Unable to rename file!")
+        else:
+            await ctx.send(f"Successfully renamed **`{original}`** to **`{new}`**")
+
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: URLConverter=None) -> None:
         """Lazy download sound command.
