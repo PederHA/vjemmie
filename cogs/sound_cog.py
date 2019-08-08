@@ -212,7 +212,7 @@ class SoundDirectory:
     
     @property
     def modified_at(self) -> float:
-        return os.path.getmtime(self.path)
+        return Path(self.path).stat().st_atime
     
     @property
     def sound_list(self) -> list:      
