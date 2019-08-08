@@ -256,8 +256,6 @@ class SoundCog(BaseCog):
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
 
-        self._sound_list = {}
-
     @property
     def sound_list(self) -> dict:
         """
@@ -267,15 +265,13 @@ class SoundCog(BaseCog):
         ----
         Raises Exception if no sound files are found.
         """
+        sound_list = {}
         for sf in self.sub_dirs:
-            if sf.cached_at == sf.modified_at:
-                continue
-            else:
-                self._sound_list.update(sf.sound_list)
-        if not self._sound_list:
+            sound_list.update(sf.sound_list)
+        if not sound_list:
             raise ValueError("No local sound files exist!")
-        return self._sound_list
-
+        return sound_list
+    
     async def cleanup(self, guild: discord.Guild) -> None:
         try:
             await guild.voice_client.disconnect()
