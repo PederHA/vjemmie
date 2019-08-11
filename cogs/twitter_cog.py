@@ -78,7 +78,7 @@ class TwitterCog(BaseCog):
     async def _twitter_markov_cmd(self, ctx: commands.Context, user: str) -> None:
         await ctx.send(await self.generate_sentence(user))
     
-    @commands.group(name="twitter")
+    @commands.group(name="twitter", enabled=False)
     async def twitter(self, ctx: commands.Context) -> None:
         cmds = ", ".join([f"**`{command.name}`**" for command in ctx.command.commands])
         if ctx.invoked_subcommand is None:
