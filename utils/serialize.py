@@ -27,5 +27,6 @@ def load_json(fp: str, default_factory=Union[list, dict]) -> Union[list, dict]:
         return default_factory()
 
 def dump_json(fp: str, obj: Any, default: Any=None) -> None:
+    d = json.dumps(obj, indent=4, default=default)
     with open(fp, "w") as f:
-        json.dump(obj, f, indent=4, default=default)
+        f.write(d)
