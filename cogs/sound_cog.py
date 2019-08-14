@@ -255,6 +255,8 @@ class SoundCog(BaseCog):
 
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
+        
+        self._sound_list = {}
 
     @property
     def sound_list(self) -> dict:
@@ -266,12 +268,20 @@ class SoundCog(BaseCog):
         Raises Exception if no sound files are found.
         """
         sound_list = {}
-        for sf in self.sub_dirs:
-            sound_list.update(sf.sound_list)
+        for sd in self.sub_dirs:
+            sl = sd.sound_list
+            for k in list(sl.keys()):
+                if k in sound_list:
+                    new_name = self.get_unique_filename(k, ext_sound_list=sound_list)
+                    self._do_rename_file(sd.path, k, new_name)
+                    sl[new_name] = sl.pop(k)
+                    print(f"{sd.path}/{k} has been renamed to {sd.path}/{new_name}")
+            sound_list.update(sl)
+        self._sound_list = sound_list
         if not sound_list:
             raise ValueError("No local sound files exist!")
-        return sound_list
-    
+        return self._sound_list
+ 
     async def cleanup(self, guild: discord.Guild) -> None:
         try:
             await guild.voice_client.disconnect()
@@ -720,13 +730,13 @@ class SoundCog(BaseCog):
 
         # Check argument to param filename
         if filename:
-            filename = sanitize_filename(filename)    
+            filename = sanitize_filename(filename)
         # Use first word of text if no filename
         else:
             filename = sanitize_filename(text.split(" ")[0])
 
         # Check filename. If filename is taken or invalid, generate filename from text    
-        sound_name = self.get_unique_filename(TTS_DIR, filename, ".mp3")
+        sound_name = self.get_unique_filename(filename)
 
         # Save mp3 file
         to_run = partial(tts.save, f"{TTS_DIR}/{sound_name}.mp3")
@@ -814,7 +824,7 @@ class SoundCog(BaseCog):
             raise CommandError("Downloaded file is of an invalid filetype.")
         
         # Get file path
-        filename = self.get_unique_filename(DOWNLOADS_DIR, filename, ext)
+        filename = self.get_unique_filename(filename)
         filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"           
         
         # Attempt to download file
@@ -829,13 +839,14 @@ class SoundCog(BaseCog):
         
         return filename
     
-    def get_unique_filename(self, directory: str, filename: str, ext: str=None) -> str:
+    def get_unique_filename(self, filename: str, *, ext_sound_list: dict=None) -> str:
         # Increment i until a unique filename is found
         for i in count():
             if i == 0: # we don't need a number if first attempted filename is unique
                 i = ""
             fname = f"{filename}{i}"
-            if fname not in self.sound_list:
+            
+            if not self._sound_list or fname not in self._sound_list:
                 return fname
 
     @commands.command(name="rename")
@@ -866,7 +877,7 @@ class SoundCog(BaseCog):
             path.rename(f"{path.parent}/{new}{path.suffix}")
         except:
             raise CommandError("Unable to rename file!")
-
+                    
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: URLConverter=None) -> None:
         """Lazy download sound command.
