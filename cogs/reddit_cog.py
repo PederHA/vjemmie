@@ -25,6 +25,7 @@ from utils.checks import admins_only
 from utils.caching import get_cached
 from utils.exceptions import CommandError
 from utils.parsing import is_valid_command_name
+from utils.serialize import dump_json
 
 reddit_client = praw.Reddit(
     client_id=REDDIT_ID,
@@ -80,16 +81,13 @@ class RedditCog(BaseCog):
         self.bot.loop.create_task(self.submission_refresh_loop())
 
     def load_subs(self) -> dict:
-        with open("db/reddit/subs.json", "r") as f:
-            _subs = json.load(f)
-            if not _subs:
-                return dict()
-            return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
+        _subs = get_cached("db/reddit/subs.json")
+        return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
 
     def dump_subs(self) -> None:
-        with open("db/reddit/subs.json", "w") as f:
-            if self.subs:
-                json.dump(self.subs, f, indent=4)
+        if self.subs:
+            dump_json("db/reddit/subs.json", self.subs)
+    
     @property
     def NSFW_WHITELIST(self):
         return get_cached("db/reddit/nsfw_whitelist.json", category="reddit")
