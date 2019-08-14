@@ -851,9 +851,14 @@ class SoundCog(BaseCog):
             raise CommandError("New filename cannot be identical to the original filename.")
         elif not directory:
             raise CommandError(f"Cannot find **`{original}`**!")
+        
+        self._do_rename_file(directory, original, new)
 
-        path = get_file_path(directory, original)
+        await ctx.send(f"Successfully renamed **`{original}`** to **`{new}`**")
 
+    def _do_rename_file(self, directory: str, filename: str, new: str) -> None:
+        path = get_file_path(directory, filename)
+        
         # Remove invalid characters
         new = sanitize_filename(new)
 
@@ -861,8 +866,6 @@ class SoundCog(BaseCog):
             path.rename(f"{path.parent}/{new}{path.suffix}")
         except:
             raise CommandError("Unable to rename file!")
-        else:
-            await ctx.send(f"Successfully renamed **`{original}`** to **`{new}`**")
 
     @commands.command(name="dl")
     async def dl(self, ctx: commands.Context, url: URLConverter=None) -> None:
