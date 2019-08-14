@@ -720,7 +720,7 @@ class SoundCog(BaseCog):
                     f"{lang_long}" for lang_short, lang_long in valid_langs.items()
                     ]
             langs = "\n".join(_langs)
-            await self.send_embed_message(ctx, "Code\tLanguage", langs, keep_header=True)
+            await self.send_embed_message(ctx, "Code\tLanguage", langs)
             return
 
         # Get tts object
