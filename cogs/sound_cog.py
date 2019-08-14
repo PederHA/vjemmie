@@ -197,12 +197,12 @@ class SoundDirectory:
     """
 
     def __init__(self, 
-                 folder: str, 
+                 directory: str, 
                  header: str, 
                  aliases: list, 
                  path: str, 
                  color: Optional[Union[str, int]]=None) -> None:
-        self.folder = folder
+        self.directory = directory
         self.header = header # This attribute is honestly pretty terrible
         self.aliases = aliases
         self.path = path
@@ -242,11 +242,11 @@ class SoundCog(BaseCog):
         # Create SoundDirectory instance for each subdirectory
         self.sub_dirs = [
                          SoundDirectory(
-                         folder=subdir.folder,
-                         header=subdir.folder.upper(),
+                         directory=subdir.directory,
+                         header=subdir.directory.upper(),
                          aliases=subdir.aliases,
                          path=subdir.path,
-                         color=self.generate_hex_color_code(subdir.folder))
+                         color=self.generate_hex_color_code(subdir.directory))
                          for subdir in SOUND_SUB_DIRS
                          ]
         
@@ -547,7 +547,7 @@ class SoundCog(BaseCog):
 
         # Formatted string of sound categories
         categories = "\n".join(
-            [f"**`{sd.folder}`**" for sd in self.sub_dirs if sd.sound_list]
+            [f"**`{sd.directory}`**" for sd in self.sub_dirs if sd.sound_list]
             )
         
         # Raise exception if all sound directories are empty
@@ -925,12 +925,12 @@ class SoundCog(BaseCog):
         infile_1 = None
         infile_2 = None
         
-        for folder in self.sub_dirs:
-            for sound in folder.sound_list:
+        for directory in self.sub_dirs:
+            for sound in directory.sound_list:
                 if file_1 == sound:
-                    infile_1 = (folder.folder, sound)
+                    infile_1 = (directory.directory, sound)
                 elif file_2 == sound:
-                    infile_2 = (folder.folder, sound)
+                    infile_2 = (directory.directory, sound)
                 if infile_1 and infile_2:
                     break
         
