@@ -133,6 +133,9 @@ class PUBGCog(BaseCog):
         gunsplit, armorsplit = await self.roll_guns(squad)
 
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
+        
+        cmd = self.bot.get_command("tts")
+        await ctx.invoke(cmd, output, "en", "crate")
 
         await ctx.send(output)
 
