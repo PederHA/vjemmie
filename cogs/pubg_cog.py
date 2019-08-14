@@ -100,14 +100,16 @@ class PUBGCog(BaseCog):
 
         default_squad = ("Simon", "Hugo", "Travis", "Steve")
 
+        tts = "tts" in players
+        
         # Resort to default squad if no players arguments
         if not players:
             squad = default_squad
-
+        
         # Get players from ctx.author's voice channel
         elif len(players) == 1 and players[0] in ["channel", "c", "ch", "chanel"]:
             try:
-                squad = [user async for user in self.get_users_in_voice(ctx)]
+                squad = [user async for user in self.get_users_in_voice(ctx, nick=True)]
             except AttributeError:
                 raise CommandError(
                     f"Must be connected to a voice channel to use `{players[0]}` argument."
@@ -134,8 +136,9 @@ class PUBGCog(BaseCog):
 
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
         
-        cmd = self.bot.get_command("tts")
-        await ctx.invoke(cmd, output, "en", "crate")
+        if tts:
+            cmd = self.bot.get_command("tts")
+            await ctx.invoke(cmd, output[3:-3], "en", "crate")
 
         await ctx.send(output)
 
