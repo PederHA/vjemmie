@@ -1,22 +1,25 @@
 import asyncio
-from datetime import datetime, timedelta
-from typing import Optional, Union
-from functools import partial
 from collections import namedtuple
+from datetime import datetime, timedelta
+from functools import partial
+from typing import Optional, Union, Awaitable
 
 import discord
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog, EmbedField
+from config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS
+from utils.access_control import (Categories, add_trusted_member,
+                                  add_trusted_role, get_trusted_members,
+                                  get_trusted_roles, remove_trusted_member,
+                                  remove_trusted_role)
 from utils.checks import admins_only, load_blacklist, save_blacklist
-from config import YES_ARGS, TRUSTED_DIR, TRUSTED_PATH
-from utils.access_control import add_trusted_user, remove_trusted_user, get_trusted_users
 from utils.exceptions import CommandError
 
 Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
 
 class AdminCog(BaseCog):
-    DISABLE_HELP = True
+    DISABLE_HELP = False
     ACTIVITY_ROTATION = True
 
     FILES = [TRUSTED_PATH]
@@ -29,7 +32,7 @@ class AdminCog(BaseCog):
         """
         print("Bot logged in")
         await self.run_activity_rotation()
-        
+
     async def run_activity_rotation(self) -> None:
         ctx = await self.get_command_invocation_ctx()
         async def new_send(*args, **kwargs):
@@ -37,14 +40,14 @@ class AdminCog(BaseCog):
         ctx.send = new_send
 
         p = self.bot.command_prefix
-        
+
         acitivities = [
             Activity(f"{p}about"),
             Activity(f"{p}help"),
             Activity(f"{p}commands"),
-            Activity("Uptime: ", partial(self.bot.get_cog("StatsCog").get_bot_uptime, type=str))   
+            Activity("Uptime: ", partial(self.bot.get_cog("StatsCog").get_bot_uptime, type=str))
         ]
-        
+
         while self.ACTIVITY_ROTATION:
             for ac in acitivities:
                 if not ac.text and not ac.callable:
@@ -58,21 +61,21 @@ class AdminCog(BaseCog):
                 else:
                     await self._change_activity(ac.text)
                 await asyncio.sleep(30)
-    
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Called when bot joins a guild."""
         await self.send_log(f"Joined guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
-    
+
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Called when bot leaves a guild."""
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
-    
+
     async def _change_activity(self, activity_name: str) -> None:
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
-    
+
     @commands.command(aliases=["ca"])
     @admins_only()
     async def change_activity(self, ctx: commands.Context, activity_name: Optional[str]=None) -> None:
@@ -87,14 +90,14 @@ class AdminCog(BaseCog):
         """
         if activity_name:
             # Disable activity rotation when manually changing bot activity
-            self.ACTIVITY_ROTATION = False 
+            self.ACTIVITY_ROTATION = False
             await self._change_activity(activity_name)
         elif not activity_name and not self.ACTIVITY_ROTATION:
             # Run activity rotation
             self.ACTIVITY_ROTATION = True
             await self.run_activity_rotation()
         # Do nothing if activity rotation is active and no argument is passed in
-    
+
     @commands.command(name="serverlist")
     @admins_only()
     async def serverlist(self, ctx: commands.Context) -> None:
@@ -123,11 +126,11 @@ class AdminCog(BaseCog):
         """
         # Get discord.Guild object for guild with ID guild_id
         guild = self.bot.get_guild(int(guild_id))
-        
+
         # Raise exception if guild is not found
         if not guild:
             return await ctx.send(f"No guild with ID {guild_id}")
-        
+
         try:
             await guild.leave()
         except discord.HTTPException:
@@ -188,8 +191,8 @@ class AdminCog(BaseCog):
             out_msg = await self.format_markdown_list(out_list)
         else:
             out_msg = await self.make_codeblock("Blacklist is empty")
-        await ctx.send(out_msg)        
-    
+        await ctx.send(out_msg)
+
     @commands.command(name="unblacklist", aliases=["remove_blacklist", "rblacklist"])
     @admins_only()
     async def unblacklist(self, ctx: commands.Context, member: commands.MemberConverter=None, command: str=None, *, output: bool=True) -> None:
@@ -229,18 +232,18 @@ class AdminCog(BaseCog):
 
     @commands.command(name="delete_messages", aliases=["dlt"])
     @admins_only()
-    async def delete_messages(self, 
-                              ctx: commands.Context, 
+    async def delete_messages(self,
+                              ctx: commands.Context,
                               member: str=None,
                               content: Optional[str]=None) -> None:
-        
+
         after = datetime.now() - timedelta(hours=2)
 
         try:
             member = await commands.MemberConverter().convert(ctx, member)
         except:
             member = None
-    
+
         n = 0
         async for msg in ctx.message.channel.history(limit=250, after=after):
             if content and content in msg.content and msg.content != ctx.message.content:
@@ -254,20 +257,20 @@ class AdminCog(BaseCog):
 
     @commands.command(name="react")
     @admins_only()
-    async def react_to_message(self, 
-                               ctx: commands.Context, 
-                               message_id: int, 
+    async def react_to_message(self,
+                               ctx: commands.Context,
+                               message_id: int,
                                emoji: str,
                                channel_id: int=None) -> None:
         """Adds emoji reaction to a specific message posted in
         `ctx.channel` or in a specific channel."""
         # Get channel
         channel = self.bot.get_channel(channel_id) if channel_id else ctx.channel
-        
+
         # Iterate through 500 most recent messages
         async for msg in channel.history(limit=500):
             if msg.id == message_id:
-                return await msg.add_reaction(emoji)         
+                return await msg.add_reaction(emoji)
         else:
             return await ctx.send(
                 # Should improve wording of this message
@@ -278,37 +281,85 @@ class AdminCog(BaseCog):
     async def trusted(self, ctx: commands.Context) -> None:
         if not ctx.guild:
             raise CommandError("This action cannot be performed in a DM channel.")
-        
+
         if not ctx.invoked_subcommand:
             return
-        
+
     @trusted.command(name="add")
     @admins_only()
-    async def trusted_add(self, ctx: commands.Context, user: commands.UserConverter) -> None:
-        add_trusted_user(ctx.guild.id, user.id)
-        await ctx.send(f"Added {user.name} to {ctx.guild.name}'s trusted users!")
+    async def trusted_add(self, ctx: commands.Context, member: commands.MemberConverter) -> None:
+        add_trusted_member(ctx.guild.id, member.id)
+        await ctx.send(f"Added {member.name} to {ctx.guild.name}'s trusted members!")
+
+    @trusted.command(name="addrole", alias=["addrank", "add_role", "add_rank"])
+    @admins_only()
+    async def trusted_add_role(self, ctx: commands.Context, role: commands.RoleConverter) -> None:
+        add_trusted_role(ctx.guild.id, role.id)
+        await ctx.send(f"Added {role.name} to {ctx.guild.name}'s trusted roles!")
 
     @trusted.command(name="remove", aliases=["delete", "rm"])
     @admins_only()
-    async def trusted_remove(self, ctx: commands.Context, user: commands.UserConverter) -> None:
+    async def trusted_remove(self, ctx: commands.Context, member: commands.MemberConverter) -> None:
         try:
-            remove_trusted_user(ctx.guild.id, user.id)
+            remove_trusted_member(ctx.guild.id, member.id)
         except ValueError:
-            await ctx.send(f"{user.name} is not in list of trusted users!")
+            await ctx.send(f"{member.name} is not a part of this guild's trusted members!")
         else:
-            await ctx.send(f"Removed **`{user.name}`** from {ctx.guild.name}'s trusted users!")
+            await ctx.send(f"Removed **`{member.name}`** from {ctx.guild.name}'s trusted members!")
 
-    @trusted.command(name="list", aliases=["show"])
+    @trusted.command(name="removerole", aliases=["remove_role", "removerank", "remove_rank", "rmrole"])
     @admins_only()
+    async def trusted_remove_role(self, ctx: commands.Context, role: commands.RoleConverter) -> None:
+        try:
+            remove_trusted_role(ctx.guild.id, role.id)
+        except ValueError:
+            await ctx.send(f"{role.name} is not a part of this guild's trusted roles!")
+        else:
+            await ctx.send(f"Removed **`{role.name}`** from {ctx.guild.name}'s trusted roles!")
+
+    #@trusted.command(name="list", aliases=["show"])
+    #@admins_only()
+    @trusted.group(name="list", aliases=["show"])
     async def trusted_show(self, ctx: commands.Context) -> None:
-        users = get_trusted_users(ctx.guild.id)
+        if not ctx.invoked_subcommand:
+            #self.bot.get_command(ctx.invoked_with)
+            cmds = "/".join([cmd.name for cmd in ctx.command.commands])
+            return await ctx.send("No subcommand invoked! \n"
+                f"**Usage:** `{ctx.command.qualified_name} <{cmds}>`")
+
+    @trusted_show.command(name="members", aliases=["users"])
+    async def trusted_show_users(self, ctx: commands.Context) -> None:
+        await self._show_trusted(ctx, category="members", content=self.fmt_trusted_members)
+
+    @trusted_show.command(name="roles")
+    async def trusted_show_roles(self, ctx: commands.Context) -> None:
+        await self._show_trusted(ctx, category="roles", content=self.fmt_trusted_roles)
+
+    async def _show_trusted(self, ctx: commands.Context, category: str, content: Awaitable) -> None:
+        content = await content(ctx)
         
-        if not users:
-            return await ctx.send("No trusted users added.")
-        
+        if not content:
+            return await ctx.send(f"No trusted {category} added.")
+
+        await self.send_embed_message(
+            ctx,
+            title=f"{ctx.guild.name} Trusted {category.capitalize()}",
+            description=content,
+            color=self.get_bot_color(ctx))
+
+    async def fmt_trusted_members(self, ctx: commands.Context) -> str:
+        members = get_trusted_members(ctx.guild.id)
+
         # drop users whose ID can't be identified
-        users = list(filter(None.__ne__, [self.bot.get_user(user) for user in users]))
-        
+        users = list(filter(None.__ne__, [self.bot.get_user(member) for member in members]))
         users = "\n".join([f"{u.name}`#{u.discriminator}`" for u in users])
-        
-        await self.send_embed_message(ctx, title="Trusted Users", description=users, color=self.get_bot_color(ctx))
+
+        return users
+
+    async def fmt_trusted_roles(self, ctx: commands.Context) -> str:
+        roles = get_trusted_roles(ctx.guild.id)
+
+        roles = list(filter(None.__ne__, [await commands.RoleConverter().convert(ctx, str(role)) for role in roles]))
+        roles = "\n".join([role.name for role in roles])
+
+        return roles
