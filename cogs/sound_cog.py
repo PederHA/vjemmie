@@ -30,6 +30,7 @@ from utils.checks import admins_only, trusted
 from utils.converters import SoundURLConverter, URLConverter
 from utils.exceptions import (CommandError, InvalidVoiceChannel,
                               VoiceConnectionError)
+from utils.parsing import split_text_numbers
 from utils.messaging import ask_user_yes_no
 from utils.spotify import get_spotify_song_info
 from utils.youtube import youtube_get_top_result
@@ -256,7 +257,7 @@ class SoundCog(BaseCog):
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
         
-        self._sound_list = {}
+        self.sound_list # initialize sound list
 
     @property
     def sound_list(self) -> dict:
@@ -267,21 +268,24 @@ class SoundCog(BaseCog):
         ----
         Raises Exception if no sound files are found.
         """
+        # This is a mess now
         sound_list = {}
         for sd in self.sub_dirs:
             sl = sd.sound_list
             for k in list(sl.keys()):
                 if k in sound_list:
-                    new_name = self.get_unique_filename(k, ext_sound_list=sound_list)
+                    new_name = self.get_unique_filename(k, ext_sound_list={**sound_list, **sl})
                     self._do_rename_file(sd.path, k, new_name)
-                    sl[new_name] = sl.pop(k)
+                    sound_list[new_name] = sl.pop(k)
                     print(f"{sd.path}/{k} has been renamed to {sd.path}/{new_name}")
             sound_list.update(sl)
-        self._sound_list = sound_list
         if not sound_list:
             raise ValueError("No local sound files exist!")
-        return self._sound_list
- 
+        return sound_list
+    
+    def _sound_list_init(self) -> None:
+        pass
+
     async def cleanup(self, guild: discord.Guild) -> None:
         try:
             await guild.voice_client.disconnect()
@@ -367,17 +371,13 @@ class SoundCog(BaseCog):
         """Creates audio source from local file and adds it to player queue."""
         try:
             if sound_name:
-                try:
-                    subdir = self.sound_list[sound_name]
-                except KeyError:
-                    raise CommandError(f"No sound file named **`{sound_name}`**") 
                 subdir = self.sound_list[sound_name]
             else:
                 # Select random sound if no argument
                 sound_name = random.choice(list(self.sound_list))
                 subdir = self.sound_list[sound_name]            
         # Attempt to suggest sound files with similar names if no results
-        except CommandError:
+        except KeyError:
             embeds = await self._do_search(sound_name, ctx)
             if embeds and len(embeds) <= len(self.sub_dirs):
                 dym = "Did you mean:"  
@@ -753,6 +753,7 @@ class SoundCog(BaseCog):
         await self.bot.loop.run_in_executor(None, to_run)
         
         return filename
+    
     @commands.command(name="add_sound", usage="<url> or <file attachment>")
     @trusted()
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
@@ -843,12 +844,21 @@ class SoundCog(BaseCog):
     
     def get_unique_filename(self, filename: str, *, ext_sound_list: dict=None) -> str:
         # Increment i until a unique filename is found
-        for i in count():
-            if i == 0: # we don't need a number if first attempted filename is unique
-                i = ""
+        sl = ext_sound_list if ext_sound_list else self.sound_list
+        
+        # Check if filename has a trailing number that can be incremented
+        head, tail = split_text_numbers(filename)  
+        if tail.isnumeric():
+            filename = head
+            start = int(tail)
+        else:
+            start = 0
+        
+        for i in count(start=start):
+            # we don't need a number if first attempted filename is unique
+            i = "" if i==0 else i
             fname = f"{filename}{i}"
-            
-            if not self._sound_list or fname not in self._sound_list:
+            if fname not in sl:
                 return fname
 
     @commands.command(name="rename")
