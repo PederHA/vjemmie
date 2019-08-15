@@ -755,7 +755,6 @@ class SoundCog(BaseCog):
         return filename
     
     @commands.command(name="add_sound", usage="<url> or <file attachment>")
-    @trusted()
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
         """Download sound file to soundboard.
         
