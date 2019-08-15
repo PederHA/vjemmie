@@ -14,7 +14,9 @@ class PUBGCog(BaseCog):
     """PUBG commands"""
     
     EMOJI = "<:pubghelm:565522877902749726>"
-
+    
+    DEFAULT_SQUAD = ["Simon", "Hugo", "Travis", "Steve"]
+    
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"
     )
@@ -92,22 +94,25 @@ class PUBGCog(BaseCog):
         name="crate",
         aliases=["crateplay", "dibs", "airdrop"],
         description="nah mate ur not getting the awm",
+        usage="<name1>, <name2>, ...[namelast] OR 'c'"
     )
     async def crate(self, ctx: commands.Context, *players):
         """
         Distributes airdrop loot among a squad.
         """
-
-        default_squad = ("Simon", "Hugo", "Travis", "Steve")
-
-        tts = "tts" in players
+        # Make players iterable a mutable object
+        players = list(players)
         
+        tts = "tts" in players 
+        if tts:
+            players.remove("tts")
+  
         # Resort to default squad if no players arguments
         if not players:
-            squad = default_squad
+            squad = self.DEFAULT_SQUAD
         
         # Get players from ctx.author's voice channel
-        elif len(players) == 1 and players[0] in ["channel", "c", "ch", "chanel"]:
+        elif players[0] in ["channel", "c", "ch", "chanel"]:
             try:
                 squad = [user async for user in self.get_users_in_voice(ctx, nick=True)]
             except AttributeError:
@@ -117,7 +122,7 @@ class PUBGCog(BaseCog):
             else:
                 if len(squad) < 2:
                     raise CommandError(
-                        "A minimum number of 2 people is required!"
+                        "A minimum of 2 users must be connected to the voice channel!"
                         )                    
       
        # At least 2 players must be specified 
@@ -137,8 +142,9 @@ class PUBGCog(BaseCog):
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
         
         if tts:
-            cmd = self.bot.get_command("tts")
-            await ctx.invoke(cmd, output[3:-3], "en", "crate")
+            sc = self.bot.get_cog("SoundCog")
+            filename = await sc._do_create_tts_file(output[3:-3], "en", "pubgcrate", overwrite=True)
+            await ctx.invoke(sc.play, filename)
 
         await ctx.send(output)
 
