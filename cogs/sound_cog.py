@@ -720,37 +720,39 @@ class SoundCog(BaseCog):
                     f"{lang_long}" for lang_short, lang_long in valid_langs.items()
                     ]
             langs = "\n".join(_langs)
-            await self.send_embed_message(ctx, "Code\tLanguage", langs)
-            return
-
-        # Get tts object
-        tts = gtts.gTTS(text=text, lang=language)
-
+            return await self.send_embed_message(ctx, "Code\tLanguage", langs)
+            
         await ctx.trigger_typing()
 
-        # Check argument to param filename
-        if filename:
-            filename = sanitize_filename(filename)
         # Use first word of text if no filename
-        else:
-            filename = sanitize_filename(text.split(" ")[0])
+        if not filename:
+            filename = text.split(" ")[0]
 
-        # Check filename. If filename is taken or invalid, generate filename from text    
-        sound_name = self.get_unique_filename(filename)
+        filename = await self._do_create_tts_file(text, language, filename)
 
-        # Save mp3 file
-        to_run = partial(tts.save, f"{TTS_DIR}/{sound_name}.mp3")
-        await self.bot.loop.run_in_executor(None, to_run)
-
-        # Confirm creation of file
-        await ctx.send(f'TTS audio file created: **`{sound_name}`**')
+        await ctx.send(f'TTS audio file created: **`{filename}`**')
 
         # Try to play created sound file in author's voice channel afterwards
-        with suppress(AttributeError):
-            if ctx.message.author.voice.channel:
-                cmd  = self.bot.get_command('play')
-                await ctx.invoke(cmd, sound_name)
+        #with suppress(AttributeError):
+        if ctx.message.author.voice:
+            cmd  = self.bot.get_command('play')
+            await ctx.invoke(cmd, filename)
 
+    async def _do_create_tts_file(self, text: str, language: str, filename: str, *, directory: str=TTS_DIR, overwrite: bool=False) -> None:
+        # Get tts object
+        tts = gtts.gTTS(text=text, lang=language)
+        
+        filename = sanitize_filename(filename)
+
+        if not overwrite:
+            # Check filename uniqueness  
+            filename = self.get_unique_filename(filename)
+        
+        # Save mp3 file
+        to_run = partial(tts.save, f"{directory}/{filename}.mp3")
+        await self.bot.loop.run_in_executor(None, to_run)
+        
+        return filename
     @commands.command(name="add_sound", usage="<url> or <file attachment>")
     @trusted()
     async def add_sound(self, ctx: commands.Context, url: str=None, filename: str=None) -> None:
