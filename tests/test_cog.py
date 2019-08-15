@@ -455,6 +455,22 @@ class TestCog(BaseCog):
     #async def test_soundcog_search_result(self, ctx: commands.Context) -> None:
     #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
     
+    @voice
+    @network_io
+    async def test_soundcog_tts_default(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "tts", "test")
+    
+    @voice
+    @network_io
+    async def test_soundcog_tts_language(self, ctx: commands.Context) -> None:
+        await asyncio.sleep(0.5)
+        await self.do_test_command(ctx, "tts", "test", "sv")
+    @voice
+    @network_io
+    async def test_soundcog_tts_filename(self, ctx: commands.Context) -> None:
+        await asyncio.sleep(0.5)
+        await self.do_test_command(ctx, "tts", "test", "en", "customfilename")    
+    
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
