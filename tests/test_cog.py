@@ -178,8 +178,10 @@ class TestCog(BaseCog):
 
     async def _post_tests_cleanup(self, ctx) -> None:
         """Calls methods required for cleanup after running tests."""
-        # Nothing here for now
-        pass
+        # Destroy audio player
+        sc = self.bot.get_cog("SoundCog")
+        await ctx.invoke(sc.destroy_player)
+    
 
     @contextmanager
     def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
