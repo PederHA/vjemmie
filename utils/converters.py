@@ -12,6 +12,7 @@ from discord.ext.commands.converter import IDConverter, _get_from_guilds
 from discord.ext.commands.errors import BadArgument
 
 from utils.exceptions import CommandError
+from utils.messaging import fetch_message
 from config import YES_ARGS
 
 
@@ -208,3 +209,13 @@ class BoolConverter(commands.Converter):
             return arg in self.options + YES_ARGS
 
         return False
+
+class MessageIdOrStringConverter(commands.Converter):
+    """Accepts a message ID or a string. Returns `str`."""
+    async def convert(self, ctx: commands.Context, arg: str) -> str:
+        if arg.isnumeric():
+            msg = fetch_message(ctx, arg)
+            return msg.content
+        else:
+            return arg
+            
