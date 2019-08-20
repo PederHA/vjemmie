@@ -49,7 +49,7 @@ ytdlopts = {
 }
 
 ffmpegopts = {
-    'before_options': "-nostdin -probesize 10M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60",
+    'before_options': "-nostdin -probesize 20M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60",
     'options': '-vn'
 }
 
