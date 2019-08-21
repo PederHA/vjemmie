@@ -34,11 +34,6 @@ class AdminCog(BaseCog):
         await self.run_activity_rotation()
 
     async def run_activity_rotation(self) -> None:
-        ctx = await self.get_command_invocation_ctx()
-        async def new_send(*args, **kwargs):
-            pass
-        ctx.send = new_send
-
         p = self.bot.command_prefix
 
         acitivities = [
