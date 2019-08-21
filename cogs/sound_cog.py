@@ -130,10 +130,11 @@ class AudioPlayer:
         self.bot = ctx.bot
         self.guild = ctx.guild
         self.channel = ctx.channel
-        if ctx.cog.qualified_name == "SoundCog":
-            self.cog = ctx.cog
-        else:
+        
+        if not ctx.cog or ctx.cog.qualified_name != "SoundCog":
             self.cog = self.bot.get_cog("SoundCog")
+        else:
+            self.cog = ctx.cog
 
         self.created_at = datetime.now()
 
