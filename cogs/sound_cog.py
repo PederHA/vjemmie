@@ -49,8 +49,8 @@ ytdlopts = {
 }
 
 ffmpegopts = {
-    'before_options': "-nostdin -probesize 20M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60",
-    'options': '-vn'
+    "before_options": "",
+    "options": "-nostdin -probesize 32 -bufsize 1M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60 -vn"
 }
 
 ytdl = YoutubeDL(ytdlopts)
