@@ -622,7 +622,7 @@ class SoundCog(BaseCog):
         
         # Join args into space-separated search query string
         query = " ".join(query)
-        if not query or all(char == " " for char in query):
+        if not query or query.isspace():
             raise CommandError("Search query cannot be an empty string.")
         
         embeds = await self._do_search(query, ctx)
