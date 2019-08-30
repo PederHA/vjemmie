@@ -92,13 +92,13 @@ class RedditCog(BaseCog):
     def NSFW_WHITELIST(self):
         return get_cached("db/reddit/nsfw_whitelist.json", category="reddit")
     
-    def clear_submission_cache(self) -> None:
+    def init_submissions_cache(self) -> None:
         self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
     
     async def submission_refresh_loop(self) -> None:
         """Wipes reddit submission cache once daily"""
         while True:
-            self.clear_submission_cache()
+            self.init_submissions_cache()
             await asyncio.sleep(86400) # 1 day
 
     @commands.group(name="reddit")
@@ -455,7 +455,7 @@ class RedditCog(BaseCog):
     @reddit.command(name="wipe", aliases=["clear"])
     @admins_only()
     async def wipe_reddit_cache(self, ctx: commands.Context) -> None:
-        self.clear_submission_cache()
+        self.init_submissions_cache()
         await ctx.send("Wiped Reddit submissions cache successfully!")
 
     async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
