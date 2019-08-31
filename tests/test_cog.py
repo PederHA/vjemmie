@@ -7,10 +7,12 @@ import copy
 import inspect
 import traceback
 import operator
+import time
 from itertools import cycle
 from contextlib import contextmanager
 from unittest.mock import Mock
 from functools import wraps, partial
+from pathlib import Path
 from typing import Coroutine, Awaitable, ContextManager, Any, TypeVar, Callable
 
 import discord
@@ -65,6 +67,8 @@ class TestCog(BaseCog):
     DISABLE_HELP = True
     FAIL_MSG = "{cmd_name} {a_kw} ❌"
     PASS_MSG = "{cmd_name} {a_kw} ✔️"
+
+    DIRS = ["tests/logs"]
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
@@ -125,7 +129,7 @@ class TestCog(BaseCog):
                     "**NOTE:** In order to run all tests you must be connected to a voice channel!")
             else:
                 return await ctx.send("Aborting.")
-
+  
         # Store test results
         passed = []
         failed = []
@@ -291,8 +295,16 @@ class TestCog(BaseCog):
 
     async def log_test_error(self, cmd_name) -> None:
         exc_info = traceback.format_exc()
-        with open(f"tests/logs/{cmd_name}.txt", "w") as f:
+        
+        p = Path(f"tests/logs/{str(int(time.time()))[:-1]}.txt")
+        
+        if not p.exists():
+            p.touch()
+        
+        with open(p, "a") as f:
             f.write(exc_info)
+            f.write("\n\n")
+
         if self.verbose:
             print(exc_info)
 
