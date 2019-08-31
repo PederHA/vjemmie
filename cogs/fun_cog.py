@@ -133,7 +133,7 @@ class FunCog(BaseCog):
         arg = " ".join(args)
         
         # Try to fetch message if arg is a number
-        if arg.isnumeric():
+        if arg.isdigit():
             msg = await fetch_message(ctx, arg)
             to_trans = msg.content
         else:
