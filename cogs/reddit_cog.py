@@ -81,8 +81,8 @@ class RedditCog(BaseCog):
         self.bot.loop.create_task(self.submission_refresh_loop())
 
     def load_subs(self) -> dict:
-        _subs = get_cached("db/reddit/subs.json")
-        return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub  in _subs.items()}
+        subs = get_cached("db/reddit/subs.json")
+        return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub in subs.items()} if subs else {}
 
     def dump_subs(self) -> None:
         if self.subs:
