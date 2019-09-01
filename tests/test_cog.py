@@ -73,10 +73,13 @@ class TestCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.pfix = self.bot.command_prefix
+        
         self.verbose = True
         self.msg_enabled = False
         self.network_io_enabled = False # Enables commands such as: !meme, !reddit get, !twitter add
         self.discord_io_enabled = False # Enables commands such as: !fuckup, !mlady
+
+        self.test_id = None # id of a set of active tests
 
     @commands.command(name="tverbose", aliases=["terminal_verbose"])
     async def toggle_terminal_verbose(self, ctx: commands.Context) -> None:
@@ -134,6 +137,9 @@ class TestCog(BaseCog):
         passed = []
         failed = []
 
+        # Run pre-test configuration
+        await self._pre_tests_setup()
+
         # Temporarily patch ctx to disable message sending while invoking bot commands
         with self.patch_ctx(ctx) as ctx_:
             # Find tests
@@ -180,12 +186,18 @@ class TestCog(BaseCog):
         else:
             return True
 
+    async def _pre_tests_setup(self) -> None:
+        # Generate unique ID for tests
+        self.test_id = int(time.time())
+    
     async def _post_tests_cleanup(self, ctx) -> None:
         """Calls methods required for cleanup after running tests."""
         # Destroy audio player
         sc = self.bot.get_cog("SoundCog")
         await ctx.invoke(sc.destroy_player)
-    
+
+        # Reset test ID
+        self.test_id = None
 
     @contextmanager
     def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
@@ -294,9 +306,11 @@ class TestCog(BaseCog):
         return passed
 
     async def log_test_error(self, cmd_name) -> None:
+        """Logs test error to log file and optionally prints 
+        traceback of error."""
         exc_info = traceback.format_exc()
         
-        p = Path(f"tests/logs/{str(int(time.time()))[:-1]}.txt")
+        p = Path(f"tests/logs/{self.test_id}.txt")
         
         if not p.exists():
             p.touch()
