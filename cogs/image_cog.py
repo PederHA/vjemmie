@@ -300,8 +300,9 @@ class ImageCog(BaseCog):
 
         return image
 
-    @commands.command(name="totext", enabled=True)
+    @commands.command(name="totext", usage="<url> or <msg attachment>")
     async def img_to_txt(self, ctx: commands.Context, url: str=None) -> None:
+        """Grab text from image."""
         if not url and not ctx.message.attachments:
             raise CommandError("An image URL or an image message attachment is required!")
         
