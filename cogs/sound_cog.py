@@ -49,8 +49,8 @@ ytdlopts = {
 }
 
 ffmpegopts = {
-    "before_options": "",
-    "options": "-nostdin -probesize 32 -bufsize 1M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60 -vn"
+    "before_options": "-nostdin -timeout 10",
+    "options": "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60 -vn"
 }
 
 ytdl = YoutubeDL(ytdlopts)
@@ -100,7 +100,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         else:
             return {"webpage_url": data["webpage_url"], "requester": ctx.author, "title": data["title"]}
         
-        return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(source, **ffmpegopts), data=data, requester=ctx.author)
 
     @classmethod
     async def create_local_source(cls, ctx, subdir: str, filename: str):
@@ -109,7 +109,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # Send add-to-queue confirmation
         await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
 
-        return cls(discord.FFmpegPCMAudio(str(path), options=["-muxpreload", "2"]), data={"title":filename}, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(str(path)), data={"title":filename}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
