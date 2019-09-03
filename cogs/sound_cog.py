@@ -257,8 +257,6 @@ class SoundCog(BaseCog):
 
         # Number of sounds played by guilds in the current session
         self.played_count: DefaultDict[int, int] = defaultdict(int) # Key: Guild ID. Value: n times played
-        
-        self.sound_list # initialize sound list
 
     @property
     def sound_list(self) -> dict:

@@ -3,6 +3,7 @@ import io
 import math
 import random
 import traceback
+import re
 from functools import partial
 from pprint import pprint
 from typing import Union
@@ -18,20 +19,16 @@ from utils.messaging import fetch_message
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
     "fuck": "fack",
-    "ath": "af",
-    "eth": "ef",
-    "ith": "if",
-    "oth": "of",
-    "uth": "uf",
-    "they": "dey",
-    "the": "de",
+    "ath": "aff",
+    "eth": "eff",
+    "ith": "iff",
+    "oth": "off",
+    "uth": "uff",
+    "they": "deyy",
+    "the": "dee",
     "r": "w",
     "l": "w"
 }
-# Upper-case translations
-UWU_MAPPING.update({k.upper(): v.upper() for k, v in UWU_MAPPING.items()})
-# Mixed-case translation
-UWU_MAPPING.update({k[0].upper()+k[1:]: v[0].upper()+v[1:] for k, v in UWU_MAPPING.items() if len(k)>1})
 
 BRAILLE_MAPPING = {
     "a": "⠁",
@@ -122,7 +119,8 @@ class FunCog(BaseCog):
 
     def do_braille_transliterate(self, text: str) -> str:
         """Public braille transliteration method other cogs can use."""
-        text = text.lower()
+        text = text.casefold()
+        re.search(r"([a-z0-9,.!? ]+)", text)
         return self._do_transliterate(text, BRAILLE_MAPPING)
 
     @commands.command(name="uwu", aliases=["owo"], usage="<message string> or <message_ID>")
@@ -131,7 +129,7 @@ class FunCog(BaseCog):
         arg = " ".join(args)
         
         # Try to fetch message if arg is a number
-        if arg.isnumeric():
+        if arg.isdigit():
             msg = await fetch_message(ctx, arg)
             to_trans = msg.content
         else:
@@ -150,7 +148,34 @@ class FunCog(BaseCog):
         """Public UwU transliteration method other cogs can use."""
         return self._do_transliterate(text, UWU_MAPPING)
 
-    def _do_transliterate(self, text: str, mapping: dict) -> str:
+    def _do_transliterate(self, text: str, mapping: dict) -> str:     
+        # Get capitalization of each character in string
+        caps = []
+        for char in text:
+            caps.append(1 if char.isupper() else 0)
+        
+        # Fold case of string before transliterating
+        text = text.casefold()
+
+        # Replace characters with those in mapping
         for k, v in mapping.items():
-            text = text.replace(k, v)  
-        return text 
+            text = text.replace(k, v)
+        
+        # Transliterate 1 word at the time
+        s = []
+        word = []
+        for cap, char in zip(caps, text):
+            if cap:
+                char = char.upper()
+            if not char.isspace():
+                word.append(char)
+            else:
+                s.append(word)
+                word = [] 
+        else:
+            s.append(word)
+        
+        # Join words
+        trans = " ".join(["".join(w) for w in s])
+        
+        return trans

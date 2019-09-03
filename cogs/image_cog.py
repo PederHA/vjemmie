@@ -39,14 +39,10 @@ class ImageCog(BaseCog):
                 )
             return await self.send_embed_message(ctx, f"!{ctx.invoked_with}", out_str)
         
+        # Add command parameters
         parser = argparse.ArgumentParser()
-        
-        # Add possible user arguments to parser
-        parser.add_argument("-url", default=None, type=str) 
-        parser.add_argument("-text", default=None, type=str)
-        parser.add_argument("-emoji", default=None, type=str)
-        parser.add_argument("-caption", default=None, type=str)
-        parser.add_argument("-list", default=None, type=str)
+        for arg in ["-url", "-text", "-emoji", "-caption", "-list"]:
+            parser.add_argument(arg, default=None, type=str)
 
         # Parse only arguments defined above
         a = parser.parse_known_args(args=args)[0]    
