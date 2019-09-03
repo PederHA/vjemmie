@@ -30,6 +30,7 @@ from utils.checks import admins_only, trusted
 from utils.converters import SoundURLConverter, URLConverter
 from utils.exceptions import (CommandError, InvalidVoiceChannel,
                               VoiceConnectionError)
+from utils.filetypes import check_file_audio
 from utils.parsing import split_text_numbers
 from utils.messaging import ask_user_yes_no
 from utils.spotify import get_spotify_song_info
@@ -774,7 +775,7 @@ class SoundCog(BaseCog):
         if not ctx.message.attachments and not url:
             return await self.send_error_msg(ctx, "A file attachment or file URL is required!")
 
-        # Use attachment URL if possible
+        # Use attachment URL if message has attachment
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
             filename, url = url, attachment.url
@@ -820,22 +821,23 @@ class SoundCog(BaseCog):
             filename = fname
         filename = sanitize_filename(filename)
 
-        # Check if file type is valid
+        # Check if file extension is recognized
         if ext not in FILETYPES:
             raise CommandError("Downloaded file is of an invalid filetype.")
-        
-        # Get file path
-        filename = self.get_unique_filename(filename)
-        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"           
         
         # Attempt to download file
         sound_file = await self.download_from_url(ctx, url)
 
-        # Save file
+        # Check if downloaded file is actually an audio file
+        if not check_file_audio(sound_file):
+            raise CommandError("Downloaded file does not appear to be an audio file!")
+        
+        filename = self.get_unique_filename(filename)
+        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"             
+        
         with open(filepath, "wb") as f:
             f.write(sound_file.getvalue())
 
-        # Log downloaded file
         await self.log_file_download(ctx, url=url, filename=f"{filename}{ext}")        
         
         return filename
