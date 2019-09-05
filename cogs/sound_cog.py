@@ -50,8 +50,8 @@ ytdlopts = {
 }
 
 ffmpegopts = {
-    "before_options": "-nostdin -timeout 10",
-    "options": "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60 -vn"
+    "before_options": "",
+    "options": "-nostdin -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60
 }
 
 ytdl = YoutubeDL(ytdlopts)
@@ -101,7 +101,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         else:
             return {"webpage_url": data["webpage_url"], "requester": ctx.author, "title": data["title"]}
         
-        return cls(discord.FFmpegPCMAudio(source, **ffmpegopts), data=data, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
 
     @classmethod
     async def create_local_source(cls, ctx, subdir: str, filename: str):
