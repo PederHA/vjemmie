@@ -681,5 +681,5 @@ class RedditCog(BaseCog):
             '!d2, !dota, !dota2'
         """
         subreddit, aliases, *_ = cmd
-        command = self.bot.command_prefix
-        return command + f", {command}".join(aliases+[subreddit]) if aliases else command + subreddit
+        pfix = self.bot.command_prefix
+        return pfix + f", {pfix}".join(aliases+[subreddit]) if aliases else pfix + subreddit
