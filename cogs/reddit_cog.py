@@ -505,6 +505,10 @@ class RedditCog(BaseCog):
 
     def _is_nsfw(self, ctx: commands.Context, sub: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
         """Determines if subreddit or reddit submission is appropriate for a channel."""
+        # Always allow if channel is marked NSFW
+        if ctx.channel.nsfw:
+            return False
+        
         if isinstance(sub, praw.models.Submission):
             subreddit = sub.subreddit.display_name.lower()
             over_18 = sub.over_18
@@ -513,12 +517,8 @@ class RedditCog(BaseCog):
             over_18 = sub.over18
         else:
             raise TypeError('Argument "sub" must be a praw Submission or Subreddit')
-        
-        # Always allow if channel is marked NSFW
-        if ctx.channel.nsfw:
-            return False
-        else:
-            return True if over_18 and subreddit not in self.NSFW_WHITELIST else False
+
+        return True if over_18 and subreddit not in self.NSFW_WHITELIST else False
 
 
     async def _get_random_reddit_post(self, guild_id: int, subreddit: str, sorting: str, time: str, is_text: bool) -> praw.models.Submission:
