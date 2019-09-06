@@ -368,7 +368,7 @@ class BaseCog(commands.Cog):
 
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> Iterator[str]:
         """
-        Generator of discord users in voice channel of ctx.message.author.
+        Generator of discord user-/nicknames of users in ctx voice channel.
         """
         if not hasattr(ctx.message.author.voice, "channel"):
             raise discord.DiscordException("Message author is not connected to a voice channel.")
