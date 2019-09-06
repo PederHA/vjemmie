@@ -234,6 +234,9 @@ class RedditCog(BaseCog):
         ctx : `commands.Context`
             Discord Context object
         """
+        if not self.subs:
+            return await ctx.send("No subreddits are added!")
+        
         _out = []
         longest_subreddit = max([len(cmd.subreddit) for cmd in self.subs.values()]) + 1
         for cmd in sorted(self.subs.values(), key=lambda cmd: cmd.subreddit):
