@@ -30,6 +30,7 @@ from utils.checks import admins_only, trusted
 from utils.converters import SoundURLConverter, URLConverter
 from utils.exceptions import (CommandError, InvalidVoiceChannel,
                               VoiceConnectionError)
+from utils.filetypes import check_file_audio
 from utils.parsing import split_text_numbers
 from utils.messaging import ask_user_yes_no
 from utils.spotify import get_spotify_song_info
@@ -50,7 +51,7 @@ ytdlopts = {
 
 ffmpegopts = {
     "before_options": "",
-    "options": "-nostdin -probesize 32 -bufsize 1M -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60 -vn"
+    "options": "-nostdin -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 60"
 }
 
 ytdl = YoutubeDL(ytdlopts)
@@ -109,7 +110,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # Send add-to-queue confirmation
         await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
 
-        return cls(discord.FFmpegPCMAudio(str(path), options=["-muxpreload", "2"]), data={"title":filename}, requester=ctx.author)
+        return cls(discord.FFmpegPCMAudio(str(path)), data={"title":filename}, requester=ctx.author)
 
     @classmethod
     async def regather_stream(cls, data, *, loop):
@@ -620,7 +621,7 @@ class SoundCog(BaseCog):
         
         # Join args into space-separated search query string
         query = " ".join(query)
-        if not query or all(char == " " for char in query):
+        if not query or query.isspace():
             raise CommandError("Search query cannot be an empty string.")
         
         embeds = await self._do_search(query, ctx)
@@ -774,7 +775,7 @@ class SoundCog(BaseCog):
         if not ctx.message.attachments and not url:
             return await self.send_error_msg(ctx, "A file attachment or file URL is required!")
 
-        # Use attachment URL if possible
+        # Use attachment URL if message has attachment
         if ctx.message.attachments:
             attachment = ctx.message.attachments[0]
             filename, url = url, attachment.url
@@ -820,22 +821,23 @@ class SoundCog(BaseCog):
             filename = fname
         filename = sanitize_filename(filename)
 
-        # Check if file type is valid
+        # Check if file extension is recognized
         if ext not in FILETYPES:
             raise CommandError("Downloaded file is of an invalid filetype.")
-        
-        # Get file path
-        filename = self.get_unique_filename(filename)
-        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"           
         
         # Attempt to download file
         sound_file = await self.download_from_url(ctx, url)
 
-        # Save file
+        # Check if downloaded file is actually an audio file
+        if not check_file_audio(sound_file):
+            raise CommandError("Downloaded file does not appear to be an audio file!")
+        
+        filename = self.get_unique_filename(filename)
+        filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"             
+        
         with open(filepath, "wb") as f:
             f.write(sound_file.getvalue())
 
-        # Log downloaded file
         await self.log_file_download(ctx, url=url, filename=f"{filename}{ext}")        
         
         return filename

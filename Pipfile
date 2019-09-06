@@ -28,6 +28,7 @@ websockets = "*"
 spotipy = "*"
 google-api-python-client = "*"
 pytesseract = "*"
+python-magic = "*"
 
 [dev-packages]
 pylint = "*"
