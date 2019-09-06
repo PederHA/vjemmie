@@ -48,6 +48,8 @@ class RedditCog(BaseCog):
         "db/reddit/nsfw_whitelist.json"
     ]
 
+    COG_COLOR = "red"
+
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     
@@ -313,7 +315,7 @@ class RedditCog(BaseCog):
                                       description=msg, 
                                       footer=False, 
                                       timestamp=False, 
-                                      color="red")
+                                      color=self.COG_COLOR)
 
     @reddit.command(name="settings")
     async def reddit_settings(self, ctx: commands.Context) -> None:
@@ -338,7 +340,7 @@ class RedditCog(BaseCog):
             ctx,
             title="Reddit settings",
             description=out,
-            color="red",
+            color=self.COG_COLOR,
             timestamp=False)
 
     @reddit.command(name="alias", aliases=["add_alias"])
@@ -659,7 +661,7 @@ class RedditCog(BaseCog):
 
         # Embed image if image URL is not None
         if image_url:
-            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color="red")
+            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color=self.COG_COLOR)
             await ctx.send(embed=embed)
 
         # Send plain text otherwise
