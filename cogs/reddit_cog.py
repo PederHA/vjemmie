@@ -420,7 +420,7 @@ class RedditCog(BaseCog):
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
 
     @commands.command(name="meme")
-    async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
+    async def meme(self, ctx: commands.Context, category: str="default") -> None:
         """Random meme. Optional categories: "edgy", "fried".
         
         Parameters
@@ -431,28 +431,30 @@ class RedditCog(BaseCog):
             Name of category of subreddits to look for memes in.
             Defaults to None.
         """
+        subs = {
+            "default": ["dankmemes", "dank_meme", "comedyheaven"],
+            "edgy": ["imgoingtohellforthis", "dark_humor"],
+            "fried": ["deepfriedmemes", "nukedmemes"]
+        }
 
-        default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
-        edgy_subs =  ["imgoingtohellforthis", "dark_humor"]
-        fried_subs = ["deepfriedmemes", "nukedmemes"]
-
-        if category in ["help", "categories", "?"]:
+        if category in ["help", "categories", "?"]:            
             # Posts an embed with a field for each category and their subreddits.
-            default_field = EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
-            edgy_field = EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
-            fried_field = EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
-            embed = await self.get_embed(ctx, title="Memes", fields=[default_field, edgy_field, fried_field], color="red")
-            await ctx.send(embed=embed)
-        else:
-            if category in ["edgy", "edge"]:
-                subreddits = edgy_subs
-            elif category in ["fried", "deepfried", "df"]:
-                subreddits = fried_subs
-            else:
-                subreddits = default_subreddits
+            subreddits = []
+            for category, _subs in subs.items():
+                subreddits.append(EmbedField(f"`{category}`", "r/"+"\nr/".join(_subs)))
+            embed = await self.get_embed(ctx, title="Memes", fields=subreddits, color=self.COG_COLOR)
+            return await ctx.send(embed=embed)
 
-            subreddit = random.choice(subreddits)
-            await self.get_from_reddit(ctx, subreddit)
+        # Get list of subreddits for given category
+        subreddits = subs.get(category.casefold())
+        if not subreddits:
+            raise CommandError(f"Category `{category}` does not exist. "
+            f"Type `{self.bot.command_prefix}{ctx.invoked_with}` to see available categories.")
+        
+        # Get random subreddit from list of subreddits
+        subreddit = random.choice(subreddits)
+
+        await self.get_from_reddit(ctx, subreddit)
     
     @reddit.command(name="wipe", aliases=["clear"])
     @admins_only()
@@ -489,7 +491,7 @@ class RedditCog(BaseCog):
         """
         if filter_ and filter_ not in valid_filters:
             raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
-
+        
         return filter_ or default_filter
     
     async def check_time(self, ctx, time: Optional[str]) -> str:
