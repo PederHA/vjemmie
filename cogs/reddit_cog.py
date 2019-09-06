@@ -487,14 +487,10 @@ class RedditCog(BaseCog):
         `str`
             A valid sorting filter for `filtering_type`.
         """
+        if filter_ and filter_ not in valid_filters:
+            raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
 
-        if filter_ is None:
-            return default_filter
-        else:
-            if filter_ not in valid_filters:
-                raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
-            else:
-                return filter_
+        return filter_ or default_filter
     
     async def check_time(self, ctx, time: Optional[str]) -> str:
         return await self._check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
