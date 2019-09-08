@@ -138,11 +138,9 @@ class RedditCog(BaseCog):
         subreddit : `str`
             Name of subreddit to add
         aliases : `str`, optional
-            Alias(es) to add. String is split on every space,
-            and each resulting string is treated as an alias.
+            String of aliases separated by spaces.
         is_text : `bool`, optional
-            Makes the underlying reddit method look for text posts 
-            when looking for posts on `subreddit`. 
+            Denotes that subreddit contains primarily text posts.
             (the default is False, which denotes that the
             subreddit is an image subreddit)
         """
