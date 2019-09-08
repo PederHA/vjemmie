@@ -166,33 +166,27 @@ class RedditCog(BaseCog):
             await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
 
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
-        """Creates a discord bot command from namedtuple `subreddit_command`.
-        
-        Parameters
-        ----------
-        subreddit_command : `RedditCommand`
-            Name, aliases, is_text of subreddit to add.
-        
-        Raises
-        ------
-        `discord.DiscordException`
-            Raised if subreddit is already added to bot.
+        """Creates a bot command from `RedditCommand` object and adds it
+        to the bot's commands.
         """
         # *_ catches additional fields if they are added in the future, and prevents errors
         subreddit, aliases, is_text, *_ = subreddit_command 
 
-        # Method used as basis for subreddit command
-        base_command = self._reddit_command_base
-        # Pass partial method into asyncio.coroutine to make it a coroutine
-        _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
-        # Pass coroutine into commands.command to get a Discord command object
+        # Create a partial async subreddit method
+        _cmd = asyncio.coroutine(partial(self._reddit_command_base, subreddit=subreddit, is_text=is_text))
+        
+        # Get a bot command object
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
 
-        # Add generated command to bot
         self.bot.add_command(cmd)
 
     async def _reddit_command_base(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
-        """Method used as a base for adding custom subreddit commands"""
+        """Method used as a base for adding custom subreddit commands.
+        
+        NOTE 8/9/2019
+        ----
+        Not sure how useful this method is over calling `get_from_reddit() `directly.
+        """
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
     @reddit.command(name="remove", aliases=["remove_sub"])
