@@ -171,7 +171,7 @@ class RedditCog(BaseCog):
         """
         # *_ catches additional fields if they are added in the future, and prevents errors
         subreddit, aliases, is_text, *_ = subreddit_command 
-
+        
         # Create a partial async subreddit method
         _cmd = asyncio.coroutine(partial(self._reddit_command_base, subreddit=subreddit, is_text=is_text))
         
@@ -414,26 +414,19 @@ class RedditCog(BaseCog):
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
 
-    @commands.command(name="meme")
+    @commands.command(name="meme", usage="<url> or 'help'")
     async def meme(self, ctx: commands.Context, category: str="default") -> None:
-        """Random meme. Optional categories: "edgy", "fried".
-        
-        Parameters
-        ----------
-        ctx : `commands.Context`
-            Discord Context object
-        category : `str`, optional
-            Name of category of subreddits to look for memes in.
-            Defaults to None.
-        """
+        """Random meme. Optional categories: "edgy", "fried"."""
         subs = {
             "default": ["dankmemes", "dank_meme", "comedyheaven"],
             "edgy": ["imgoingtohellforthis", "dark_humor"],
             "fried": ["deepfriedmemes", "nukedmemes"]
         }
 
+        category = category.casefold()
+
         if category in ["help", "categories", "?"]:            
-            # Posts an embed with a field for each category and their subreddits.
+            # Post an embed with a field for each category and their respective subreddits.
             subreddits = []
             for category, _subs in subs.items():
                 subreddits.append(EmbedField(f"`{category}`", "r/"+"\nr/".join(_subs)))
@@ -441,7 +434,7 @@ class RedditCog(BaseCog):
             return await ctx.send(embed=embed)
 
         # Get list of subreddits for given category
-        subreddits = subs.get(category.casefold())
+        subreddits = subs.get(category)
         if not subreddits:
             raise CommandError(f"Category `{category}` does not exist. "
             f"Type `{self.bot.command_prefix}{ctx.invoked_with}` to see available categories.")
