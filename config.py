@@ -84,6 +84,9 @@ SoundSubdir.SOUND_DIR = SOUND_DIR
 # sends its output as a DM instead of in the ctx.channel
 SOUNDLIST_FILE_LIMIT = 150 
 
+# FFMPEG Logging Level (see https://ffmpeg.org/ffmpeg.html#Generic-options)
+FFMPEG_LOGLEVEL = "warning"
+
 # Sound subdirectories
 #                    Directory  Aliases
 YTDL_DIR = SoundSubdir("ytdl", ["youtube", "utube", "yt"])

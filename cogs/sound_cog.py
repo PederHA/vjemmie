@@ -25,7 +25,7 @@ from youtube_dl import YoutubeDL
 
 from cogs.base_cog import BaseCog
 from config import (DOWNLOADS_DIR, SOUND_DIR, SOUND_SUB_DIRS,
-                    SOUNDLIST_FILE_LIMIT, TTS_DIR, YTDL_DIR)
+                    SOUNDLIST_FILE_LIMIT, TTS_DIR, YTDL_DIR, FFMPEG_LOGLEVEL)
 from utils.checks import admins_only, trusted
 from utils.converters import SoundURLConverter, URLConverter
 from utils.exceptions import (CommandError, InvalidVoiceChannel,
@@ -51,7 +51,7 @@ ytdlopts = {
 
 ffmpegopts = {
     "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn -loglevel debug"
+    "options": f"-vn -loglevel {FFMPEG_LOGLEVEL}"
 }
 
 ytdl = YoutubeDL(ytdlopts)
