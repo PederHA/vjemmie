@@ -48,6 +48,8 @@ class RedditCog(BaseCog):
         "db/reddit/nsfw_whitelist.json"
     ]
 
+    COG_COLOR = "red"
+
     ALL_POST_LIMIT = 250
     OTHER_POST_LIMIT = 100
     
@@ -136,11 +138,9 @@ class RedditCog(BaseCog):
         subreddit : `str`
             Name of subreddit to add
         aliases : `str`, optional
-            Alias(es) to add. String is split on every space,
-            and each resulting string is treated as an alias.
+            String of aliases separated by spaces.
         is_text : `bool`, optional
-            Makes the underlying reddit method look for text posts 
-            when looking for posts on `subreddit`. 
+            Denotes that subreddit contains primarily text posts.
             (the default is False, which denotes that the
             subreddit is an image subreddit)
         """
@@ -166,33 +166,27 @@ class RedditCog(BaseCog):
             await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
 
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
-        """Creates a discord bot command from namedtuple `subreddit_command`.
-        
-        Parameters
-        ----------
-        subreddit_command : `RedditCommand`
-            Name, aliases, is_text of subreddit to add.
-        
-        Raises
-        ------
-        `discord.DiscordException`
-            Raised if subreddit is already added to bot.
+        """Creates a bot command from `RedditCommand` object and adds it
+        to the bot's commands.
         """
         # *_ catches additional fields if they are added in the future, and prevents errors
         subreddit, aliases, is_text, *_ = subreddit_command 
-
-        # Method used as basis for subreddit command
-        base_command = self._reddit_command_base
-        # Pass partial method into asyncio.coroutine to make it a coroutine
-        _cmd = asyncio.coroutine(partial(base_command, subreddit=subreddit, is_text=is_text))
-        # Pass coroutine into commands.command to get a Discord command object
+        
+        # Create a partial async subreddit method
+        _cmd = asyncio.coroutine(partial(self._reddit_command_base, subreddit=subreddit, is_text=is_text))
+        
+        # Get a bot command object
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
 
-        # Add generated command to bot
         self.bot.add_command(cmd)
 
     async def _reddit_command_base(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
-        """Method used as a base for adding custom subreddit commands"""
+        """Method used as a base for adding custom subreddit commands.
+        
+        NOTE 8/9/2019
+        ----
+        Not sure how useful this method is over calling `get_from_reddit() `directly.
+        """
         await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
     @reddit.command(name="remove", aliases=["remove_sub"])
@@ -232,6 +226,9 @@ class RedditCog(BaseCog):
         ctx : `commands.Context`
             Discord Context object
         """
+        if not self.subs:
+            return await ctx.send("No subreddits are added!")
+        
         _out = []
         longest_subreddit = max([len(cmd.subreddit) for cmd in self.subs.values()]) + 1
         for cmd in sorted(self.subs.values(), key=lambda cmd: cmd.subreddit):
@@ -313,7 +310,7 @@ class RedditCog(BaseCog):
                                       description=msg, 
                                       footer=False, 
                                       timestamp=False, 
-                                      color="red")
+                                      color=self.COG_COLOR)
 
     @reddit.command(name="settings")
     async def reddit_settings(self, ctx: commands.Context) -> None:
@@ -338,7 +335,7 @@ class RedditCog(BaseCog):
             ctx,
             title="Reddit settings",
             description=out,
-            color="red",
+            color=self.COG_COLOR,
             timestamp=False)
 
     @reddit.command(name="alias", aliases=["add_alias"])
@@ -417,40 +414,35 @@ class RedditCog(BaseCog):
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
 
-    @commands.command(name="meme")
-    async def random_meme(self, ctx: commands.Context, category: str=None) -> None:
-        """Random meme. Optional categories: "edgy", "fried".
+    @commands.command(name="meme", usage="<url> or 'help'")
+    async def meme(self, ctx: commands.Context, category: str="default") -> None:
+        """Random meme. Optional categories: "edgy", "fried"."""
+        subs = {
+            "default": ["dankmemes", "dank_meme", "comedyheaven"],
+            "edgy": ["imgoingtohellforthis", "dark_humor"],
+            "fried": ["deepfriedmemes", "nukedmemes"]
+        }
+
+        category = category.casefold()
+
+        if category in ["help", "categories", "?"]:            
+            # Post an embed with a field for each category and their respective subreddits.
+            subreddits = []
+            for category, _subs in subs.items():
+                subreddits.append(EmbedField(f"`{category}`", "r/"+"\nr/".join(_subs)))
+            embed = await self.get_embed(ctx, title="Memes", fields=subreddits, color=self.COG_COLOR)
+            return await ctx.send(embed=embed)
+
+        # Get list of subreddits for given category
+        subreddits = subs.get(category)
+        if not subreddits:
+            raise CommandError(f"Category `{category}` does not exist. "
+            f"Type `{self.bot.command_prefix}{ctx.invoked_with}` to see available categories.")
         
-        Parameters
-        ----------
-        ctx : `commands.Context`
-            Discord Context object
-        category : `str`, optional
-            Name of category of subreddits to look for memes in.
-            Defaults to None.
-        """
+        # Get random subreddit from list of subreddits
+        subreddit = random.choice(subreddits)
 
-        default_subreddits = ["dankmemes", "dank_meme", "comedyheaven"]
-        edgy_subs =  ["imgoingtohellforthis", "dark_humor"]
-        fried_subs = ["deepfriedmemes", "nukedmemes"]
-
-        if category in ["help", "categories", "?"]:
-            # Posts an embed with a field for each category and their subreddits.
-            default_field = EmbedField("Default", "r/"+"\nr/".join(default_subreddits))
-            edgy_field = EmbedField("Edgy", "r/"+"\nr/".join(edgy_subs))
-            fried_field = EmbedField("Deep Fried", "r/"+"\nr/".join(fried_subs))
-            embed = await self.get_embed(ctx, title="Memes", fields=[default_field, edgy_field, fried_field], color="red")
-            await ctx.send(embed=embed)
-        else:
-            if category in ["edgy", "edge"]:
-                subreddits = edgy_subs
-            elif category in ["fried", "deepfried", "df"]:
-                subreddits = fried_subs
-            else:
-                subreddits = default_subreddits
-
-            subreddit = random.choice(subreddits)
-            await self.get_from_reddit(ctx, subreddit)
+        await self.get_from_reddit(ctx, subreddit)
     
     @reddit.command(name="wipe", aliases=["clear"])
     @admins_only()
@@ -485,14 +477,10 @@ class RedditCog(BaseCog):
         `str`
             A valid sorting filter for `filtering_type`.
         """
-
-        if filter_ is None:
-            return default_filter
-        else:
-            if filter_ not in valid_filters:
-                raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
-            else:
-                return filter_
+        if filter_ and filter_ not in valid_filters:
+            raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
+        
+        return filter_ or default_filter
     
     async def check_time(self, ctx, time: Optional[str]) -> str:
         return await self._check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
@@ -659,7 +647,7 @@ class RedditCog(BaseCog):
 
         # Embed image if image URL is not None
         if image_url:
-            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color="red")
+            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color=self.COG_COLOR)
             await ctx.send(embed=embed)
 
         # Send plain text otherwise

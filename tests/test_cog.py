@@ -432,6 +432,10 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "meme")
 
     @network_io
+    async def test_redditcog_meme_fried(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "meme", "fried")
+
+    @network_io
     async def test_redditcog_get(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "reddit get", "python")
 
