@@ -85,7 +85,7 @@ SoundSubdir.SOUND_DIR = SOUND_DIR
 SOUNDLIST_FILE_LIMIT = 150 
 
 # FFMPEG Logging Level (see https://ffmpeg.org/ffmpeg.html#Generic-options)
-FFMPEG_LOGLEVEL = "warning"
+FFMPEG_LOGLEVEL = "info"
 
 # Sound subdirectories
 #                    Directory  Aliases
