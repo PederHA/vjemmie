@@ -8,8 +8,11 @@ BUFSIZE = 1024
 
 def _get_file_mimetype(file_: T, bufsize: int) -> str:
     if hasattr(file_, "read"):
+        pos = file_.tell()
+        if pos != 0:
+            file_.seek(0)
         b = file_.read(bufsize)
-        file_.seek(0) # is this necessary?
+        file_.seek(pos)
     else:
         b = file_
     return magic.from_buffer(b, mime=True)
