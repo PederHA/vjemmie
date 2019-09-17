@@ -49,7 +49,7 @@ class StatsCog(BaseCog):
     @commands.command(name="get_players")
     @owners_only()
     async def get_players(self, ctx) -> None:
-        """ADMIN ONLY: Display active audio players."""
+        """Display active audio players."""
         sound_cog = self.bot.get_cog("SoundCog")
         players = sound_cog.players
       

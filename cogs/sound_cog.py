@@ -312,7 +312,7 @@ class SoundCog(BaseCog):
     @commands.command(name="players")
     @admins_only()
     async def show_players(self, ctx: commands.Context) -> None:
-        """ADMIN ONLY: Show active Audio Players."""
+        """Show active Audio Players."""
         players = "\n".join(
             [f"{str(self.bot.get_guild(gid))}" for gid in self.players]
         )

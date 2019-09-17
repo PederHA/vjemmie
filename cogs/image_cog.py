@@ -162,7 +162,7 @@ class ImageCog(BaseCog):
     @commands.command(name="quantum")
     @owners_only()
     async def quantum(self, ctx: commands.Context, *args) -> None:
-        """ADMIN ONLY: Deepest frying."""
+        """Deepest frying."""
         await ctx.invoke(self.nuke, *args, passes=20)
 
     @commands.command(name="removebg")

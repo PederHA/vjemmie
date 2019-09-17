@@ -192,7 +192,7 @@ class RedditCog(BaseCog):
     @reddit.command(name="remove", aliases=["remove_sub"])
     @admins_only()
     async def remove_sub(self, ctx: commands.Context, subreddit: str) -> None:
-        """ADMIN ONLY: Remove <subreddit>
+        """Remove <subreddit>
         
         Parameters
         ----------
@@ -389,7 +389,7 @@ class RedditCog(BaseCog):
     @reddit.command(name="remove_alias")
     @admins_only()
     async def remove_alias(self, ctx: commands.Context, subreddit: str, alias: str) -> None:
-        """ADMIN ONLY: Remove alias for subreddit
+        """Remove alias for subreddit
         
         Parameters
         ----------
