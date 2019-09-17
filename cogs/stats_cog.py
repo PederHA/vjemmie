@@ -25,7 +25,7 @@ class StatsCog(BaseCog):
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
 
-    def get_bot_uptime(self, type:Union[dict, str]=dict) -> str:
+    def get_bot_uptime(self, type: Union[dict, str]=dict) -> str:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
             return up
@@ -77,7 +77,7 @@ class StatsCog(BaseCog):
                         *, 
                         rtn_type: Union[str, list, None]=None
                         ) -> Union[List[Commit.Commit], str, None]:
-        """Display git commmit log"""
+        """Display git commit log"""
         commits = await self.get_commits("PederHA/vjemmie", days)
         
         # Format commit hash + message
@@ -91,7 +91,6 @@ class StatsCog(BaseCog):
         await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
     
     async def get_commits(self, repo: str, days: int) -> List[Commit.Commit]:
-        """Display git commmit log"""
         # Limit number of days to get commits from
         if days > 7:
             raise ValueError("Number of days cannot exceed 7!")
