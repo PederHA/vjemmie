@@ -419,7 +419,7 @@ class RedditCog(BaseCog):
         """Random meme. Optional categories: "edgy", "fried"."""
         subs = {
             "default": ["dankmemes", "dank_meme", "comedyheaven"],
-            "edgy": ["imgoingtohellforthis", "dark_humor"],
+            "edgy": ["imgoingtohellforthis", "dark_humor", "darkhumorandmemes"],
             "fried": ["deepfriedmemes", "nukedmemes"]
         }
 
