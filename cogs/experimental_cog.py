@@ -1,13 +1,17 @@
-import unicodedata
+import time
+from datetime import datetime
+from functools import partial
 
 import discord
 import requests
+import websockets
+from aiohttp import web
 from discord.ext import commands
-from datetime import datetime
-import time
+from websockets.server import WebSocketServerProtocol
 
 from cogs.base_cog import BaseCog
 from utils.checks import owners_only
+from utils.exceptions import CommandError
 from utils.experimental import get_ctx
 
 
@@ -15,46 +19,9 @@ class ExperimentalCog(BaseCog):
     """Unstable/bad/temporary commands"""
 
     EMOJI = ":robot:"
-    
-    @commands.command(name="emojis")
-    async def emojis(self, ctx:commands.Context, emoji: str=None, *text: str) -> None:
-        """Replace spaces with a given emoji."""
-        if not emoji:
-            return await ctx.send("Emoji is a required argument")
-        
-        if not text:
-            return await ctx.send("Text is a required argument")
-        
-        msg = list(text)
-        # Append and prepend empty strings in order for 
-        # str.join() to add emoji to beginning and end of text
-        msg.append("")
-        msg.insert(0, "")
-        await ctx.send(emoji.join(msg))
-
-    @commands.command(name="sheriff")
-    async def sheriff(self, ctx: commands.Context, emoji: str) -> None:
-        """Make a sheriff out of emojis."""
-        out = """
-        \n⁯⁯⁯⁯ 
-⠀ ⠀ ⠀    🤠
-　   {e}{e}{e}
-    {e}   {e}　{e}
-    👇  {e}{e} 👇
-  　  {e}　{e}
-　   {e}　 {e}
-　   👢     👢
-    """.format(e=emoji)
-        try:
-            emoji_name = unicodedata.name(emoji)
-        except:
-            if ":" in emoji:
-                emoji_name = emoji.split(":", 3)[1]
-            else:
-                emoji_name = None
-        if emoji_name is not None:
-            out += f"\nI am the sheriff of {emoji_name.title()}"
-        await ctx.send(out)
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
+        #self.bot.loop.run_until_complete(websockets.serve(self.handler, "localhost", 9002))
 
     @commands.command(name="dbg")
     @owners_only()
@@ -62,3 +29,15 @@ class ExperimentalCog(BaseCog):
         """Drop into debugger for TestingCog."""
         breakpoint()
         print("yeah!")
+
+    async def handler(self, websocket: WebSocketServerProtocol, path: str):
+        cmd = await websocket.recv()
+
+        # Is this really the way to get a cmd invocation ctx for a given channel?
+        channel = self.bot.get_channel(560503336013529091)
+        command = self.bot.get_command(cmd)
+        ctx = await self.bot.get_context(await channel.fetch_message(channel.last_message_id))
+        
+        await ctx.invoke(command)
+        
+        await websocket.send("OK")

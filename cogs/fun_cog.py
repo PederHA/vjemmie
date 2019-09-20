@@ -4,6 +4,7 @@ import math
 import random
 import traceback
 import re
+import unicodedata
 from functools import partial
 from pprint import pprint
 from typing import Union
@@ -179,3 +180,40 @@ class FunCog(BaseCog):
         trans = " ".join(["".join(w) for w in s])
         
         return trans
+
+    @commands.command(name="emojis")
+    async def emojis(self, ctx:commands.Context, emoji: str=None, *text: str) -> None:
+        """Replace spaces in a string with emojis."""
+        if not emoji:
+            return await ctx.send("Emoji is a required argument")
+        
+        if not text:
+            return await ctx.send("Text is a required argument")
+        
+        out = f"{emoji}{emoji.join(list(text))}{emoji}"
+
+        await ctx.send(out)
+
+    @commands.command(name="sheriff")
+    async def sheriff(self, ctx: commands.Context, emoji: str) -> None:
+        """Make a sheriff out of emojis."""
+        out = """
+        \n⁯⁯⁯⁯ 
+⠀ ⠀ ⠀    🤠
+　   {e}{e}{e}
+    {e}   {e}　{e}
+    👇  {e}{e} 👇
+  　  {e}　{e}
+　   {e}　 {e}
+　   👢     👢
+    """.format(e=emoji)
+        try:
+            emoji_name = unicodedata.name(emoji)
+        except:
+            if ":" in emoji:
+                emoji_name = emoji.split(":", 3)[1]
+            else:
+                emoji_name = None
+        if emoji_name is not None:
+            out += f"\nI am the sheriff of {emoji_name.title()}"
+        await ctx.send(out)
