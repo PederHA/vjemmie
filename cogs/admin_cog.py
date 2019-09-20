@@ -180,6 +180,9 @@ class AdminCog(BaseCog):
 
     @log.command(name="get")
     async def post_log(self, ctx: commands.Context, log_name: str=None, encoding: str="utf-8") -> None:
+        if not log_name:
+            log_name = "vjemmie.log" # Need to specify environ vars
+        
         log_dir = self.get_log_dir()
         
         # Check if log file exists
