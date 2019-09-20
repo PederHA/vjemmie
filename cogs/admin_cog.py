@@ -1,4 +1,6 @@
 import asyncio
+import os
+from pathlib import Path
 from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
@@ -158,6 +160,42 @@ class AdminCog(BaseCog):
                 # CBA spamming log channel with every message attempt
                 print(f"Failed to send message to guild {guild.name}")
 
+    @commands.group(name="log", aliases=["logs"])
+    async def log(self, ctx: commands.Context) -> None:
+        if not ctx.invoked_subcommand:
+            raise CommandError("A subcommand is required!")
+
+    def get_log_dir(self) -> None:
+        try:
+            immortal_dir = os.environ["IMMORTAL_SDIR"]
+        except KeyError:
+            raise CommandError("Immortal SDIR environment variable is not set!")
+
+        # Check if log dir exists
+        log_dir = Path(immortal_dir) / "logs"
+        if not log_dir.exists():
+            raise CommandError("Unable to locate log directory!")
+        
+        return log_dir
+
+    @log.command(name="get")
+    async def post_log(self, ctx: commands.Context, log_name: str=None, encoding: str="utf-8") -> None:
+        log_dir = self.get_log_dir()
+        
+        # Check if log file exists
+        log = log_dir / log_name
+        if not log.exists():
+            raise CommandError(f"`{str(log)}` does not exist!")
+        
+        await self.read_send_file(ctx, log, encoding=encoding)
+
+    @log.command(name="list")
+    async def list_log_files(self, ctx: commands.Context) -> None:
+        log_dir = self.get_log_dir()
+        
+        files = "\n".join(list(log_dir.iterdir()))
+
+        await self.send_text_message(files, ctx)
 
     @commands.command(name="blacklist")
     @admins_only()
