@@ -160,7 +160,7 @@ class AudioPlayer:
                 async with timeout(self.timeout_duration):
                     source = await self.queue.get()
             except asyncio.TimeoutError:
-                if self.queue.empty() and not self.guild.voice_client.is_playing():
+                if not self.guild.voice_client or self.queue.empty() and not self.guild.voice_client.is_playing():
                     return self.destroy(self.guild)
                 else:
                     continue
