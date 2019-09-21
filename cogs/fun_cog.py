@@ -181,9 +181,9 @@ class FunCog(BaseCog):
         
         return trans
 
-    @commands.command(name="emojis")
+    @commands.command(name="emojis", usage="<emoji> <phrase>")
     async def emojis(self, ctx:commands.Context, emoji: str=None, *text: str) -> None:
-        """Replace spaces in a string with emojis."""
+        """👏VJEMMIE👏IS👏A👏STRONG👏INDEPENDENT👏BOT👏"""
         if not emoji:
             return await ctx.send("Emoji is a required argument")
         
