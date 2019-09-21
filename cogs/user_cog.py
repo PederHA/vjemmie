@@ -20,7 +20,7 @@ class UserCog(BaseCog):
         self.bot.remove_command('help')
 
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])
-    async def send_help(self, ctx: commands.Context, cog_name: str=None, advanced: BoolConverter(["advanced"]+YES_ARGS)=False):
+    async def send_help(self, ctx: commands.Context, cog_name: str=None, advanced: BoolConverter(["advanced"])=False):
         """Sends information about a specific cog's commands"""        
         # Only include cogs that have commands that pass checks for current ctx
         cogs = []
