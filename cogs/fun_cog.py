@@ -190,6 +190,10 @@ class FunCog(BaseCog):
         if not text:
             return await ctx.send("Text is a required argument")
         
+        # Split words if text arg is provided as quoted string
+        if len(text) == 1:
+            text = text[0].split(" ")
+
         out = f"{emoji}{emoji.join(list(text))}{emoji}"
 
         await ctx.send(out)
