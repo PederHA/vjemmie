@@ -56,7 +56,7 @@ class UserCog(BaseCog):
         await ctx.send(embed=embed)
         
         # Send !help usage instructions
-        await ctx.send("Type `!help <category> (advanced)` for a specific category.\n"
+        await ctx.send("Type `!help <category> [advanced]` for a specific category.\n"
                         "Or type `!commands` to show all available commands.")
 
     @commands.command(name="commands")
