@@ -15,6 +15,8 @@ BLACKLIST_PATH = "db/blacklist.json"
 DB_DIR = "db"
 TRUSTED_DIR = f"{DB_DIR}/access"
 TRUSTED_PATH = f"{TRUSTED_DIR}/trusted.json"
+TEMP_DIR = "temp"
+STATS_DIR = "stats"
 
 # COGS
 # -----------------
