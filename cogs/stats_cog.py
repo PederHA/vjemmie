@@ -64,16 +64,25 @@ class StatsCog(BaseCog):
     async def log_command_usage(self, ctx: commands.Context) -> None:
         self.commands[ctx.guild.id][ctx.command.qualified_name] += 1
     
-    def get_command_usage(self, guild_id: Union[str, int]=None) -> None:
+    def get_top_commands(self, guild_id: Union[str, int]=None) -> None:
+        """Get top commands for all guilds or a specific guild."""
         u = get_cached(CMD_USAGE_FILE)
         if guild_id:
             usage = u[str(guild_id)] # JSON only support str keys
         else:
             usage = u
         return usage
-    
+
+    def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
+        """Get number of times a command has been used in a specific guild."""
+        try:
+            usage = self.get_top_commands(guild_id=str(guild_id))
+            return usage[command]
+        except KeyError:
+            return 0        
+
     async def _dump_command_usage(self) -> None:
-        usage = self.get_command_usage()
+        usage = self.get_top_commands()
         for guild_id, counter in self.commands.items():
             guild_id = str(guild_id) # NEEDED?
             try:
@@ -98,7 +107,7 @@ class StatsCog(BaseCog):
             raise CommandError("This command is not supported in DMs!")
         
         try:
-            usage = self.get_command_usage(guild_id=ctx.guild.id)
+            usage = self.get_top_commands(guild_id=ctx.guild.id)
         except KeyError:
             raise CommandError("No commands have been used in this server!")
         else:

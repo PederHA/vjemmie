@@ -158,7 +158,7 @@ class UserCog(BaseCog):
         title = f"**`{_cmd_name}`**"
 
         # Embed description
-        header = f"_{cmd.help}_"
+        header = f"_{cmd.help_doc}_"
         category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}"
         usage = f"**Usage:** `{_cmd_name}` `{cmd.usage}`"
 
@@ -182,11 +182,6 @@ class UserCog(BaseCog):
 
         await self.send_embed_message(ctx, title=title, description=description)
 
-    def get_command_usage(self, ctx, command) -> int:
+    def get_command_usage(self, ctx, command: str) -> int:
         stats_cog = self.bot.get_cog("StatsCog") 
-        
-        try:
-            usage = stats_cog.get_command_usage(guild_id=ctx.guild.id)
-            return usage[command]
-        except KeyError:
-            return 0
+        return stats_cog.get_command_usage(ctx.guild.id, command)
