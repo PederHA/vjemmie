@@ -1,30 +1,49 @@
-from discord.ext import commands
-import discord
-from cogs.base_cog import BaseCog
-from datetime import datetime, timedelta
-from time import perf_counter, time
+import asyncio
 import json
+from datetime import datetime, timedelta
 from functools import partial
-from typing import Union, List
-
+from collections import defaultdict, Counter
 from itertools import islice
+from time import perf_counter, time
+from typing import List, Union
 
-from github import Github, GithubObject, Commit
+import discord
+from discord.ext import commands
+from github import Commit, Github, GithubObject
 
-from utils.checks import owners_only
-from utils.datetimeutils import format_time_difference
 from botsecrets import GITHUB_TOKEN
+from cogs.base_cog import BaseCog
+from config import STATS_DIR
+from utils.caching import get_cached
+from utils.checks import owners_only
+from utils.exceptions import CommandError
+from utils.datetimeutils import format_time_difference
+from utils.serialize import dump_json
+
+
+CMD_USAGE_FILE = f"{STATS_DIR}/commandusage.json"
 
 class StatsCog(BaseCog):
     """Commands and methods for gathering bot statistics."""
 
     EMOJI = ":chart_with_upwards_trend:"
+    DIRS = [STATS_DIR]
+    FILES = [CMD_USAGE_FILE]
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
+        self._init_commands_counter()
 
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        await self.cmd_usage_loop()
+    
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx: commands.Context) -> None:
+        await self.log_command_usage(ctx)
+    
     def get_bot_uptime(self, type: Union[dict, str]=dict) -> str:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
@@ -38,13 +57,67 @@ class StatsCog(BaseCog):
             return uptime       
         else:
             raise TypeError("Return type must be 'str' or 'dict'")
+
+    def _init_commands_counter(self) -> None:
+        self.commands = defaultdict(Counter)
+
+    async def log_command_usage(self, ctx: commands.Context) -> None:
+        self.commands[ctx.guild.id][ctx.command.qualified_name] += 1
     
+    def get_command_usage(self, guild_id: Union[str, int]=None) -> None:
+        u = get_cached(CMD_USAGE_FILE)
+        if guild_id:
+            usage = u[str(guild_id)] # JSON only support str keys
+        else:
+            usage = u
+        return usage
+    
+    async def _dump_command_usage(self) -> None:
+        usage = self.get_command_usage()
+        for guild_id, counter in self.commands.items():
+            guild_id = str(guild_id) # NEEDED?
+            try:
+                usage[guild_id]
+            except KeyError:
+                usage[guild_id] = {}
+            finally:
+                usage[guild_id] = defaultdict(int, usage[guild_id])
+            for cmd, val in counter.items():
+                usage[guild_id][cmd] += val
+        dump_json(CMD_USAGE_FILE, usage)
+
+    async def cmd_usage_loop(self) -> None:
+        while True:
+            await self._dump_command_usage()
+            self._init_commands_counter()
+            await asyncio.sleep(60)
+
+    @commands.command(name="topcommands", aliases=["topc"])
+    async def top_commands(self, ctx: commands.Context) -> None:
+        if not ctx.guild:
+            raise CommandError("This command is not supported in DMs!")
+        
+        try:
+            usage = self.get_command_usage(guild_id=ctx.guild.id)
+        except KeyError:
+            raise CommandError("No commands have been used in this server!")
+        else:
+            _u = [(k, v) for k, v in usage.items()]
+            usage = sorted(_u, key=lambda d: d[1], reverse=True)
+        
+        description = "\n".join([
+            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
+            for (cmd, n) in usage
+        ])
+
+        await self.send_embed_message(ctx, title=f"Top Commands for {ctx.guild.name}", description=description)
+
     @commands.command(name="uptime", aliases=["up"])
     async def uptime(self, ctx: commands.Context) -> str:
         """Bot uptime."""
         up = self.get_bot_uptime(type=str)
         await ctx.send(f"Bot has been up for {up}")
-        return up # Band-aid fix to simplify access to bot uptime from other cogs
+        return up # NOTE: I think this is LITERALLY just for TestCog. Remove?
         
     @commands.command(name="get_players")
     @owners_only()
