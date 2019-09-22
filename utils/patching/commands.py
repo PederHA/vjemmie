@@ -46,3 +46,8 @@ def patch_command_signature(cmd: Command) -> Command:
     """Patches `discord.ext.commands.Command`'s `signature` method to ignore
     keyword-only parameters."""
     cmd.signature = signature
+    setattr(cmd, "help_doc", help_doc)
+
+@property
+def help_doc(instance) -> str:
+    return instance.help.split("\nParameters")[0] # Only show up to method param list if it exists
