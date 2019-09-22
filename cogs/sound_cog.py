@@ -656,7 +656,7 @@ class SoundCog(BaseCog):
         
         return embeds
    
-    @commands.group(name="queue")
+    @commands.group(name="queue", usage="[subcommand]")
     async def queue(self, ctx: commands.Context) -> None:
         """Display soundboard queue."""
         vc = ctx.voice_client

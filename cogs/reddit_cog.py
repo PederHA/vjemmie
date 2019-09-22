@@ -103,7 +103,7 @@ class RedditCog(BaseCog):
             self.init_submissions_cache()
             await asyncio.sleep(86400) # 1 day
 
-    @commands.group(name="reddit")
+    @commands.group(name="reddit", usage="<subcommand>")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
         """Reddit command. Arguments:
 

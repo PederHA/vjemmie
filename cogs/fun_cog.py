@@ -96,10 +96,11 @@ class FunCog(BaseCog):
         
         await ctx.send(random.randint(lower, upper))
             
-    @commands.command(name='random')
+    @commands.command(name='random', usage="<name1>, <name2>, ..., [namelast]")
     async def roll2(self, ctx: commands.Context, *args) -> None:
         """
-        Select from  <item1, item2, ..., itemlast>
+        Select randomly from `<name1>, <name2>, ..., [namelast]`.
+        At least two names must be specified.
         """    
         # Parse args
         if args and args[0] in ["c", "channel"]:
@@ -183,7 +184,7 @@ class FunCog(BaseCog):
 
     @commands.command(name="emojis", usage="<emoji> <phrase>")
     async def emojis(self, ctx:commands.Context, emoji: str=None, *text: str) -> None:
-        """👏VJEMMIE👏IS👏A👏STRONG👏INDEPENDENT👏BOT👏"""
+        """👏VJEMMIE👏IS👏A👏BOT👏"""
         if not emoji:
             return await ctx.send("Emoji is a required argument")
         
