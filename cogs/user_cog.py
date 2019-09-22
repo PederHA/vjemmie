@@ -154,10 +154,12 @@ class UserCog(BaseCog):
 
         _cmd_name = f"{self.bot.command_prefix}{cmd.qualified_name}"
 
+        # Embed title
         title = f"**`{_cmd_name}`**"
 
-        header = f"_{cmd.help}_ \n"
-        category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}\n"
+        # Embed description
+        header = f"_{cmd.help}_"
+        category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}"
         usage = f"**Usage:** `{_cmd_name}` `{cmd.usage}`"
 
         # Include subcommands if they exist
@@ -170,15 +172,13 @@ class UserCog(BaseCog):
         else:
             subcommands = ""
 
-
         times_used = f"**Times used:** {self.get_command_usage(ctx, command)}"
         
-        description = f"""{header}
-        {category}
+        description = f"""{header}\n
+        {category}\n
         {usage}
         {subcommands}
         {times_used}"""
-
 
         await self.send_embed_message(ctx, title=title, description=description)
 
