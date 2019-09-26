@@ -25,7 +25,7 @@ from config import (  # DISABLE_HELP,
     COMMAND_INVOCATION_CHANNEL, ERROR_CHANNEL_ID)
 from utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               CategoryError, CommandError, FileSizeError,
-                              FileTypeError, InvalidVoiceChannel, CommandError, 
+                              FileTypeError, InvalidVoiceChannel, CommandError,
                               NoContextException)
 from utils.experimental import get_ctx
 
@@ -102,7 +102,6 @@ class BaseCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.add_help_command()
         self.setup()
 
     def setup(self, default_factory: Callable=dict) -> None:
@@ -111,7 +110,7 @@ class BaseCog(commands.Cog):
             p = Path(directory)
             if not p.exists():
                 p.mkdir(parents=True, exist_ok=True)
-        
+
         # Create required files
         for _file in self.FILES:
             p = Path(_file)
@@ -120,7 +119,7 @@ class BaseCog(commands.Cog):
                 p.touch()
                 if p.suffix == ".json":
                     p.write_text(f"{default_factory()}")
-    
+
     @property
     def cog_name(self) -> str:
         cog_name = self.__class__.__name__
@@ -135,14 +134,14 @@ class BaseCog(commands.Cog):
     def BOT_COLOR(self) -> discord.Color:
         """experimental"""
         default = discord.Color(0x000000)
-        
+
         try:
             ctx = get_ctx()
         except NoContextException:
             return default
-        
+
         bot_member = ctx.guild.get_member(self.bot.user.id)
-        
+
         if not bot_member:
             return default
         else:
@@ -151,14 +150,7 @@ class BaseCog(commands.Cog):
     def get_bot_color(self, ctx) -> discord.Color:
         """Safe, but boring, implementation of `BOT_COLOR`."""
         bot_member = ctx.guild.get_member(self.bot.user.id)
-        return bot_member.color       
-
-    def add_help_command(self) -> None:
-        #if self.cog_name not in self.DISABLE_HELP:
-        if not self.DISABLE_HELP:
-            cmd_coro = self._get_cog_commands
-            cmd = commands.command(name=self.cog_name)(cmd_coro)
-            self.bot.add_command(cmd)
+        return bot_member.color
 
     async def format_markdown_list(self, items: Iterable[str], *, formatting: str="", item_name: str=None, enum: bool=False) -> str:
         """
@@ -200,10 +192,10 @@ class BaseCog(commands.Cog):
 
         _out = []
         _out.append(f"```{formatting}\n")
-        
+
         if item_name:
             _out.append(f"Available {item_name}:\n\n")
-        
+
         idx = ""
         for i, item in enumerate(items, 1):
             if enum:
@@ -249,11 +241,11 @@ class BaseCog(commands.Cog):
                 raise discord.DiscordException(f"Could not interpret {color}")
             else:
                 return color_classmethod()
-        
+
         # Parse int arg
         elif isinstance(color, int):
             return discord.Color(color)
-        
+
         else:
             raise discord.DiscordException("Argument must be type(str) or type(int)")
 
@@ -322,34 +314,34 @@ class BaseCog(commands.Cog):
         # Timestamp must be specified on object instantiation
         opts = {"timestamp":datetime.now()} if timestamp else {}
         embed = discord.Embed(title=title, description=description, **opts)
-        
+
         # Add author details
         if author:
             if await self.is_img_url(author_icon):
                 icon_url = author_icon
             else:
                 icon_url = Embed.Empty
-            embed.set_author(name=author, 
+            embed.set_author(name=author,
                              url=author_url,
                              icon_url=icon_url)
         # Add footer
         if footer:
-            embed.set_footer(text=f"Requested by {ctx.message.author.name}", 
+            embed.set_footer(text=f"Requested by {ctx.message.author.name}",
                              icon_url=ctx.message.author.avatar_url)
-        
+
         # Add embed fields
         if fields:
             for field in fields:
-                # Make sure fields contains EmbedField objects           
+                # Make sure fields contains EmbedField objects
                 if not isinstance(field, EmbedField):
                     raise discord.DiscordException(f"'fields' must be a list of EmbedField objects!")
-                
+
                 # Use inline kw-only arg if given, otherwise use EmbedField's inline value
                 il = inline if inline is not None else field.inline
-                embed.add_field(name=field.name, 
+                embed.add_field(name=field.name,
                                 value=field.value,
                                 inline=il)
-        
+
         # Add image if URL is an image URL
         if image_url and await self.is_img_url(image_url):
             embed.set_image(url=image_url)
@@ -357,13 +349,13 @@ class BaseCog(commands.Cog):
         # Add thumbnail if thumbnail URL is an image URL
         if thumbnail_url and await self.is_img_url(thumbnail_url):
             embed.set_thumbnail(url=thumbnail_url)
-        
+
         # Add color to embed
         if color:
             if not isinstance(color, discord.Color):
                 color = await self.get_discord_color(color)
             embed.color = color
-        
+
         return embed
 
     async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> Iterator[str]:
@@ -390,7 +382,7 @@ class BaseCog(commands.Cog):
         if not channel_id:
             channel_id = self.LOG_CHANNEL_ID
 
-        try:     
+        try:
             await self.send_text_message(msg, channel_id=channel_id)
         except discord.Forbidden:
             print(f"Insufficient permissions for channel {channel_id}.")
@@ -412,11 +404,11 @@ class BaseCog(commands.Cog):
 
         # Send traceback
         await self.send_text_message(error_msg, channel_id=self.ERROR_CHANNEL_ID)
-        
+
         # Send message that caused error
         cause_of_error = f"Message that caused error: {ctx.author.name}: {ctx.message.content}" if ctx else ""
         await self.send_text_message(cause_of_error, channel_id=self.ERROR_CHANNEL_ID)
-    
+
     async def warn_owner(self, message: str) -> None:
         channel = self.bot.get_channel(LOG_CHANNEL_ID)
         await channel.send(f"{self.AUTHOR_MENTION} {message}")
@@ -439,13 +431,13 @@ class BaseCog(commands.Cog):
         # Check if error stems from lack of privileges
         if isinstance(error, commands.CheckFailure):
             return await ctx.send("Insufficient privileges to execute command!")
-        
+
         # Ignore cooldown exceptions
         if isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(
                 f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
                 f"Try again in {error.retry_after:.2f}s")
-        
+
         # Default error handler
         return await self._handle_error(ctx, error)
 
@@ -458,7 +450,7 @@ class BaseCog(commands.Cog):
         # Show user original error message of these exception types
         if hasattr(error, "original"):
             error = error.original
-        
+
         if any(isinstance(error, err) for err in IGNORE_EXCEPTION):
             return
 
@@ -469,7 +461,7 @@ class BaseCog(commands.Cog):
             msg = "An unknown error occured"
 
         # Log traceback in logging channel if exception class is not ignored
-        log_error = not any(isinstance(error, err) for err in IGNORE_TRACEBACK)  
+        log_error = not any(isinstance(error, err) for err in IGNORE_TRACEBACK)
 
         await self.send_error_msg(ctx, msg, log_error=log_error)
 
@@ -487,7 +479,7 @@ class BaseCog(commands.Cog):
 
         # Display error to user
         await ctx.send(f"ERROR: {error_msg}")
-        
+
         if log_error:
             # Get formatted traceback
             traceback_msg = traceback.format_exc()
@@ -513,14 +505,14 @@ class BaseCog(commands.Cog):
             aiohttp session for guild
         """
 
-        # Check if downloads are enabled in config. 
+        # Check if downloads are enabled in config.
         if not self.DOWNLOADS_ALLOWED:
             raise BotPermissionError("Downloads are not allowed for this bot!")
-        
+
         # Add bot attribute keeping track of aiohttp ClientSession objects
         if not hasattr(self.bot, "sessions"):
             self.bot.sessions = {}
-        
+
         # Get client session for ctx.guild
         session = self.bot.sessions.get(ctx.guild.id)
 
@@ -528,7 +520,7 @@ class BaseCog(commands.Cog):
         if not session:
             session = aiohttp.ClientSession()
             self.bot.sessions[ctx.guild.id] = session
-        
+
         return session
 
     async def download_from_url(self, ctx: commands.Context, url: str) -> io.BytesIO:
@@ -541,26 +533,26 @@ class BaseCog(commands.Cog):
         """
         # Get session
         session = await self.get_aiohttp_session(ctx)
-        
+
         # Check if host responds
         try:
             resp = await session.get(url)
         except aiohttp.ClientConnectionError:
             raise discord.DiscordException("No response from destination host")
-        
+
         # Check content size
         if resp.content_length > self.MAX_DL_SIZE:
             raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
-        
+
         # Check available RAM
         if resp.content_length * 2 > psutil.virtual_memory().available:
             raise MemoryError(f"Not enough memory to download file!")
-        
+
         # Download content
         data = await resp.read()
-        
+
         return io.BytesIO(data)
-    
+
     async def rehost_image_to_discord(self, ctx: commands.Context, image_url: str=None) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
@@ -620,7 +612,7 @@ class BaseCog(commands.Cog):
 
         return msg # Could do return await.channel.send(), but I think this is more self documenting
 
-    async def _get_cog_commands(self, ctx: commands.Context, advanced: bool=True, *, rtn: bool=False) -> None:
+    async def _get_cog_commands(self, ctx: commands.Context, advanced: bool=False) -> None:
         """Sends an embed listing all commands belonging the cog.
 
         The method compiles a list of commands defined by the invoking cog,
@@ -640,21 +632,22 @@ class BaseCog(commands.Cog):
         advanced : `bool`, optional
             Defines whether the command listing should display calling
             signatures or not. (the default is False, which ommits signatures)
-        """  
+        """
         # Get commands for current cog
         # NOTE: Replace with walk_commands() to get subcommands?
-        _commands = sorted(self.get_commands(),key=lambda cmd: cmd.name)
-        
+        commands_ = await self.get_invokable_commands(ctx)
+        commands_ = sorted(commands_, key=lambda cmd: cmd.name)
+
         # Get commands as string of command names + descriptions, separated by newlines
         out = []
-        for command in _commands:
-            
+        for command in commands_:
+
             # Skip commands that fail for current context or are hidden
             if not await command.can_run(ctx) or command.hidden or not command.enabled:
                 continue
-            
+
             group = False
-            
+
             if isinstance(command, commands.Group):
                 cmds = list(command.commands)
                 cmds.sort(key=lambda k: k.name)
@@ -662,48 +655,48 @@ class BaseCog(commands.Cog):
                 group = True
             else:
                 cmds = [command]
-            
-            for cmd in cmds:          
+
+            for cmd in cmds:
                 # Show bot command prefix if command is not a subcommand
                 subcommand = group and type(cmd) == commands.Command
                 prefix = f"{self.bot.command_prefix}" if not subcommand else ""
-                
+
                 # Add indent to subcommands
                 indent = f"-{self.EMBED_FILL_CHAR*2}" if type(cmd) == commands.Command and subcommand else ""
                 # Add right side padding if no indent
                 padding = "\xa0"*2 if not indent else ""
-                
+
                 # Show command signature on advanced output
                 if advanced:
                     cmd_name = f"{cmd.name} {cmd.signature}".ljust(35, "\xa0")
                 else:
                     cmd_name = cmd.name.ljust(20,"\xa0")
-                
-                # Add docstring prefix from check 
+
+                # Add docstring prefix from check
                 doc = cmd.short_doc
                 for check in cmd.checks:
                     if hasattr(check, "doc_prefix"):
                         doc = f"{check.doc_prefix} {cmd.short_doc}"
                         break
-                
+
                 out.append(f"`{indent}{prefix}{cmd_name}{padding}:` {doc}")
 
-        out_str = "\n".join(out)    
+        out_str = "\n".join(out)
 
-        if not out_str:
-            raise CommandError("Cog has no commands!")
-        
-        if advanced and not rtn:
+        if advanced and out_str:
             # Add command signature legend string if advanced output is enabled
             out_str = self.SIGNATURE_HELP + out_str
-        
-        if rtn:
-            return out_str
-        
-        await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", out_str)
 
-    async def send_text_message(self, 
-                                text: str,     
+        return out_str
+
+    async def send_cog_commands(self, ctx: commands.Context, advanced: bool=False) -> None:
+        out = await self._get_cog_commands(ctx, advanced)
+        if not out:
+            raise CommandError("Cog has no commands!")
+        await self.send_embed_message(ctx, f"{self.EMOJI} {self.cog_name} commands", out)
+
+    async def send_text_message(self,
+                                text: str,
                                 ctx: Optional[commands.Context]=None,
                                 *,
                                 channel_id: Optional[int]=None) -> None:
@@ -749,20 +742,20 @@ class BaseCog(commands.Cog):
         joined into n<=limit sized chunks, whereas `_split_string_to_chunks()` 
         splits string into n<=limit chunks, ignoring any newline chars.
         """
-        # NOTE: 
+        # NOTE:
         # This looks ugly, but is way more efficient than appending to a string
         # and checking string length on every iteration of the loop
-        
+
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
-        
+
         chunk = [] # List t to append
         n_lines = 0 # Number of lines
         chunk_len = 0 # Size of current chunk
         join_lines = lambda l: "\n".join(l)
 
         for line in text.splitlines():
-            l_len = len(line)   
+            l_len = len(line)
             if chunk_len + l_len > limit - n_lines: # Account for newline chars
                 yield join_lines(chunk)
                 chunk = []
@@ -771,7 +764,7 @@ class BaseCog(commands.Cog):
             chunk.append(line)
             n_lines += 1
             chunk_len += l_len
-        
+
         else:
             if chunk_len > limit:
                 raise discord.DiscordException(
@@ -825,7 +818,7 @@ class BaseCog(commands.Cog):
         # Split text by line
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
-        
+
         text_fields = [tf async for tf in self._split_string_by_lines(description, limit)]
 
         if len(text_fields) > 1:
@@ -859,7 +852,7 @@ class BaseCog(commands.Cog):
         # Send each embed object to ctx.channel
         if channel:
             ctx = channel
-        
+
         for embed in embeds:
             # Add message text to first message
             if embed == embeds[0]:
@@ -895,11 +888,11 @@ class BaseCog(commands.Cog):
         # Get url string if url argument is a discord.Asset object
         if isinstance(url, discord.Asset):
             url = url._url
-        
+
         p = urlparse(url)
         return (
                 p.scheme in ["http", "https"] and
-                any(p.path.lower().endswith(ext) 
+                any(p.path.lower().endswith(ext)
                 for ext in self.IMAGE_EXTENSIONS) and
                 not url.endswith(p.hostname)
                 )
@@ -950,7 +943,7 @@ class BaseCog(commands.Cog):
             msg += f" {add_msg}"
         if not self.DOWNLOADS_ALLOWED:
             raise BotPermissionError(msg)
-        
+
     async def get_cogs(self, *, all_cogs: bool=False) -> list:
         """Returns list of cogs, sorted by name. Optionally includes
         cogs hidden by `BaseCog.DISABLE_HELP`.
@@ -960,16 +953,15 @@ class BaseCog(commands.Cog):
         I might remove the `all_cogs` parameter and fully respect that
         disabled means disabled.
         """
-        filtering = True if all_cogs else False
         return sorted([
-                        cog for cog in self.bot.cogs.values() 
-                        if cog.DISABLE_HELP in [False, filtering]
+                        cog for cog in self.bot.cogs.values()
+                        if cog.DISABLE_HELP in [False, all_cogs] # [False, True] or [False, False]
                        ],
                     key=lambda c: c.cog_name)
 
     async def get_embed_from_img_upload(self,
                                         ctx: commands.Context,
-                                        to_upload: Union[io.BytesIO, str], 
+                                        to_upload: Union[io.BytesIO, str],
                                         filename: Optional[str]=None
                                         ) -> discord.Embed:
         """Uploads an image to Discord from a URL or a file-like object 
@@ -1006,32 +998,32 @@ class BaseCog(commands.Cog):
             # String must be an image URL
             if not self.is_img_url(to_upload):
                 raise ValueError("String must be URL to an image file!")
-            
+
             # Upload image to bot's image rehosting channel
             msg = await self.rehost_image_to_discord(ctx, to_upload)
             url = msg.attachments[0].url
 
         elif isinstance(to_upload, io.BytesIO):
             # Check if filename is passed in
-            if not filename: 
+            if not filename:
                 raise TypeError(
                     "A filename is required for bytes object uploads!"
                     )
-            
+
             # Check if filename contains name of file and extension
             fname, ext = os.path.splitext(filename)
             if not ext:
                 raise ValueError(
                     "Filename must contain name of file and extension, e.g. 'image.jpeg'"
-                    )    
-            
+                    )
+
             # Upload image and get URL from resulting bot message
             msg = await self.upload_bytes_obj_to_discord(to_upload, filename)
             url = msg.attachments[0].url
-        
+
         else:
             raise TypeError('Argument "to_upload" must be type <io.BytesIO> or <str>')
-        
+
         # Create discord Embed object using obtained URL of image
         return await self.get_embed(ctx, image_url=url)
 
@@ -1043,3 +1035,10 @@ class BaseCog(commands.Cog):
         channel = self.bot.get_channel(COMMAND_INVOCATION_CHANNEL)
         ctx = await self.bot.get_context(await channel.fetch_message(channel.last_message_id))
         return ctx
+
+    async def get_invokable_commands(self, ctx) -> None:
+        _commands = self.get_commands()
+        return [
+            command for command in _commands if await command.can_run(ctx)
+            and not command.hidden and command.enabled
+        ]

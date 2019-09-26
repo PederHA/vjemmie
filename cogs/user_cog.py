@@ -19,45 +19,93 @@ class UserCog(BaseCog):
         super().__init__(bot)
         self.bot.remove_command('help')
 
-    @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"])
-    async def send_help(self, ctx: commands.Context, cog_name: str=None, advanced: BoolConverter(["advanced"])=False):
-        """Sends information about a specific cog's commands"""
-        # Only include cogs that have commands that pass checks for current ctx
-        cogs = []
+    @commands.group(name="help", aliases=["Help", "hlep", "?", "pls"])
+    async def help_(self, ctx: commands.Context, cmd_or_category: str=None, advanced: BoolConverter(["advanced"])=False) -> None:
+        if not cmd_or_category:
+            return await ctx.send("Specify a command or category to get help for!\n"
+        f"Usage: `{self.bot.command_prefix}help <command/category> [advanced]`\n"
+        f"`{self.bot.command_prefix}commands` to get a list of commands\n"
+        f"`{self.bot.command_prefix}categories` to get a list of categories.")
+        
+        try:
+            await ctx.invoke(self.help_command, cmd_or_category)
+        except CommandError:
+            pass
+        else:
+            return
+
+        try:
+            await ctx.invoke(self.help_category, cmd_or_category)
+        except CategoryError:
+            raise CommandError(f"No command or category named `{cmd_or_category}`")
+
+    @commands.command(name="category")
+    async def help_category(self, ctx: commands.Context, cog_name: str=None, advanced: BoolConverter(["advanced"])=False):
+        """Sends information about a specific category's commands"""
+        # We refer to cogs as categories to users 
         for cog in await self.get_cogs():
-            try:
-                await cog._get_cog_commands(ctx, rtn=True)
-            except CommandError: # Cog has no commands that pass checks
-                pass
-            else:
-                cogs.append(cog)
-
-        # Raise exception if no cog commands are available
-        if not cogs:
-            raise CogError(
-                "Bot has no cogs, or cog commands are unavailable for the current server or channel."
-                )
-
-        # Send help message for specific category
-        if cog_name:
-            cog_name = cog_name.lower()
-            for cog in cogs:
-                if cog_name == cog.cog_name.lower():
-                    return await cog._get_cog_commands(ctx, advanced)
-            else:
-                raise CategoryError(f"No such category **{cog_name}**.")
-
-        # Send message listing all possible !help categories if no category
-        # Make an embed field for each cog
-        fields = [EmbedField(f"{cog.EMOJI} {cog.cog_name}", cog.__doc__+"\n\xa0") for cog in cogs if cog.__doc__]
-        embed = await self.get_embed(ctx, title="CATEGORIES", fields=fields, inline=False)
-
-        # Send embeds
-        await ctx.send(embed=embed)
+            if cog_name.lower() == cog.cog_name.lower():
+                cmds = await cog.get_invokable_commands(ctx)
+                if not cmds:
+                    raise CommandError("Category has no associated commands!")
+                return await cog.send_cog_commands(ctx, advanced)
+        
+        # If loop does not raise error or return, it means cog does not exist.
+        raise CommandError(f"No such category **{cog_name}**.")
+    @commands.command(name="categories")
+    async def help_categories(self, ctx: commands.Context) -> None:
+        cogs = await self.get_cogs()
+        for idx, cog in enumerate(cogs):
+            if not await cog.get_invokable_commands(ctx) or not cog.__doc__:
+                cogs.pop(idx)
+        
+        description = "\n".join([f"{cog.EMOJI} **{cog.cog_name}**\n{cog.__doc__}\n" for cog in cogs])
+        await self.send_embed_message(ctx, title="Categories", description=description)
 
         # Send !help usage instructions
-        await ctx.send("Type `!help <category> [advanced]` for a specific category.\n"
-                        "Or type `!commands` to show all available commands.")
+        await ctx.send(f"Type `{self.bot.command_prefix}help <category> [advanced]` for a specific category.\n"
+                        f"Or type `{self.bot.command_prefix}commands` to show all available commands.")
+
+    @commands.command(name="command", aliases=["cmd"])
+    async def help_command(self, ctx: commands.Context, command: str) -> None:
+        cmd = self.bot.get_command(command)
+
+        if not cmd:
+            raise CommandError(f"`{self.bot.command_prefix}{command}` not found!")
+
+        _cmd_name = f"{self.bot.command_prefix}{cmd.qualified_name}"
+
+        # Embed title
+        title = f"**`{_cmd_name}`**"
+
+        # Embed description
+        header = f"_{cmd.help_doc}_"
+        category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}"
+        usage = f"**Usage:** `{_cmd_name} {cmd.usage}`"
+
+        # Include subcommands if they exist
+        if isinstance(cmd, commands.Group):
+            subcommands = "\n**Subcommands:\n** " + "\n".join([
+                f"`{_cmd.name.ljust(20, self.EMBED_FILL_CHAR)}:` {_cmd.short_doc}"
+                for _cmd in cmd.commands
+            ])
+
+        else:
+            subcommands = ""
+
+        times_used = f"**Times used:** {self.get_command_usage(ctx, command)}"
+        
+        # FIXME: This is ugly as sin
+        description = f"""{header}\n
+        {category}
+        {usage}{subcommands}   
+        {times_used}"""
+
+        await self.send_embed_message(ctx, title=title, description=description)
+
+    def get_command_usage(self, ctx, command: str) -> int:
+        stats_cog = self.bot.get_cog("StatsCog") 
+        return stats_cog.get_command_usage(ctx.guild.id, command)
 
     @commands.command(name="commands")
     async def show_commands(self,
@@ -69,7 +117,8 @@ class UserCog(BaseCog):
         for cog in await self.get_cogs():
             # Ignore cogs returning no commands due to failed checks or lack of commands
             with suppress(CommandError):
-                cmds = await cog._get_cog_commands(ctx, advanced, rtn=True)
+                #cmds = await cog._get_cog_commands(ctx, advanced, rtn=True)
+                cmds = await cog._get_cog_commands(ctx, advanced)
                 l.append(f"{cog.EMOJI} **{cog.cog_name}**\n_{cog.__doc__}_\n{cmds}\n")
 
         if not l:
@@ -126,11 +175,12 @@ class UserCog(BaseCog):
         except:
             n_soundfiles = 0
 
+        p = self.bot.command_prefix
         fields = [
             EmbedField(name="Owner", value=AUTHOR_MENTION),
             EmbedField(name="Running on", value=f"<:python:570331647933677590> Python {sys.version.split(' ')[0]}"),
             EmbedField(name="Command categories", value=len(await self.get_cogs())),
-            EmbedField(name="Useful commands", value="`!help`, `!commands`, `!changelog`"),
+            EmbedField(name="Useful commands", value=f"`{p}help`, `{p}commands`, `{p}categories`, `{p}changelog`"),
             EmbedField(name="Soundboard files", value=f"{n_soundfiles}"),
             EmbedField(name="Memory usage", value=f"{mem_used_mb} / {mem_total_mb} MB"),
             EmbedField(name="CPU Usage", value=f"{psutil.cpu_percent()}%"),
@@ -145,43 +195,3 @@ class UserCog(BaseCog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="chelp")
-    async def commands_help(self, ctx: commands.Context, command: str) -> None:
-        cmd = self.bot.get_command(command)
-
-        if not cmd:
-            raise CommandError(f"`{self.bot.command_prefix}{command}` not found!")
-
-        _cmd_name = f"{self.bot.command_prefix}{cmd.qualified_name}"
-
-        # Embed title
-        title = f"**`{_cmd_name}`**"
-
-        # Embed description
-        header = f"_{cmd.help_doc}_"
-        category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}"
-        usage = f"**Usage:** `{_cmd_name}` `{cmd.usage}`"
-
-        # Include subcommands if they exist
-        if isinstance(cmd, commands.Group):
-            subcommands = "**Subcommands:\n** " + "\n".join([
-                f"`{_cmd.name.ljust(20, self.EMBED_FILL_CHAR)}:` {_cmd.short_doc}"
-                for _cmd in cmd.commands # Same formatting as `!commands`. 
-            ])                           # !chelp & !commands should use
-                                         # a common method for this formatting!
-        else:
-            subcommands = ""
-
-        times_used = f"**Times used:** {self.get_command_usage(ctx, command)}"
-        
-        description = f"""{header}\n
-        {category}\n
-        {usage}
-        {subcommands}
-        {times_used}"""
-
-        await self.send_embed_message(ctx, title=title, description=description)
-
-    def get_command_usage(self, ctx, command: str) -> int:
-        stats_cog = self.bot.get_cog("StatsCog") 
-        return stats_cog.get_command_usage(ctx.guild.id, command)
