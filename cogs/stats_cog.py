@@ -102,24 +102,30 @@ class StatsCog(BaseCog):
             await asyncio.sleep(60)
 
     @commands.command(name="topcommands", aliases=["topc"])
-    async def top_commands(self, ctx: commands.Context) -> None:
+    async def top_commands(self, ctx: commands.Context, n_commands: int=10) -> None:
         if not ctx.guild:
             raise CommandError("This command is not supported in DMs!")
         
         try:
-            usage = self.get_top_commands(guild_id=ctx.guild.id)
+            cmds = self.get_top_commands(guild_id=ctx.guild.id)
         except KeyError:
             raise CommandError("No commands have been used in this server!")
         else:
-            _u = [(k, v) for k, v in usage.items()]
-            usage = sorted(_u, key=lambda d: d[1], reverse=True)
+            _c = [(k, v) for k, v in cmds.items()]
+            cmds = sorted(_c, key=lambda d: d[1], reverse=True)
+        
+        if n_commands >= 3:
+            try:
+                cmds = cmds[:n_commands]
+            except TypeError:
+                raise CommandError("Number of commands must be an integer.")
         
         description = "\n".join([
             f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
-            for (cmd, n) in usage
+            for (cmd, n) in cmds
         ])
 
-        await self.send_embed_message(ctx, title=f"Top Commands for {ctx.guild.name}", description=description)
+        await self.send_embed_message(ctx, title=f"Top {n_commands} Commands for {ctx.guild.name}", description=description)
 
     @commands.command(name="uptime", aliases=["up"])
     async def uptime(self, ctx: commands.Context) -> str:
