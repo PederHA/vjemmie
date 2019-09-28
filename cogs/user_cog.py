@@ -28,14 +28,14 @@ class UserCog(BaseCog):
         f"`{self.bot.command_prefix}categories` to get a list of categories.")
         
         try:
-            await ctx.invoke(self.help_command, cmd_or_category)
+            await ctx.invoke(self.help_command, cmd_or_category, advanced)
         except CommandError:
             pass
         else:
             return
 
         try:
-            await ctx.invoke(self.help_category, cmd_or_category)
+            await ctx.invoke(self.help_category, cmd_or_category, advanced)
         except CategoryError:
             raise CommandError(f"No command or category named `{cmd_or_category}`")
 
