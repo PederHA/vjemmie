@@ -31,7 +31,7 @@ class UserCog(BaseCog):
         
         # Check if cmd_or_category is a command
         try:
-            await ctx.invoke(self.help_command, cmd_or_category, advanced)
+            await ctx.invoke(self.help_command, cmd_or_category)
         except CommandError:
             pass
         else:
@@ -56,6 +56,7 @@ class UserCog(BaseCog):
         
         # If loop does not raise error or return, it means cog does not exist.
         raise CommandError(f"No such category **{cog_name}**.")
+    
     @commands.command(name="categories")
     async def help_categories(self, ctx: commands.Context) -> None:
         cogs = await self.get_cogs()
