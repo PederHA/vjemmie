@@ -23,6 +23,7 @@ from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
 from utils.checks import admins_only
 from utils.caching import get_cached
+from utils.converters import BoolConverter
 from utils.exceptions import CommandError
 from utils.parsing import is_valid_command_name
 from utils.serialize import dump_json
@@ -128,7 +129,7 @@ class RedditCog(BaseCog):
         await self.get_from_reddit(ctx, subreddit, sorting, time)
     
     @reddit.command(name="add", aliases=["add_sub"])
-    async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: bool=False) -> None:
+    async def add_sub(self, ctx: commands.Context, subreddit: str, aliases: str=None, is_text: BoolConverter(["text"])=False) -> None:
         """Add <subreddit> [alias]
         
         Parameters

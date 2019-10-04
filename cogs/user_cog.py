@@ -22,11 +22,14 @@ class UserCog(BaseCog):
     @commands.group(name="help", aliases=["Help", "hlep", "?", "pls"])
     async def help_(self, ctx: commands.Context, cmd_or_category: str=None, advanced: BoolConverter(["advanced"])=False) -> None:
         if not cmd_or_category:
-            return await ctx.send("Specify a command or category to get help for!\n"
-        f"Usage: `{self.bot.command_prefix}help <command/category> [advanced]`\n"
-        f"`{self.bot.command_prefix}commands` to get a list of commands\n"
-        f"`{self.bot.command_prefix}categories` to get a list of categories.")
+            return await ctx.send(
+                "Specify a command or category to get help for!\n"
+                f"Usage: `{self.bot.command_prefix}help <command/category> [advanced]`\n"
+                f"`{self.bot.command_prefix}commands` to get a list of commands\n"
+                f"`{self.bot.command_prefix}categories` to get a list of categories."
+                )
         
+        # Check if cmd_or_category is a command
         try:
             await ctx.invoke(self.help_command, cmd_or_category)
         except CommandError:
@@ -34,8 +37,9 @@ class UserCog(BaseCog):
         else:
             return
 
+        # Check if cmd_or_category is a category if previous attempt failed
         try:
-            await ctx.invoke(self.help_category, cmd_or_category)
+            await ctx.invoke(self.help_category, cmd_or_category, advanced)
         except CategoryError:
             raise CommandError(f"No command or category named `{cmd_or_category}`")
 
@@ -52,6 +56,7 @@ class UserCog(BaseCog):
         
         # If loop does not raise error or return, it means cog does not exist.
         raise CommandError(f"No such category **{cog_name}**.")
+    
     @commands.command(name="categories")
     async def help_categories(self, ctx: commands.Context) -> None:
         cogs = await self.get_cogs()
