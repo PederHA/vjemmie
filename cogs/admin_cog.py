@@ -2,9 +2,10 @@ import asyncio
 import os
 from pathlib import Path
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Optional, Union, Awaitable
+from typing import Optional, Union, Awaitable, Callable
 
 import discord
 from discord.ext import commands
@@ -18,13 +19,30 @@ from utils.access_control import (Categories, add_trusted_member,
 from utils.checks import admins_only, load_blacklist, save_blacklist
 from utils.exceptions import CommandError
 
-Activity = namedtuple("Activity", "text callable is_coro", defaults=["", None, False])
+
+@dataclass
+class Activity:
+    text: str
+    callable_: Callable = None
+    prepend_text: bool = True
+
+    async def get_activity(self) -> str:
+        r = ""
+        if self.callable_:
+            if asyncio.iscoroutine(self.callable_):
+                r = await self.callable_()
+            else:
+                r = self.callable_()
+        
+        return f"{self.text}{r}" if self.prepend_text else f"{r}{self.text}"
+
 
 class AdminCog(BaseCog):
-    DISABLE_HELP = False
-    ACTIVITY_ROTATION = True
-
     FILES = [TRUSTED_PATH]
+
+    # Activity rotation stuff
+    ACTIVITY_ROTATION = True
+    AC_ROTATION_INTERVAL = 10
 
     """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
@@ -45,19 +63,10 @@ class AdminCog(BaseCog):
             Activity("Uptime: ", partial(self.bot.get_cog("StatsCog").get_bot_uptime, type=str))
         ]
 
-        while self.ACTIVITY_ROTATION:
-            for ac in acitivities:
-                if not ac.text and not ac.callable:
-                    continue # Skip if activity has no text or callable
-                if ac.callable:
-                    if ac.is_coro:
-                        r = await ac.callable()
-                    else:
-                        r = ac.callable()
-                    await self._change_activity(f"{ac.text}{r}")
-                else:
-                    await self._change_activity(ac.text)
-                await asyncio.sleep(30)
+        while self.ACTIVITY_ROTATION: 
+            for activity in acitivities:
+                await self._change_activity(await activity.get_activity())
+                await asyncio.sleep(self.AC_ROTATION_INTERVAL)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild) -> None:
