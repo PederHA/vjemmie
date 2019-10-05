@@ -50,4 +50,5 @@ def patch_command_signature(cmd: Command) -> Command:
 
 @property
 def help_doc(instance) -> str:
-    return instance.help.split("\nParameters")[0] # Only show up to method param list if it exists
+    # Only show up to method param list if it exists
+    return instance.help.split("\nParameters")[0] if instance.help else ""
