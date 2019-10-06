@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import os
 from pathlib import Path
 from collections import namedtuple
@@ -29,7 +30,7 @@ class Activity:
     async def get_activity(self) -> str:
         r = ""
         if self.callable_:
-            if asyncio.iscoroutine(self.callable_):
+            if inspect.isawaitable(self.callable_):
                 r = await self.callable_()
             else:
                 r = self.callable_()
