@@ -18,6 +18,7 @@ from cogs.base_cog import BaseCog
 from config import STATS_DIR
 from utils.caching import get_cached
 from utils.checks import owners_only
+from utils.converters import UserOrMeConverter
 from utils.exceptions import CommandError
 from utils.datetimeutils import format_time_difference
 
@@ -151,15 +152,28 @@ class StatsCog(BaseCog):
         with open(GUILD_STATS_PATH, "wb") as f:
             pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_top_guild_commands(self, guild_id: int, limit: int=0) -> List[Tuple[str, int]]:
+    def get_top_guild_commands(self, guild_id: int, limit: int=0) -> Counter:
         """Get top commands for a specific guild."""
         return self.guilds[guild_id].get_top_commands(limit=limit)
 
-    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> List[Tuple[int, int]]:
-        """Get top user of a specific command."""
+    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> Counter:
+        """Get top users of a specific command."""
         guild = self.guilds[guild_id]
         cmd = guild.commands[command]
         return cmd.get_top_users(limit=limit)
+
+    def get_top_commands_for_user(self, guild_id: int, user: discord.User, limit: int=0) -> Counter: # FIX
+        """Get a Counter of a user's most used commands."""
+        guild = self.guilds[guild_id]
+        cmds = []
+        for command in guild.commands.values():
+            for user_id, used in command.users.items():
+                if user_id == user.id:
+                    cmds.append((command.name, used))
+                    break
+        if limit:
+            cmds = cmds[:limit]
+        return Counter(dict(cmds))
 
     def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
         """Get number of times a command has been used in a specific guild."""
@@ -168,23 +182,31 @@ class StatsCog(BaseCog):
         except KeyError:
             return 0
 
-    @commands.command(name="topcommands", aliases=["topc"])
-    async def top_commands(self, ctx: commands.Context) -> None:
+    @commands.command(name="topcommands", aliases=["topc"], usage="[user]")
+    async def top_commands(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
         """List most used commands in the server."""
         if not ctx.guild:
             raise CommandError("This command is not supported in DMs!")
-
-        try:
-            usage = self.get_top_guild_commands(guild_id=ctx.guild.id)
-        except:
-            raise CommandError("No commands have been used in this server!")
-
+        
+        if user:
+            usage = self.get_top_commands_for_user(ctx.guild.id, user)
+            if not usage:
+                raise CommandError("User has not used any commands yet!")
+            title = f"Top commands for {user.name}"
+        else:
+            try:
+                usage = self.get_top_guild_commands(guild_id=ctx.guild.id)
+            except:
+                raise CommandError("No commands have been used in this server!")
+            else:
+                title = f"Top Commands for {ctx.guild.name}"
+        
         description = "\n".join([
             f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
-            for (cmd, n) in usage.most_common()
+            for (cmd, n) in usage.most_common(10)
         ])
 
-        await self.send_embed_message(ctx, title=f"Top Commands for {ctx.guild.name}", description=description)
+        await self.send_embed_message(ctx, title=title, description=description)
 
     @commands.command(name="uptime", aliases=["up"])
     async def uptime(self, ctx: commands.Context) -> str:
