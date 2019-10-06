@@ -25,7 +25,6 @@ from utils.datetimeutils import format_time_difference
 
 GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
 
-
 @dataclass
 class DiscordCommand:
     """Represents a Discord command. 
@@ -40,7 +39,7 @@ class DiscordCommand:
     @property
     def top_user(self) -> Optional[Tuple[int, int]]:
         top_user = self.get_top_users(limit=1)
-        return top_user[0] if top_user else None
+        return top_user.most_common() if top_user else None
 
     def log_command(self, ctx: commands.Context) -> None:
         self.times_used += 1
@@ -68,11 +67,11 @@ class DiscordGuild:
         """Retrieves Counter of top command invokers in the guild."""
         users = Counter()
         for command in self.commands.values():
-            for (uid, uses) in command.get_top_users(limit=0):
+            for (uid, uses) in command.get_top_users(limit=None):
                 users[uid] += uses
         return users
 
-    def get_top_users_command(self, command: str, *, limit: int=0) -> Counter:
+    def get_top_users_command(self, command: str, *, limit: int=None) -> Counter:
         """Get top N users of a command."""
         if not command in self.commands:
             # NOTE: should this really raise exception instead of returning empty list?
