@@ -1,11 +1,13 @@
 import asyncio
-import json
+import pickle
 from datetime import datetime, timedelta
+from dataclasses import dataclass, field
 from functools import partial
-from collections import defaultdict, Counter
+from collections import Counter
 from itertools import islice
-from time import perf_counter, time
-from typing import List, Union
+from pathlib import Path
+from time import perf_counter, time, time_ns
+from typing import List, Union, Dict, Tuple, Optional
 
 import discord
 from discord.ext import commands
@@ -18,32 +20,179 @@ from utils.caching import get_cached
 from utils.checks import owners_only
 from utils.exceptions import CommandError
 from utils.datetimeutils import format_time_difference
-from utils.serialize import dump_json
 
 
-CMD_USAGE_FILE = f"{STATS_DIR}/commandusage.json"
+GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
+
+
+@dataclass
+class DiscordCommand:
+    """Represents a Discord command. 
+    
+    Keeps track of total numbers of times the command is used 
+    in a guild, as well as per-user statistics.
+    """
+    name: str = None
+    times_used: int = 0
+    users: Counter = field(init=False, default_factory=Counter)
+
+    @property
+    def top_user(self) -> Optional[Tuple[int, int]]:
+        top_user = self.get_top_users(limit=1)
+        return top_user[0] if top_user else None
+
+    def log_command(self, ctx: commands.Context) -> None:
+        self.times_used += 1
+        self.users[ctx.message.author.id] += 1
+
+    def get_top_users(self, limit: int) -> Counter:
+        """Get users who have invoked the command the most often."""
+        if not limit or limit < 0:
+            limit = None
+        return Counter(dict(self.users.most_common(limit)))
+
+
+@dataclass
+class DiscordGuild:
+    ctx: commands.Context
+
+    def __post_init__(self) -> None:
+        self.guild_name = self.ctx.guild.name
+        self.guild_id = self.ctx.guild.id
+        self.commands = {}
+        del self.ctx # has to be deleted so object can be pickled
+
+    @property
+    def top_total_commands_invokers(self) -> Counter:
+        """Retrieves Counter of top command invokers in the guild."""
+        users = Counter()
+        for command in self.commands.values():
+            for (uid, uses) in command.get_top_users(limit=0):
+                users[uid] += uses
+        return users
+
+    def get_top_users_command(self, command: str, *, limit: int=0) -> Counter:
+        """Get top N users of a command."""
+        if not command in self.commands:
+            # NOTE: should this really raise exception instead of returning empty list?
+            raise AttributeError("Command has not been used in this server yet!")
+        return self.commands[command].get_top_users(limit=limit)
+
+    @property
+    def top10_commands(self) -> Counter:
+        """Get Counter of top 10 most used commands in the guild."""
+        return self.get_top_commands(limit=10)
+
+    def get_top_commands(self, limit: int=10) -> Counter:
+        """Get Counter of top N most used commands in the guild."""
+        top_commands = [(command.name, command.times_used) for command in self.commands.values()]
+        
+        if limit:
+            top_commands = top_commands[:limit]
+
+        return Counter(dict(top_commands))
+
+    def log_command(self, ctx: commands.Context) -> None:
+        """Log command usage."""
+        if ctx.command.name not in self.commands:
+            self.commands[ctx.command.name] = DiscordCommand(name=ctx.command.name)
+        self.commands[ctx.command.name].log_command(ctx)
+
 
 class StatsCog(BaseCog):
     """Commands and methods for gathering bot statistics."""
 
     EMOJI = ":chart_with_upwards_trend:"
     DIRS = [STATS_DIR]
-    FILES = [CMD_USAGE_FILE]
+    FILES = [GUILD_STATS_PATH]
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
-        self._init_commands_counter()
+        self.guilds = self.load_guilds()
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await self.cmd_usage_loop()
-    
+
+    async def cmd_usage_loop(self) -> None:
+        while True:
+            await asyncio.sleep(20)
+            await self.bot.loop.run_in_executor(None, self.dump_guilds)
+
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
-        await self.log_command_usage(ctx)
-    
+        self.log_command_usage(ctx)
+
+    def log_command_usage(self, ctx: commands.Context) -> None:
+        gid = ctx.guild.id
+        if not self.guilds.get(gid):
+            self.guilds[gid] = DiscordGuild(ctx)
+        self.guilds[gid].log_command(ctx)
+
+    def load_guilds(self) -> Dict[int, DiscordGuild]:
+        """Load guild statistics. Only performed on bot startup."""
+        with open(GUILD_STATS_PATH, "rb") as f:
+            try:
+                return pickle.load(f)
+            except EOFError:
+                return {}
+            except:
+                # Create backup if file isn't empty
+                contents = f.read()
+                if contents != {}:
+                    with open(f"{GUILD_STATS_PATH}_{time_ns()}.bak", "wb") as backup:
+                        backup.write(contents)
+                return {}
+
+    def dump_guilds(self) -> None:
+        """Save guild usage statistics."""
+        with open(GUILD_STATS_PATH, "wb") as f:
+            pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_top_guild_commands(self, guild_id: int, limit: int=0) -> List[Tuple[str, int]]:
+        """Get top commands for a specific guild."""
+        return self.guilds[guild_id].get_top_commands(limit=limit)
+
+    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> List[Tuple[int, int]]:
+        """Get top user of a specific command."""
+        guild = self.guilds[guild_id]
+        cmd = guild.commands[command]
+        return cmd.get_top_users(limit=limit)
+
+    def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
+        """Get number of times a command has been used in a specific guild."""
+        try:
+            return self.guilds[guild_id].commands[command].times_used
+        except KeyError:
+            return 0
+
+    @commands.command(name="topcommands", aliases=["topc"])
+    async def top_commands(self, ctx: commands.Context) -> None:
+        """List most used commands in the server."""
+        if not ctx.guild:
+            raise CommandError("This command is not supported in DMs!")
+
+        try:
+            usage = self.get_top_guild_commands(guild_id=ctx.guild.id)
+        except:
+            raise CommandError("No commands have been used in this server!")
+
+        description = "\n".join([
+            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
+            for (cmd, n) in usage.most_common()
+        ])
+
+        await self.send_embed_message(ctx, title=f"Top Commands for {ctx.guild.name}", description=description)
+
+    @commands.command(name="uptime", aliases=["up"])
+    async def uptime(self, ctx: commands.Context) -> str:
+        """Bot uptime."""
+        up = self.get_bot_uptime(type=str)
+        await ctx.send(f"Bot has been up for {up}")
+        return up # NOTE: I think this is LITERALLY just for TestCog. Remove?
+
     def get_bot_uptime(self, type: Union[dict, str]=dict) -> str:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
@@ -54,100 +203,24 @@ class StatsCog(BaseCog):
                     f"{up_fmt(up['hours'], 'h')}"
                     f"{up_fmt(up['minutes'], 'm')}"
                     f"{up_fmt(up['seconds'], 's')}")
-            return uptime       
+            return uptime
         else:
             raise TypeError("Return type must be 'str' or 'dict'")
 
-    def _init_commands_counter(self) -> None:
-        self.commands = defaultdict(Counter)
-
-    async def log_command_usage(self, ctx: commands.Context) -> None:
-        self.commands[ctx.guild.id][ctx.command.qualified_name] += 1
-    
-    def get_top_commands(self, guild_id: Union[str, int]=None) -> None:
-        """Get top commands for all guilds or a specific guild."""
-        u = get_cached(CMD_USAGE_FILE)
-        if guild_id:
-            usage = u[str(guild_id)] # JSON only support str keys
-        else:
-            usage = u
-        return usage
-
-    def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
-        """Get number of times a command has been used in a specific guild."""
-        try:
-            usage = self.get_top_commands(guild_id=str(guild_id))
-            return usage[command]
-        except KeyError:
-            return 0        
-
-    async def _dump_command_usage(self) -> None:
-        usage = self.get_top_commands()
-        for guild_id, counter in self.commands.items():
-            guild_id = str(guild_id) # NEEDED?
-            try:
-                usage[guild_id]
-            except KeyError:
-                usage[guild_id] = {}
-            finally:
-                usage[guild_id] = defaultdict(int, usage[guild_id])
-            for cmd, val in counter.items():
-                usage[guild_id][cmd] += val
-        dump_json(CMD_USAGE_FILE, usage)
-
-    async def cmd_usage_loop(self) -> None:
-        while True:
-            await self._dump_command_usage()
-            self._init_commands_counter()
-            await asyncio.sleep(60)
-
-    @commands.command(name="topcommands", aliases=["topc"])
-    async def top_commands(self, ctx: commands.Context, n_commands: int=10) -> None:
-        if not ctx.guild:
-            raise CommandError("This command is not supported in DMs!")
-        
-        try:
-            cmds = self.get_top_commands(guild_id=ctx.guild.id)
-        except KeyError:
-            raise CommandError("No commands have been used in this server!")
-        else:
-            _c = [(k, v) for k, v in cmds.items()]
-            cmds = sorted(_c, key=lambda d: d[1], reverse=True)
-        
-        if n_commands >= 3:
-            try:
-                cmds = cmds[:n_commands]
-            except TypeError:
-                raise CommandError("Number of commands must be an integer.")
-        
-        description = "\n".join([
-            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
-            for (cmd, n) in cmds
-        ])
-
-        await self.send_embed_message(ctx, title=f"Top {n_commands} Commands for {ctx.guild.name}", description=description)
-
-    @commands.command(name="uptime", aliases=["up"])
-    async def uptime(self, ctx: commands.Context) -> str:
-        """Bot uptime."""
-        up = self.get_bot_uptime(type=str)
-        await ctx.send(f"Bot has been up for {up}")
-        return up # NOTE: I think this is LITERALLY just for TestCog. Remove?
-        
     @commands.command(name="get_players")
     @owners_only()
     async def get_players(self, ctx) -> None:
         """Display active audio players."""
         sound_cog = self.bot.get_cog("SoundCog")
         players = sound_cog.players
-      
+
         out = []
         for gid, player in players.items():
-            embed_body = ( 
+            embed_body = (
                     f"**Created at**: {player.created_at}\n"
                     f"**Currently playing**: {player.current.title if player.current else None}\n"
                     f"**Guild ID**: {gid}\n"
-                    )            
+                    )
             out.append((str(self.bot.get_guild(gid)), embed_body))
 
         # Post active players
@@ -156,18 +229,18 @@ class StatsCog(BaseCog):
                 await self.send_embed_message(ctx, gname, o, footer=False)
         else:
             await ctx.send("No active audio players")
-    
+
     @commands.command(name="changelog")
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.guild)
-    async def changelog(self, 
-                        ctx: commands.Context, 
-                        days: int=0, 
-                        *, 
+    async def changelog(self,
+                        ctx: commands.Context,
+                        days: int=0,
+                        *,
                         rtn_type: Union[str, list, None]=None
                         ) -> Union[List[Commit.Commit], str, None]:
         """Display git commit log"""
         commits = await self.get_commits("PederHA/vjemmie", days)
-        
+
         # Format commit hash + message
         out_commits = "\n".join(
             [
@@ -175,14 +248,14 @@ class StatsCog(BaseCog):
             for commit in commits
             ]
         )
-        
+
         await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
-    
+
     async def get_commits(self, repo: str, days: int) -> List[Commit.Commit]:
         # Limit number of days to get commits from
         if days > 7:
             raise ValueError("Number of days cannot exceed 7!")
-        
+
         # Get repo
         repo = self.github.get_repo(repo)
 
@@ -190,13 +263,13 @@ class StatsCog(BaseCog):
         since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet
         to_run = partial(repo.get_commits, since=since)
         _c = await self.bot.loop.run_in_executor(None, to_run)
-        
+
         if days:
             commits = list(_c)
         else:
             # Get 5 most recent commits if no days argument
             commits = list(islice(_c, 5))
-        
+
         if not commits:
             if days:
                 # Wrong type but w/e ill fix later
@@ -209,7 +282,7 @@ class StatsCog(BaseCog):
                     )
 
         return commits
-       
+
     @commands.command(name="commits")
     async def commits(self, ctx: commands.Context) -> None:
         """Display number of commits made past week"""
@@ -218,7 +291,7 @@ class StatsCog(BaseCog):
         await ctx.send(f"{n_commits} commits have been made the past week.")
 
     @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context) -> str:  
+    async def ping(self, ctx: commands.Context) -> str:
         ping_ms = self.get_bot_ping_ms()
         await ctx.send(f"Ping: {ping_ms}ms")
 

@@ -19,8 +19,9 @@ class UserCog(BaseCog):
         super().__init__(bot)
         self.bot.remove_command('help')
 
-    @commands.group(name="help", aliases=["Help", "hlep", "?", "pls"])
+    @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"], usage="<command/category>")
     async def help_(self, ctx: commands.Context, cmd_or_category: str=None, advanced: BoolConverter(["advanced"])=False) -> None:
+        """Get command/category usage info and statistics."""
         if not cmd_or_category:
             return await ctx.send(
                 "Specify a command or category to get help for!\n"
@@ -40,7 +41,7 @@ class UserCog(BaseCog):
         # Check if cmd_or_category is a category if previous attempt failed
         try:
             await ctx.invoke(self.help_category, cmd_or_category, advanced)
-        except CategoryError:
+        except CommandError:
             raise CommandError(f"No command or category named `{cmd_or_category}`")
 
     @commands.command(name="category")
@@ -84,9 +85,10 @@ class UserCog(BaseCog):
         title = f"**`{_cmd_name}`**"
 
         # Embed description
-        header = f"_{cmd.help_doc}_"
-        category = f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}"
-        usage = f"**Usage:** `{_cmd_name} {cmd.usage}`"
+        description = []
+        description.append(f"_{cmd.help_doc}_\n")
+        description.append(f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}")
+        description.append(f"**Usage:** `{_cmd_name} {cmd.usage}`")
 
         # Include subcommands if they exist
         if isinstance(cmd, commands.Group):
@@ -94,17 +96,23 @@ class UserCog(BaseCog):
                 f"`{_cmd.name.ljust(20, self.EMBED_FILL_CHAR)}:` {_cmd.short_doc}"
                 for _cmd in cmd.commands
             ])
+            description.append(subcommands)
 
-        else:
-            subcommands = ""
+        # Number of times the command has been used in the guild
+        description.append(f"**Times used:** {self.get_command_usage(ctx, command)}")
 
-        times_used = f"**Times used:** {self.get_command_usage(ctx, command)}"
+        # Top user of the command
+        top_users = self.bot.get_cog("StatsCog").get_top_command_users(ctx.guild.id, command, limit=10)
+        if top_users:
+            for top_user in top_users:
+                # Make sure the top user can be identified
+                user = self.bot.get_user(top_user[0])
+                if user:
+                    used = top_user[1]
+                    description.append(f"**Top User:** {user.mention} ({used})")
+                    break
         
-        # FIXME: This is ugly as sin
-        description = f"""{header}\n
-        {category}
-        {usage}{subcommands}   
-        {times_used}"""
+        description = "\n".join(description)
 
         await self.send_embed_message(ctx, title=title, description=description)
 

@@ -1,7 +1,11 @@
-"""Very simple testing suite for the bot's commands that came about due to my
-impatience for getting tests up and running, but being unwilling to put in the
-effort of researching how to integrate discord commands into existing testing frameworks.
+"""Very simple testing suite for the bot commands and methods that came 
+about due to a severe lack of patience for reading testing framework 
+documentation and failing to integrate existing testing frameworks 
+with Discord commands.
+
+It's pretty fucking bad, let's be real, but it gets the job done.
 """
+
 import asyncio
 import copy
 import inspect
@@ -172,6 +176,7 @@ class TestCog(BaseCog):
             result = "All tests failed"
         else:
             result = f"Passed:\n{passed_fmt}\n\nFailed:\n{failed_fmt}\n"
+        
         await self.send_text_message(result, ctx)
 
     def determine_run_coro(self, coro, ctx: commands.Context) -> bool:
@@ -227,9 +232,6 @@ class TestCog(BaseCog):
         # Object to test equality of result with
         assertion = kwargs.pop("assertion", SENTINEL)
 
-        # Assert type of result instead of value
-        assert_type = kwargs.pop("assert_type", False)
-
         # same as TestCase.assertRaises
         raises = kwargs.pop("raises", None)
 
@@ -249,11 +251,14 @@ class TestCog(BaseCog):
             if ctx:
                 r = await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
-                r = await coro_or_cmd(*args, **kwargs)
+                if inspect.isawaitable(coro_or_cmd):
+                    r = await coro_or_cmd(*args, **kwargs)
+                else:
+                    r = coro_or_cmd(*args, **kwargs)
             
             # Assert returned value == assertion, if specified
             if assertion is not SENTINEL:
-                if assert_type:
+                if isinstance(assertion, type):
                     assert op(type(r), assertion)
                 else:
                     if index is not SENTINEL:
@@ -264,7 +269,7 @@ class TestCog(BaseCog):
                     assert op(r, assertion)
 
         except AssertionError:
-            await self._format_assertion_error(r, cmd_name, assertion, assert_type)
+            await self._format_assertion_error(r, cmd_name, assertion)
         except Exception as e:
             passed = await self._handle_exc(cmd_name, e, raises)
         else:
@@ -286,10 +291,10 @@ class TestCog(BaseCog):
         else:
             return DEFAULT_OPERATOR
 
-    async def _format_assertion_error(self, result: Any, cmd_name: str, assertion: Any, assert_type: bool) -> None:
+    async def _format_assertion_error(self, result: Any, cmd_name: str, assertion: Any) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
-            r = type(result) if assert_type else result
+            r = type(result) if isinstance(assertion, type) else result
             print(f"Expected {assertion}, got {r}")
 
     async def _handle_exc(self, cmd_name, exc, raises) -> bool:
@@ -349,6 +354,14 @@ class TestCog(BaseCog):
         
         return await self._do_test(cmd, *args, **kwargs, ctx=ctx)
 
+    async def do_test_cog_method(self, cog_name: str, meth_name: str, *args, **kwargs) -> None:
+        """Tests a non-command method in a Cog."""
+        cog = self.bot.get_cog(cog_name)
+
+        method = getattr(cog, meth_name, None)
+
+        await self._do_test(method, *args, **kwargs)
+        
 
     #########################################
     #####             TESTS             #####
@@ -482,7 +495,7 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "search", "steven dawson")
     
     #async def test_soundcog_search_type(self, ctx: commands.Context) -> None:
-    #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list, assert_type=True)
+    #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion=list)
     #
     #async def test_soundcog_search_result(self, ctx: commands.Context) -> None:
     #    await self.do_test_command(ctx, "search", "steven dawson", rtn=True, assertion="steven dawson", index=0, in_="description")
@@ -497,6 +510,7 @@ class TestCog(BaseCog):
     async def test_soundcog_tts_language(self, ctx: commands.Context) -> None:
         await asyncio.sleep(0.5)
         await self.do_test_command(ctx, "tts", "test", "sv")
+    
     @voice
     @network_io
     async def test_soundcog_tts_filename(self, ctx: commands.Context) -> None:
@@ -508,13 +522,22 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "uptime")
     
     async def test_statscog_uptime_type(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "uptime", assertion=str, assert_type=True)
+        await self.do_test_command(ctx, "uptime", assertion=str)
 
     async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog")
     
     async def test_statscog_ping(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "ping")
+    
+    async def test_statscog_get_top_guild_commands(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_top_guild_commands", guild_id=ctx.guild.id)
+    
+    async def test_statscog_get_top_command_users(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_top_command_users", guild_id=ctx.guild.id, command="run_tests")
+    
+    async def test_statscog_get_command_usage(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_command_usage", guild_id=ctx.guild.id, command="run_tests", assertion=int)    
     
     # TwitterCog
     @network_io
