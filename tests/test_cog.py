@@ -30,6 +30,9 @@ from utils.messaging import ask_user_yes_no
 SENTINEL = object() # Shouldn't strictly be called "sentinel", but it's not a None-value either...
 DEFAULT_OPERATOR = operator.eq
 
+# Used for ImageCog tests
+IMAGE_URL = "https://cdn.discordapp.com/attachments/560503336013529091/630814900897185813/D846i0ZWwAcH-k_.png"
+
 class TestError(Exception):
     pass
 
@@ -572,6 +575,15 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "invite")
 
     # ImageCog
+    @discord_io
+    async def test_imagecog_totext(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "totext", IMAGE_URL)
+
+    @discord_io
+    async def test_imagecog_totext(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "deepfry", "-url", IMAGE_URL)
+
+
     async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
         deepfry_cmd = self.bot.get_command("deepfry")
