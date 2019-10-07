@@ -580,7 +580,7 @@ class TestCog(BaseCog):
         await self.do_test_command(ctx, "totext", IMAGE_URL)
 
     @discord_io
-    async def test_imagecog_totext(self, ctx: commands.Context) -> None:
+    async def test_imagecog_deepfry(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "deepfry", "-url", IMAGE_URL)
 
 
