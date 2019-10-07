@@ -208,13 +208,12 @@ class StatsCog(BaseCog):
         await self.send_embed_message(ctx, title=title, description=description)
 
     @commands.command(name="uptime", aliases=["up"])
-    async def uptime(self, ctx: commands.Context) -> str:
+    async def uptime(self, ctx: commands.Context) -> None:
         """Bot uptime."""
         up = self.get_bot_uptime(type=str)
         await ctx.send(f"Bot has been up for {up}")
-        return up # NOTE: I think this is LITERALLY just for TestCog. Remove?
 
-    def get_bot_uptime(self, type: Union[dict, str]=dict) -> str:
+    def get_bot_uptime(self, type: Union[dict, str]=dict) -> Union[dict, str]:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
             return up

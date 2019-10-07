@@ -520,9 +520,6 @@ class TestCog(BaseCog):
     # StatsCog
     async def test_statscog_uptime(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "uptime")
-    
-    async def test_statscog_uptime_type(self, ctx: commands.Context) -> None:
-        await self.do_test_command(ctx, "uptime", assertion=str)
 
     async def test_statscog_changelog_type(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "changelog")
@@ -530,6 +527,12 @@ class TestCog(BaseCog):
     async def test_statscog_ping(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "ping")
     
+    async def test_statscog_get_bot_uptime_str(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_bot_uptime", type=str)    
+
+    async def test_statscog_get_bot_uptime_dict(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_bot_uptime", type=dict) 
+
     async def test_statscog_get_top_guild_commands(self, ctx: commands.Context) -> None:
         await self.do_test_cog_method("StatsCog", "get_top_guild_commands", guild_id=ctx.guild.id)
     
