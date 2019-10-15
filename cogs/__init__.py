@@ -12,7 +12,6 @@ from cogs.avatar_cog import AvatarCog
 from cogs.experimental_cog import ExperimentalCog
 from cogs.fun_cog import FunCog
 from cogs.image_cog import ImageCog
-from cogs.management_cog import ManagementCog
 from cogs.meme_cog import MemeCog
 from cogs.pubg_cog import PUBGCog
 from cogs.reddit_cog import RedditCog
