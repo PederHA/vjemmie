@@ -17,7 +17,7 @@ from typing import Iterable, Optional, Tuple, Union
 import discord
 import praw
 from prawcore.exceptions import Forbidden
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from botsecrets import REDDIT_ID, REDDIT_SECRET, REDDIT_USER_AGENT
 from cogs.base_cog import BaseCog, EmbedField
@@ -81,7 +81,10 @@ class RedditCog(BaseCog):
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
         
         # Initiate loop that clears reddit submission cache daily
-        self.bot.loop.create_task(self.submission_refresh_loop())
+        self.submission_refresh_loop.start()
+
+    def cog_unload(self) -> None:
+        self.submission_refresh_loop.cancel()    
 
     def load_subs(self) -> dict:
         subs = get_cached("db/reddit/subs.json")
@@ -98,11 +101,10 @@ class RedditCog(BaseCog):
     def init_submissions_cache(self) -> None:
         self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
     
+    @tasks.loop(seconds=86400.0)
     async def submission_refresh_loop(self) -> None:
         """Wipes reddit submission cache once daily"""
-        while True:
-            self.init_submissions_cache()
-            await asyncio.sleep(86400) # 1 day
+        self.init_submissions_cache()
 
     @commands.group(name="reddit", usage="<subcommand>")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
