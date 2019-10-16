@@ -10,7 +10,7 @@ from time import perf_counter, time, time_ns
 from typing import List, Union, Dict, Tuple, Optional
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from github import Commit, Github, GithubObject
 
 from botsecrets import GITHUB_TOKEN
@@ -111,15 +111,14 @@ class StatsCog(BaseCog):
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
         self.guilds = self.load_guilds()
+        self._do_dump.start()
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        await self.cmd_usage_loop()
-
-    async def cmd_usage_loop(self) -> None:
-        while True:
-            await asyncio.sleep(20)
-            await self.bot.loop.run_in_executor(None, self.dump_guilds)
+    def cog_unload(self):
+        self._do_dump.cancel()
+    
+    @tasks.loop(seconds=20.0)
+    async def _do_dump(self) -> None:
+        await self.bot.loop.run_in_executor(None, self.dump_guilds)
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
