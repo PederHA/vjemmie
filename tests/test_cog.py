@@ -529,9 +529,12 @@ class TestCog(BaseCog):
     async def test_statscog_get_bot_uptime_dict(self, ctx: commands.Context) -> None:
         await self.do_test_cog_method("StatsCog", "get_bot_uptime", type=dict) 
 
-    async def test_statscog_get_top_guild_commands(self, ctx: commands.Context) -> None:
-        await self.do_test_cog_method("StatsCog", "get_top_guild_commands", guild_id=ctx.guild.id)
-    
+    async def test_statscog_get_top_commands_for_guild(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_top_commands_for_guild", guild_id=ctx.guild.id)
+
+    async def test_statscog_get_top_commands_for_user(self, ctx: commands.Context) -> None:
+        await self.do_test_cog_method("StatsCog", "get_top_commands_for_user", guild_id=ctx.guild.id, user=ctx.message.author)
+
     async def test_statscog_get_top_command_users(self, ctx: commands.Context) -> None:
         await self.do_test_cog_method("StatsCog", "get_top_command_users", guild_id=ctx.guild.id, command="run_tests")
     

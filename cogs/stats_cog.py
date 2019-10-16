@@ -86,7 +86,7 @@ class DiscordGuild:
     def get_top_commands(self, limit: int=10) -> Counter:
         """Get Counter of top N most used commands in the guild."""
         top_commands = [(command.name, command.times_used) for command in self.commands.values()]
-        
+
         if limit:
             top_commands = top_commands[:limit]
 
@@ -150,15 +150,9 @@ class StatsCog(BaseCog):
         with open(GUILD_STATS_PATH, "wb") as f:
             pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_top_guild_commands(self, guild_id: int, limit: int=0) -> Counter:
+    def get_top_commands_for_guild(self, guild_id: int, limit: int=0) -> Counter:
         """Get top commands for a specific guild."""
         return self.guilds[guild_id].get_top_commands(limit=limit)
-
-    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> Counter:
-        """Get top users of a specific command."""
-        guild = self.guilds[guild_id]
-        cmd = guild.commands[command]
-        return cmd.get_top_users(limit=limit)
 
     def get_top_commands_for_user(self, guild_id: int, user: discord.User, limit: int=0) -> Counter: # FIX
         """Get a Counter of a user's most used commands."""
@@ -173,6 +167,12 @@ class StatsCog(BaseCog):
             cmds = cmds[:limit]
         return Counter(dict(cmds))
 
+    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> Counter:
+        """Get top users of a specific command."""
+        guild = self.guilds[guild_id]
+        cmd = guild.commands[command]
+        return cmd.get_top_users(limit=limit)
+
     def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
         """Get number of times a command has been used in a specific guild."""
         try:
@@ -185,23 +185,29 @@ class StatsCog(BaseCog):
         """List most used commands in the server."""
         if not ctx.guild:
             raise CommandError("This command is not supported in DMs!")
-        
+
         if user:
-            usage = self.get_top_commands_for_user(ctx.guild.id, user)
-            if not usage:
+            cmds = self.get_top_commands_for_user(ctx.guild.id, user)
+            if not cmds:
                 raise CommandError("User has not used any commands yet!")
             title = f"Top commands for {user.name}"
         else:
             try:
-                usage = self.get_top_guild_commands(guild_id=ctx.guild.id)
+                cmds = self.get_top_commands_for_guild(guild_id=ctx.guild.id)
             except:
                 raise CommandError("No commands have been used in this server!")
             else:
                 title = f"Top Commands for {ctx.guild.name}"
+
+        # don't include commands that have been deleted or are unavailable      
+        for command in list(cmds):
+            if not self.bot.get_command(command):
+                cmds.pop(command)
         
+        # Create message body
         description = "\n".join([
-            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {n}"
-            for (cmd, n) in usage.most_common(10)
+            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {used}"
+            for (cmd, used) in cmds.most_common(10)
         ])
 
         await self.send_embed_message(ctx, title=title, description=description)
