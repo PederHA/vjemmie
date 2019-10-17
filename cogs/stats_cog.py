@@ -111,14 +111,28 @@ class StatsCog(BaseCog):
         self.bot.start_time = datetime.now()
         self.github = Github(GITHUB_TOKEN)
         self.guilds = self.load_guilds()
-        self._do_dump.start()
+        self.dump_command_stats.start()
 
     def cog_unload(self):
-        self._do_dump.cancel()
+        self.dump_command_stats.cancel()
     
-    @tasks.loop(seconds=20.0)
+    def dump_guilds(self) -> None:
+        """Save guild usage statistics."""
+        with open(GUILD_STATS_PATH, "wb") as f:
+            pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
+
     async def _do_dump(self) -> None:
         await self.bot.loop.run_in_executor(None, self.dump_guilds)
+
+    @tasks.loop(seconds=20.0)
+    async def dump_command_stats(self) -> None:
+        await self._do_dump()
+
+    @dump_command_stats.after_loop
+    async def on_dump_command_stats_cancel(self) -> None:
+        """Make sure we dump most recent stats if we are being cancelled."""
+        if self.dump_command_stats.is_being_cancelled():
+            await self._do_dump()
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
@@ -144,11 +158,6 @@ class StatsCog(BaseCog):
                     with open(f"{GUILD_STATS_PATH}_{time_ns()}.bak", "wb") as backup:
                         backup.write(contents)
                 return {}
-
-    def dump_guilds(self) -> None:
-        """Save guild usage statistics."""
-        with open(GUILD_STATS_PATH, "wb") as f:
-            pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def get_top_commands_for_guild(self, guild_id: int, limit: int=0) -> Counter:
         """Get top commands for a specific guild."""
