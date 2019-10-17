@@ -104,11 +104,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
 
     @classmethod
-    async def create_local_source(cls, ctx, subdir: str, filename: str):
+    async def create_local_source(cls, ctx, subdir: str, filename: str, silent: bool=False):
         path = get_file_path(subdir, filename)
 
         # Send add-to-queue confirmation
-        await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
+        if not silent:
+            await ctx.send(f"```\nAdded {filename} to the Queue.\n```", delete_after=10)
 
         return cls(discord.FFmpegPCMAudio(str(path)), data={"title":filename}, requester=ctx.author)
 
@@ -369,8 +370,10 @@ class SoundCog(BaseCog):
                 await channel.connect()
             except asyncio.TimeoutError:
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
-    
-    async def play_local_source(self, ctx: commands.Context, player: AudioPlayer, sound_name: str) -> None:
+        
+        await self._play(ctx, "silence", silent=True)
+
+    async def play_local_source(self, ctx: commands.Context, player: AudioPlayer, sound_name: str, **kwargs) -> None:
         """Creates audio source from local file and adds it to player queue."""
         try:
             if sound_name:
@@ -392,7 +395,7 @@ class SoundCog(BaseCog):
                     await ctx.send(embed=embed)
             return
         else:
-            source = await YTDLSource.create_local_source(ctx, subdir, sound_name)
+            source = await YTDLSource.create_local_source(ctx, subdir, sound_name, **kwargs)
             await player.queue.put(source)
 
     async def play_ytdl_source(self, ctx: commands.Context, player: AudioPlayer, url: str) -> None:
@@ -407,7 +410,7 @@ class SoundCog(BaseCog):
         source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=download)
         await player.queue.put(source)        
 
-    async def _play(self, ctx: commands.Context, arg: str, voice_channel: commands.VoiceChannelConverter=None) -> None:
+    async def _play(self, ctx: commands.Context, arg: str, voice_channel: commands.VoiceChannelConverter=None, **kwargs) -> None:
         """Play sound in message author's voice channel
         
         Parameters
@@ -431,7 +434,7 @@ class SoundCog(BaseCog):
         if urlparse(arg).scheme in ["http", "https"]:
             await self.play_ytdl_source(ctx, player, arg)
         else:
-            await self.play_local_source(ctx, player, arg)
+            await self.play_local_source(ctx, player, arg, **kwargs)
         
         # Increment played count for guild
         self.played_count[ctx.guild.id] += 1
