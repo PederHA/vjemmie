@@ -112,7 +112,7 @@ class ImageCog(BaseCog):
         """
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
-            raise discord.DiscordException("URL or attachment must be an image file!")
+            raise CommandError("URL or attachment must be an image file!")
 
         try:
             # Download image if url if not a file-like object
@@ -172,7 +172,7 @@ class ImageCog(BaseCog):
         """Removes background from an image."""
         if not image_url and not ctx.message.attachments:
             self.reset_command_cooldown(ctx)
-            raise discord.DiscordException("Message has no image URL or image attachment")
+            raise CommandError("Message has no image URL or image attachment")
         
         if ctx.message.attachments:
             image_url = ctx.message.attachments[0].url

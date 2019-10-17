@@ -160,7 +160,7 @@ class RedditCog(BaseCog):
                 raise
             commands_ = self._get_commands(cmd)
             s = "s" if "," in commands_ else ""
-            raise discord.DiscordException(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
+            raise CommandError(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
         else:
             self.subs[subreddit] = new_command
             self.dump_subs() # After adding sub, save list of subs to disk
@@ -359,11 +359,11 @@ class RedditCog(BaseCog):
 
         # Only accept aliases with letters a-z
         if not is_valid_command_name(alias):
-            raise discord.DiscordException("Invalid alias name. Can only contain letters a-z.")
+            raise CommandError("Invalid alias name. Can only contain letters a-z.")
         
         # Check if subreddit exists as a bot command
         if not subreddit in self.subs:
-            raise discord.DiscordException(f"Subreddit {subreddit} is not added as a bot command!")
+            raise CommandError(f"Subreddit {subreddit} is not added as a bot command!")
 
         # Add new alias
         self.subs[subreddit].aliases.append(alias)
@@ -407,10 +407,10 @@ class RedditCog(BaseCog):
         alias = alias.lower()
 
         if subreddit not in self.subs:
-            raise discord.DiscordException(f"Subreddit {subreddit} is not added as a bot command!")
+            raise CommandError(f"Subreddit {subreddit} is not added as a bot command!")
         
         if alias not in self.subs[subreddit].aliases:
-            raise discord.DiscordException(f"No such alias **!{alias}** for subreddit **r/{subreddit}**")
+            raise CommandError(f"No such alias **!{alias}** for subreddit **r/{subreddit}**")
         
         self.subs[subreddit].aliases.remove(alias)
         self.dump_subs()
@@ -481,7 +481,7 @@ class RedditCog(BaseCog):
             A valid sorting filter for `filtering_type`.
         """
         if filter_ and filter_ not in valid_filters:
-            raise discord.DiscordException(f"{filter_} is not a valid Reddit sorting filter.")
+            raise CommandError(f"{filter_} is not a valid Reddit sorting filter.")
         
         return filter_ or default_filter
     
@@ -591,7 +591,7 @@ class RedditCog(BaseCog):
         # Check if NSFW subreddit
         if self._is_nsfw(ctx, sub):
             #if sub.over18 and not ctx.channel.nsfw and subreddit.lower() not in self.NSFW_WHITELIST:
-            raise discord.DiscordException("Cannot post NSFW content in a non-NSFW channel!")
+            raise CommandError("Cannot post NSFW content in a non-NSFW channel!")
 
         # Get posts generator
         if sorting == "hot":

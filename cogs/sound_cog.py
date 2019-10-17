@@ -438,7 +438,8 @@ class SoundCog(BaseCog):
     
     @commands.command(name="play", usage="<filename>")
     async def play(self, ctx: commands.Context, *args):
-        """Play local sound files."""
+        """Play local sound files.
+        Use `!search` to list available sounds."""
         arg = " ".join(args)
         await self._play(ctx, arg)
 
@@ -711,7 +712,7 @@ class SoundCog(BaseCog):
             valid_langs = gtts.lang.tts_langs()
         except:
             await self.send_log(f"**URGENT**: Update gTTS. {self.AUTHOR_MENTION}")
-            raise discord.DiscordException("Text-to-speech module is unavailable. Try again later.")
+            raise CommandError("Text-to-speech module is unavailable. Try again later.")
 
         # User error and help arguments
         if not text:
@@ -919,7 +920,7 @@ class SoundCog(BaseCog):
             await ctx.invoke(cmd, url)
         
         else:
-            raise discord.DiscordException("A URL or attached file is required!")
+            raise CommandError("A URL or attached file is required!")
 
     @commands.command(name="combine")
     @admins_only()

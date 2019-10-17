@@ -238,7 +238,7 @@ class BaseCog(commands.Cog):
                 # discord.Color has classmethods for several basic colors. Check src!
                 color_classmethod = getattr(discord.Color, color)
             except:
-                raise discord.DiscordException(f"Could not interpret {color}")
+                raise CommandError(f"Could not interpret {color}")
             else:
                 return color_classmethod()
 
@@ -247,7 +247,7 @@ class BaseCog(commands.Cog):
             return discord.Color(color)
 
         else:
-            raise discord.DiscordException("Argument must be type(str) or type(int)")
+            raise CommandError("Argument must be type(str) or type(int)")
 
     async def get_embed(self,
                         ctx: commands.Context,
@@ -363,7 +363,7 @@ class BaseCog(commands.Cog):
         Generator of discord user-/nicknames of users in ctx voice channel.
         """
         if not hasattr(ctx.message.author.voice, "channel"):
-            raise discord.DiscordException("Message author is not connected to a voice channel.")
+            raise CommandError("Message author is not connected to a voice channel.")
 
         for member in ctx.message.author.voice.channel.members:
             if member.nick and nick:
