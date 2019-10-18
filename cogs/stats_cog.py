@@ -124,7 +124,7 @@ class StatsCog(BaseCog):
     async def _do_dump(self) -> None:
         await self.bot.loop.run_in_executor(None, self.dump_guilds)
 
-    @tasks.loop(seconds=20.0)
+    @tasks.loop(seconds=300.0)
     async def dump_command_stats(self) -> None:
         await self._do_dump()
 
