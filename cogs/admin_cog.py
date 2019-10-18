@@ -213,9 +213,10 @@ class AdminCog(BaseCog):
         log = self.get_log_file(log_name)
         
         with open(log, "r", encoding=encoding) as f:
-            contents = f.read().splitlines()[-lines:]
+            _contents = f.read().splitlines()[-lines:]
+        contents = "\n".join(_contents)
         
-        await ctx.send(contents)
+        await self.send_text_message(contents, ctx)
 
 
     @log.command(name="list")
