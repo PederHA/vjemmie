@@ -220,10 +220,8 @@ class AdminCog(BaseCog):
 
     @log.command(name="list")
     async def list_log_files(self, ctx: commands.Context) -> None:
-        log_dir = self.get_log_dir()
-        
+        log_dir = self._get_log_dir()
         files = "\n".join(list(log_dir.iterdir()))
-
         await self.send_text_message(files, ctx)
 
     @commands.command(name="blacklist")
