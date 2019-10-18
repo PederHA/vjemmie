@@ -175,7 +175,7 @@ class AdminCog(BaseCog):
         if not ctx.invoked_subcommand:
             raise CommandError("A subcommand is required!")
 
-    def get_log_dir(self) -> None:
+    def _get_log_dir(self) -> None:
         try:
             immortal_dir = os.environ["IMMORTAL_SDIR"]
         except KeyError:
@@ -188,19 +188,35 @@ class AdminCog(BaseCog):
         
         return log_dir
 
-    @log.command(name="get")
-    async def post_log(self, ctx: commands.Context, log_name: str=None, encoding: str="utf-8") -> None:
+    def get_log_file(self, log_name: Optional[str]) -> Path:
         if not log_name:
             log_name = "vjemmie.log" # Need to specify environ vars
         
-        log_dir = self.get_log_dir()
+        log_dir = self._get_log_dir()
         
         # Check if log file exists
         log = log_dir / log_name
         if not log.exists():
             raise CommandError(f"`{str(log)}` does not exist!")
         
+        return log    
+
+    @log.command(name="get")
+    async def post_log(self, ctx: commands.Context, log_name: str=None, encoding: str="utf-8") -> None:
+        """Print a log file in its entirety."""
+        log = self.get_log_file(log_name)
         await self.read_send_file(ctx, log, encoding=encoding)
+
+    @log.command(name="tail")
+    async def post_log_tail(self, ctx: commands.Context, log_name: str=None, lines: int=5, encoding="utf8") -> None:
+        """Print last N lines of a log file."""
+        log = self.get_log_file(log_name)
+        
+        with open(log, "r", encoding=encoding) as f:
+            contents = f.read().splitlines()[-lines:]
+        
+        await ctx.send(contents)
+
 
     @log.command(name="list")
     async def list_log_files(self, ctx: commands.Context) -> None:
