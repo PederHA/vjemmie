@@ -178,9 +178,13 @@ class StatsCog(BaseCog):
 
     def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> Counter:
         """Get top users of a specific command."""
-        guild = self.guilds[guild_id]
-        cmd = guild.commands[command]
-        return cmd.get_top_users(limit=limit)
+        try:
+            guild = self.guilds[guild_id]
+            cmd = guild.commands[command]
+        except KeyError: # Catches exception from both statements in 'try' clause
+            return Counter()
+        else:
+            return cmd.get_top_users(limit=limit)
 
     def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
         """Get number of times a command has been used in a specific guild."""

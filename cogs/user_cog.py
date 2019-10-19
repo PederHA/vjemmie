@@ -104,12 +104,11 @@ class UserCog(BaseCog):
         # Top user of the command
         top_users = self.bot.get_cog("StatsCog").get_top_command_users(ctx.guild.id, command, limit=10)
         if top_users:
-            for top_user in top_users:
-                # Make sure the top user can be identified
-                user = self.bot.get_user(top_user[0])
+            # Iterate until a valid user is found (our top user might have left the server)
+            for user_id, n_used in top_users.items():
+                user = self.bot.get_user(user_id)
                 if user:
-                    used = top_user[1]
-                    description.append(f"**Top User:** {user.mention} ({used})")
+                    description.append(f"**Top User:** {user.mention} ({n_used})")
                     break
         
         description = "\n".join(description)
