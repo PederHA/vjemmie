@@ -194,7 +194,7 @@ class TestCog(BaseCog):
             return False
         elif not ctx.message.author.voice and hasattr(coro, "voice"):
             return False
-        elif not inspect.iscoroutine(coro):
+        elif not inspect.iscoroutinefunction(coro):
             return False
         else:
             return True
