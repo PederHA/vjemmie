@@ -558,8 +558,14 @@ class TestCog(BaseCog):
     async def test_usercog_help(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "help")
 
-    async def test_usercog_help_sound(self, ctx: commands.Context) -> None:
+    async def test_usercog_help_category_sound(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "help", "sound")
+
+    async def test_usercog_help_command_play(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "help", "play")
+    
+    async def test_usercog_help_command_deepfry(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "help", "deepfry")
 
     async def test_usercog_commands(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "commands")
