@@ -148,20 +148,23 @@ class TestCog(BaseCog):
         await self._pre_tests_setup()
 
         # Temporarily patch ctx to disable message sending while invoking bot commands
-        with self.patch_ctx(ctx) as ctx_:
-            # Find tests
-            for k in dir(self):
-                if k.startswith("test_"):
-                    coro = getattr(self, k)
-                    if not self.determine_run_coro(coro, ctx_):
-                        continue
-                    if inspect.iscoroutinefunction(coro):
-                        try:
-                            await coro(ctx_)
-                        except:
-                            failed.append(k)
-                        else:
-                            passed.append(k)
+        with self.patch_ctx(ctx) as ctx_: 
+            for test in [k for k in dir(self) if k.startswith("test_")]:
+                # Get coroutine
+                coro = getattr(self, test)
+
+                # If test cannot be run, skip it
+                if not self.determine_run_coro(coro, ctx_):
+                    continue 
+                
+                # Test coroutine
+                try:
+                    await coro(ctx_)
+                except:
+                    failed.append(test)
+                else:
+                    passed.append(test)
+       
         await self._post_tests_cleanup(ctx)
        
         # Format results
@@ -190,6 +193,8 @@ class TestCog(BaseCog):
         elif not self.discord_io_enabled and hasattr(coro, "discord_io"):
             return False
         elif not ctx.message.author.voice and hasattr(coro, "voice"):
+            return False
+        elif not inspect.iscoroutine(coro):
             return False
         else:
             return True
