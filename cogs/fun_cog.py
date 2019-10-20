@@ -3,7 +3,6 @@ import io
 import math
 import random
 import traceback
-import re
 import unicodedata
 from functools import partial
 from pprint import pprint
@@ -122,7 +121,6 @@ class FunCog(BaseCog):
     def do_braille_transliterate(self, text: str) -> str:
         """Public braille transliteration method other cogs can use."""
         text = text.casefold()
-        re.search(r"([a-z0-9,.!? ]+)", text)
         return self._do_transliterate(text, BRAILLE_MAPPING)
 
     @commands.command(name="uwu", aliases=["owo"], usage="<message string> or <message_ID>")
