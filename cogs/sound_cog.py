@@ -371,7 +371,7 @@ class SoundCog(BaseCog):
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
         
         # Keep ffmpeg hot (seems to fix delayed sound output on initial sound file)
-        subprocess.call("ffmpeg")
+        subprocess.call("ffmpeg", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     async def play_local_source(self, ctx: commands.Context, player: AudioPlayer, sound_name: str) -> None:
         """Creates audio source from local file and adds it to player queue."""
