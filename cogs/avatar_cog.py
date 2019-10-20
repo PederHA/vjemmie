@@ -29,23 +29,29 @@ class AvatarCog(BaseCog):
         ----------
         ctx : `commands.Context`
             Discord Context object
+        
         template : `str`
             File name of image to be used as template. 
             Must be located in memes/templates/
+        
         resize : `Union[Tuple[int,int], list]`
             tuple (width, height) or list of tuples (w, h). A list 
             indicates that multiple instances of a user's avatar is 
             to be added to the template image.
+        
         offset : `Union[Tuple[int,int], list]`
             tuple (off_x, off_y) or list of tuples (off_x, off_y).
             Same logic as `resize` with regards to lists.
+        
         user : `commands.MemberConverter`, optional
             A Discord user. If specified, this user's avatar is 
             downloaded in place of the message author's.
+        
         text : `Union[List[dict], dict]`, optional
             Dict should contain arguments corresponding to 
             `ImageCog._add_text()` parameters. Passing in a list 
             indicates multiple text overlays.
+        
         template_overlay : `bool`, optional
             If True, the order of template and avatar is reversed, 
             and the template is placed over the avatar.
@@ -61,12 +67,9 @@ class AvatarCog(BaseCog):
         # Download user's avatar
         # NOTE: as of discord.py 1.1.0 there is a new avatar.read() method
         # but I cba changing anything rn
-        avatar_img = await self.download_from_url(ctx, user_avatar_url)
+        _avatar = await self.download_from_url(ctx, user_avatar_url)
 
-        # Open user's avatar
-        user_avatar = Image.open(avatar_img)
-
-        # Open template
+        avatar = Image.open(_avatar)
         background = Image.open(f"memes/templates/{template}", "r")
 
         # Convert template to RGBA
@@ -74,7 +77,7 @@ class AvatarCog(BaseCog):
             background.putalpha(255) # puts an alpha channel on the image
 
         # Add avatar to template
-        background = await self._do_paste(background, user_avatar, resize, offset, template_overlay)
+        background = await self._do_paste(background, avatar, resize, offset, template_overlay)
 
         # Add text
         if text:
@@ -85,12 +88,12 @@ class AvatarCog(BaseCog):
                     background = await self._add_text(ctx, background, **txt)
 
         # Save image to file-like object
-        file_like_obj = io.BytesIO()
-        background.save(file_like_obj, format="PNG")
-        file_like_obj.seek(0) # Seek to byte 0, so discord.File can use BytesIO.read()
+        result = io.BytesIO()
+        background.save(result, format="PNG")
+        result.seek(0) # Seek to byte 0, so discord.File can use BytesIO.read()
 
         # Upload image to discord and get embed
-        embed = await self.get_embed_from_img_upload(ctx, file_like_obj, "out.png")
+        embed = await self.get_embed_from_img_upload(ctx, result, "out.png")
         await ctx.send(embed=embed)
     
     async def _resize_paste(self, 
