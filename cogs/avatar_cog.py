@@ -59,6 +59,8 @@ class AvatarCog(BaseCog):
             user_avatar_url = user
 
         # Download user's avatar
+        # NOTE: as of discord.py 1.1.0 there is a new avatar.read() method
+        # but I cba changing anything rn
         avatar_img = await self.download_from_url(ctx, user_avatar_url)
 
         # Open user's avatar
