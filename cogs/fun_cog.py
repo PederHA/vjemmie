@@ -115,13 +115,12 @@ class FunCog(BaseCog):
     async def braille(self, ctx: commands.Context, *text: str) -> None:
         """Braille transliteration."""
         text = " ".join(text)
-        trans = self.do_braille_transliterate(text)
+        trans = await self.transliterate_braille(text)
         await ctx.send(trans)
 
-    def do_braille_transliterate(self, text: str) -> str:
+    async def transliterate_braille(self, text: str) -> str:
         """Public braille transliteration method other cogs can use."""
-        text = text.casefold()
-        return self._do_transliterate(text, BRAILLE_MAPPING)
+        return await self._do_transliterate(text.casefold(), BRAILLE_MAPPING)
 
     @commands.command(name="uwu", aliases=["owo"], usage="<message string> or <message_ID>")
     async def uwu(self, ctx: commands.Context, *args) -> None:
@@ -138,17 +137,17 @@ class FunCog(BaseCog):
         if not to_trans:
             raise CommandError("No string to transliterate.")
         
-        trans = self.do_uwu_transliterate(to_trans)
+        trans = await self.transliterate_uwu(to_trans)
 
         _iw = ctx.invoked_with
         owo = f"{_iw[0].capitalize()}{_iw[1]}{_iw[2].capitalize()}"
         await ctx.send(f"{trans} {owo}")
 
-    def do_uwu_transliterate(self, text: str) -> str:
+    async def transliterate_uwu(self, text: str) -> str:
         """Public UwU transliteration method other cogs can use."""
-        return self._do_transliterate(text, UWU_MAPPING)
+        return await self._do_transliterate(text, UWU_MAPPING)
 
-    def _do_transliterate(self, text: str, mapping: dict) -> str:     
+    async def _do_transliterate(self, text: str, mapping: dict) -> str:     
         # Get capitalization of each character in string
         caps = []
         for char in text:
