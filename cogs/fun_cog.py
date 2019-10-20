@@ -230,14 +230,20 @@ class FunCog(BaseCog):
 
     async def big_text(self, text: str) -> str:
         """Replaces characters in a string with regional indicator emojis."""
-        _t = []
+        t = []
         chars = "".join([unidecode.unidecode(c) for c in text.casefold()])  
         for c in chars:                # normalize to ascii char (æ -> ae)
+            # Letters
             if c.isalpha() and ord(c) < 128:
-                _t.append(f":regional_indicator_{c}:")
+                t.append(f":regional_indicator_{c}:")
+            # Numbers
+            elif c.isdigit():
+                name = unicodedata.name(c).split(" ")[1].lower()
+                t.append(f":{name}:")
+            # Symbols
             else:
                 if c.isspace():
                     c = c*2 # Double spacing
-                _t.append(c)
-        return "".join(_t)
+                t.append(c)
+        return "".join(t)
         
