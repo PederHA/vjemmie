@@ -10,6 +10,7 @@ from typing import Union
 
 import discord
 import requests
+import unidecode
 from discord.ext import commands
 
 from cogs.base_cog import BaseCog
@@ -230,10 +231,9 @@ class FunCog(BaseCog):
     async def big_text(self, text: str) -> str:
         """Replaces characters in a string with regional indicator emojis."""
         _t = []
-        for c in text.casefold():
-            c = unicodedata.normalize("NFD", c)[0] # normalize char (å -> a)
-            if c.isalpha() and ord(c) < 128: # Must be an ascii-compliant alphabetical char
-                                             # NOTE: ord(c) < 127 Might be redundant due to unicodedata.normalize()?
+        chars = "".join([unidecode.unidecode(c) for c in text.casefold()])  
+        for c in chars:                # normalize to ascii char (æ -> ae)
+            if c.isalpha() and ord(c) < 128:
                 _t.append(f":regional_indicator_{c}:")
             else:
                 if c.isspace():

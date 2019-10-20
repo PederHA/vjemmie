@@ -29,6 +29,7 @@ google-api-python-client = "*"
 pytesseract = "*"
 python-magic = "*"
 discord-py = "*"
+unidecode = "*"
 
 [dev-packages]
 pylint = "*"

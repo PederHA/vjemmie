@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "702e40ae32871ca952a292ef630c3b60f26235071dfa15dbb3d9be2d263f895c"
+            "sha256": "e5637344eee019e2628caf86bcd73f16cdfb2c6ce4ceb0139e7ddcf9de2336b2"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -589,6 +589,7 @@
                 "sha256:1d7a042116536098d05d599ef2b8616759f02985c85b4fef50c78a5aaf10822a",
                 "sha256:2b6aab710c2a1647e928e36d69c21e76b453cd455f4e2621000e54b2a9b8cce8"
             ],
+            "index": "pypi",
             "version": "==1.1.1"
         },
         "update-checker": {
@@ -715,7 +716,7 @@
                 "sha256:05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d",
                 "sha256:f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"
             ],
-            "markers": "platform_system == 'Windows'",
+            "markers": "sys_platform == 'win32'",
             "version": "==0.4.1"
         },
         "gitdb2": {
