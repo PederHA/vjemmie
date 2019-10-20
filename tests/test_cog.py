@@ -250,16 +250,13 @@ class TestCog(BaseCog):
         # Get operator for assertion statement (default: ==)
         op = await self._get_operator(kwargs) # TODO: UNFINISHED!!
 
-        # Get name of command or coro, str formatted args and str formatted kwargs
-        cmd_name, _args, _kwargs = await self._get_test_attrs(coro_or_cmd, *args, **kwargs)
-
         passed = False
         try:
             # Await coro or command
             if ctx:
                 r = await ctx.invoke(coro_or_cmd, *args, **kwargs)
             else:
-                if inspect.isawaitable(coro_or_cmd):
+                if inspect.iscoroutinefunction(coro_or_cmd):
                     r = await coro_or_cmd(*args, **kwargs)
                 else:
                     r = coro_or_cmd(*args, **kwargs)
