@@ -228,6 +228,7 @@ class TestCog(BaseCog):
         yield new_ctx
 
     async def _do_test(self, coro_or_cmd, *args, **kwargs) -> None:
+        """This is a dumpster fire."""
         # Pop ctx
         ctx = kwargs.pop("ctx", None)
         
@@ -426,6 +427,10 @@ class TestCog(BaseCog):
     async def test_funcog_braille(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "braille", "testing braille command")
     
+    async def test_funcog_big_text(self, ctx: commands.Context) -> None:
+        chars = "".join([chr(i) for i in range(192, 256)])
+        await self.do_test_cog_method("FunCog", "big_text", text=chars)
+
     # PUBGCog
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "drop", "erangel", "hot")

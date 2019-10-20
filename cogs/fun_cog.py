@@ -219,3 +219,25 @@ class FunCog(BaseCog):
         if emoji_name is not None:
             out += f"\nI am the sheriff of {emoji_name.title()}"
         await ctx.send(out)
+
+    @commands.command(name="big", aliases=["regional_indicator"])
+    async def regional_indicator_text(self, ctx: commands.Context, *text) -> None:
+        """BIG TEXT."""
+        text = " ".join(text)
+        big_text = await self.big_text(text)
+        await ctx.send(big_text)
+
+    async def big_text(self, text: str) -> str:
+        """Replaces characters in a string with regional indicator emojis."""
+        _t = []
+        for c in text.casefold():
+            c = unicodedata.normalize("NFD", c)[0] # normalize char (å -> a)
+            if c.isalpha() and ord(c) < 128: # Must be an ascii-compliant alphabetical char
+                                             # NOTE: ord(c) < 127 Might be redundant due to unicodedata.normalize()?
+                _t.append(f":regional_indicator_{c}:")
+            else:
+                if c.isspace():
+                    c = c*2 # Double spacing
+                _t.append(c)
+        return "".join(_t)
+        
