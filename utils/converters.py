@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from typing import Optional, Iterable, Union
 from urllib.parse import urlparse, ParseResult
@@ -210,6 +211,7 @@ class BoolConverter(commands.Converter):
 
         return False
 
+
 class MessageIdOrStringConverter(commands.Converter):
     """Accepts a message ID or a string. Returns `str`."""
     async def convert(self, ctx: commands.Context, arg: str) -> str:
@@ -218,4 +220,12 @@ class MessageIdOrStringConverter(commands.Converter):
             return msg.content
         else:
             return arg
-            
+
+
+class IPAddressConverter(commands.Converter):
+    """Accepts a message ID or a string. Returns `str`."""
+    async def convert(self, ctx: commands.Context, arg: str) -> str:
+        try:
+            return ipaddress.ip_address(arg)
+        except ValueError:
+            raise CommandError(f"'{arg}' is not a valid IP Address!")
