@@ -1,4 +1,4 @@
-import ipaddress
+from ipaddress import ip_address, IPv4Address, IPv6Address
 import re
 from typing import Optional, Iterable, Union
 from urllib.parse import urlparse, ParseResult
@@ -224,8 +224,8 @@ class MessageIdOrStringConverter(commands.Converter):
 
 class IPAddressConverter(commands.Converter):
     """Accepts a message ID or a string. Returns `str`."""
-    async def convert(self, ctx: commands.Context, arg: str) -> str:
+    async def convert(self, ctx: commands.Context, arg: str) -> Union[IPv4Address, IPv6Address]:
         try:
-            return ipaddress.ip_address(arg)
+            return ip_address(arg)
         except ValueError:
             raise CommandError(f"'{arg}' is not a valid IP Address!")
