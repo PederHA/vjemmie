@@ -36,13 +36,13 @@ class DGVGKCog(BaseCog):
     @mc.command(name="port")
     async def set_server_port(self, ctx: commands.Context, port: int) -> None:
         port = abs(port)
-        if port > 65535:
-            raise CommandError("Port number must be between 0 and 65535")
-        self.SERVER_PORT = str(port)
+        if port == 0 or port > 65535:
+            raise CommandError("Port number must be between 1 and 65535")
+        self.SERVER_PORT = port
         await ctx.send(f"Minecraft server port set to `{self.SERVER_PORT}`")
 
     @mc.command(name="players")
     async def view_players(self, ctx: commands.Context) -> None:
-        status = self._get_server_status()
+        status = await self._get_server_status()
         players = "\n".join([player.name for player in status.players.sample])
         await self.send_embed_message(ctx, title="Players Online", description=players)
