@@ -7,13 +7,24 @@ import mcstatus
 from cogs.base_cog import BaseCog
 from utils.converters import IPAddressConverter
 from utils.exceptions import CommandError
+from utils.serialize import dump_json
+from utils.caching import get_cached
 
+CONF = "DGVGK/minecraft.json"
 
 class DGVGKCog(BaseCog):
     """De Gode Venners Gamingkrok commands."""
     
     SERVER_IP = "35.228.88.187"
     SERVER_PORT = 25565
+
+    FILES = [CONF]
+
+    def __init__(self) -> None:
+        self._set_ip_port()
+
+    def _set_ip_port(self) -> None:
+
 
     async def _get_server_status(self) -> mcstatus.pinger.PingResponse:
         try:
