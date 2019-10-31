@@ -30,7 +30,7 @@ class Activity:
     async def get_activity(self) -> str:
         r = ""
         if self.callable_:
-            if inspect.isawaitable(self.callable_):
+            if inspect.iscoroutinefunction(self.callable_):
                 r = await self.callable_()
             else:
                 r = self.callable_()
