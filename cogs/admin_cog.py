@@ -39,13 +39,13 @@ class Activity:
 
 
 class AdminCog(BaseCog):
+    """Admin commands for administering guild-related bot functionality."""
     FILES = [TRUSTED_PATH]
 
     # Activity rotation stuff
     ACTIVITY_ROTATION = True
     AC_ROTATION_INTERVAL = 10
 
-    """Admin commands for administering guild-related bot functionality."""
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Sets activity and prints a message when cog is instantiated 
