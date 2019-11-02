@@ -57,7 +57,7 @@ class AdminCog(BaseCog):
     async def run_activity_rotation(self) -> None:
         p = self.bot.command_prefix
 
-        acitivities = [
+        activities = [
             Activity(f"{p}about"),
             Activity(f"{p}help"),
             Activity(f"{p}commands"),
@@ -65,7 +65,7 @@ class AdminCog(BaseCog):
         ]
 
         while self.ACTIVITY_ROTATION: 
-            for activity in acitivities:
+            for activity in activities:
                 await self._change_activity(await activity.get_activity())
                 await asyncio.sleep(self.AC_ROTATION_INTERVAL)
 
