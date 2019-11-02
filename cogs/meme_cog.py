@@ -16,6 +16,11 @@ class MemeCog(BaseCog):
         self.experimental = False
         self.wordlist = []
         self.models = {}
+        self.daddy_verbs = self.load_daddy_verbs()
+
+    def load_daddy_verbs(self) -> None:
+        with open("memes/txt/verbs.txt", "r", encoding="utf-8") as f:
+            return f.read().splitlines()
     
     @commands.command(name="goodshit")
     async def goodshit(self, ctx: commands.Context) -> None:
@@ -48,6 +53,11 @@ class MemeCog(BaseCog):
         word = random.choice(self.wordlist)
         
         await ctx.send(f"Good morning to everyone apart from the {word}")
+
+    @commands.command(name="daddy")
+    async def verb_me_daddy(self, ctx: commands.Context) -> None:
+        verb = random.choice(self.daddy_verbs).capitalize()
+        await ctx.send(f"{verb} me daddy")
 
     @commands.command(name="emojipastam")
     async def emojipasta_markovchain(self, ctx: commands.Context) -> None:
