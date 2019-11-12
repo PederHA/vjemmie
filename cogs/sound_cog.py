@@ -836,7 +836,7 @@ class SoundCog(BaseCog):
         sound_file = await self.download_from_url(ctx, url)
 
         # Check if downloaded file is actually an audio file
-        if not check_file_audio(sound_file):
+        if not check_file_audio(sound_file) and ext != ".mp3": # mp3 files can't always be identified by MIME type
             raise CommandError("Downloaded file does not appear to be an audio file!")
         
         filename = self.get_unique_filename(filename)

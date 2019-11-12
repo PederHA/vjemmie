@@ -19,6 +19,7 @@ def _get_file_mimetype(file: T, bufsize: int) -> str:
 
 
 def check_file_audio(file: T, bufsize: int=BUFSIZE) -> bool:
+    """DO NOT use this to check MP3 files. They sometimes show up as `application/octet-stream`.""" 
     return _get_file_mimetype(file, bufsize).startswith("audio/")
 
 
