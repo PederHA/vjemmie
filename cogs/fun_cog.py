@@ -257,6 +257,7 @@ class FunCog(BaseCog):
         if len(users) < n_teams:
             raise CommandError("Number of teams cannot exceed number of users!")
         
+        random.shuffle(users)
         teams_ = list(np.array_split(users, n_teams))
         
         teams = []
