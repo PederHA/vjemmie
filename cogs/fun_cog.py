@@ -260,11 +260,12 @@ class FunCog(BaseCog):
         random.shuffle(users)
         teams_ = list(np.array_split(users, n_teams))
         
-        teams = []
-        for i, team in enumerate(teams_, start=1):
-            _t = f"Team {i}\n```"
-            _t += "\n".join([f"* {user}" for user in team])
-            _t += "```"
-            teams.append(_t)
-        t = "\n".join(teams)
-        await self.send_embed_message(ctx, title="Teams", description=t)
+        # Create message
+        n = "\n" # backslashes aren't allowed in f-strings
+        teams = "\n".join(
+            [
+            f"Team {i}\n```{n.join([f'* {user}' for user in team])}```" 
+            for i, team in list(enumerate(teams_, start=1))
+            ]
+        )
+        await self.send_embed_message(ctx, title="Teams", description=teams)
