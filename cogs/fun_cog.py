@@ -9,6 +9,7 @@ from pprint import pprint
 from typing import Union
 
 import discord
+import numpy as np
 import requests
 import unidecode
 from discord.ext import commands
@@ -247,3 +248,22 @@ class FunCog(BaseCog):
                 t.append(c)
         return "".join(t)
         
+    @commands.command(name="team")
+    async def split(self, ctx: commands.Context, n_teams: int=2) -> None:
+        if n_teams < 2:
+            raise CommandError("Cannot split into less than 2 teams!")
+
+        users = [user async for user in self.get_users_in_voice(ctx)]
+        if len(users) < n_teams:
+            raise CommandError("Number of teams cannot exceed number of users!")
+        
+        teams_ = list(np.array_split(users, n_teams))
+        
+        teams = []
+        for i, team in enumerate(teams_, start=1):
+            _t = f"Team {i}\n```"
+            _t += "\n".join([f"* {user}" for user in team])
+            _t += "```"
+            teams.append(_t)
+        t = "\n".join(teams)
+        await self.send_embed_message(ctx, title="Teams", description=t)
