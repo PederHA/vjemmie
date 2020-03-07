@@ -5,3 +5,4 @@ to disable in case of missing API credentials.
     -  No YouTube creds: Disable !yt
     - !ytdl should remain enabled regardless
 
+- [ ] Move config.py to top-level directory and add as bot attribute
