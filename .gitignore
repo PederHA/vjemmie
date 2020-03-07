@@ -4,12 +4,16 @@
 # Python
 __pycache__/
 
+
+# Distribution files
+vjemmie.egg-info/
+dist/
+
 # Startup scripts
 botstartup*
 
 # Config and credentials files
 botsecrets.py
-config.py
 
 # Filetypes
 *.pkl
@@ -25,11 +29,10 @@ Docker*
 downloads/
 _dev/*
 db/*
-deepfryer/images/*
-memes/images*
 sounds/
 temp/
 SoundboardProxy/
+stats/
 
 # Single files
 cogs/message_cog.py
