@@ -14,7 +14,7 @@ from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
 from ..utils import spotify, youtube
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
 from ..utils.printing import eprint
-from . import stats_cog
+from . import reddit_cog, stats_cog
 from .base_cog import BaseCog, EmbedField
 
 
@@ -25,6 +25,7 @@ class BotSetupCog(BaseCog):
         self.setup_youtube()
         self.setup_spotify()
         self.setup_github()
+        self.setup_reddit()
             
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -40,7 +41,7 @@ class BotSetupCog(BaseCog):
                 "3. Create an Application\n"
                 "4. Retrieve Client ID and Client Secret\n"
             )
-            return self.disable_command("spotify")
+            return self.disable_commands("spotify")
 
         spotify.spotify = spotipy.Spotify(
             client_credentials_manager=SpotifyClientCredentials(
@@ -48,7 +49,6 @@ class BotSetupCog(BaseCog):
                 client_secret=self.bot.secrets.SPOTIFY_CLIENT_SECRET
             )
         )
-
     def setup_youtube(self) -> None:
         if not self.bot.secrets.YOUTUBE_API_KEY:
             eprint(
@@ -59,13 +59,12 @@ class BotSetupCog(BaseCog):
                 "3. Enable YouTube Data API v3\n"
                 "4. Create an API Key"
             )
-            return self.disable_command("yt")
-
-        spotify.spotify = spotipy.Spotify(
-            client_credentials_manager=SpotifyClientCredentials(
-                client_id=self.bot.secrets.SPOTIFY_CLIENT_ID, 
-                client_secret=self.bot.secrets.SPOTIFY_CLIENT_SECRET
-            )
+            return self.remove_commands("yt")
+         
+        youtube.youtube = build(
+            YOUTUBE_API_SERVICE_NAME,
+            YOUTUBE_API_VERSION,
+            developerKey=self.bot.secrets.YOUTUBE_API_KEY
         )
 
     def setup_github(self) -> None:
@@ -78,12 +77,39 @@ class BotSetupCog(BaseCog):
                 "3. Enable repo:status\n"
                 "4. Generate personal access token"
             )
-            return self.disable_command("changelog", "commits")
+            return self.remove_commands("changelog", "commits")
+        
+        stats_cog.githubclient = Github(self.bot.secrets.GITHUB_TOKEN)
 
-        stats_cog = self.bot.get_cog("StatsCog")
-        stats_cog.github = Github(self.bot.secrets.GITHUB_TOKEN)
+    def setup_reddit(self) -> None:
+        if not all(c for c in [
+            self.bot.secrets.REDDIT_ID,
+            self.bot.secrets.REDDIT_SECRET,
+            self.bot.secrets.REDDIT_USER_AGENT,
+            ]
+        ):
+            eprint(
+                "Reddit API credentials are missing.\n"
+                "How to fix:\n"
+                "1. Go to https://old.reddit.com/prefs/apps/\n"
+                "2. Create a new Reddit App\n"
+                "3. Retrieve its ID and Secret key"
+            )
+            return self.remove_cog("RedditCog")
+        reddit_cog.reddit_client = Github(self.bot.secrets.GITHUB_TOKEN)
 
-    def disable_command(self, *cmds) -> None:
+    def remove_commands(self, *cmds) -> None:
         for cmd in cmds:
             eprint(f"Disabling command '{self.bot.command_prefix}{cmd}'")
-            self.bot.get_command(cmd).enabled = False
+            self.bot.remove_command(cmd)
+
+    def remove_cog(self, cog: str) -> None:
+        _cog = self.bot.get_cog(cog)
+        if not _cog:
+            eprint(
+                f"BotSetupCog attempted to disable cog '{cog}', "
+                f"but no such cog exists."
+            )
+            return
+        eprint(f"Disabling cog '{cog}'")
+        self.bot.remove_cog(cog)

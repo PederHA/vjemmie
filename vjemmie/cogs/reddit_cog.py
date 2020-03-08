@@ -28,7 +28,7 @@ from ..utils.parsing import is_valid_command_name
 from ..utils.serialize import dump_json
 
 
-reddit_client: praw.Reddit = None # Initialized by RedditCog
+reddit: praw.Reddit = None # Initialized by RedditCog
 
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
@@ -67,13 +67,6 @@ class RedditCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-
-        global reddit_client
-        reddit_client = praw.Reddit(
-            client_id=self.bot.secrets.REDDIT_ID,
-            client_secret=self.bot.secrets.REDDIT_SECRET,
-            user_agent=self.bot.secrets.REDDIT_USER_AGENT,
-        )
 
         # Load subreddits
         self.subs = self.load_subs()
@@ -590,7 +583,7 @@ class RedditCog(BaseCog):
                                    post_limit: int = None,
                                    allow_nsfw: bool = False) -> list:
         # Get subreddit
-        sub = reddit_client.subreddit(subreddit)
+        sub = reddit.subreddit(subreddit)
 
         # Check if NSFW subreddit
         if self._is_nsfw(ctx, sub):
