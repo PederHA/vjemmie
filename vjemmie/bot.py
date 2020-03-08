@@ -30,7 +30,7 @@ def run(
         cogs = []
     if test:
         cogs.append(TestCog)
-    cogs = cogs + COGS  # add default cogs
+    cogs.extend(COGS)  # add default cogs
 
     # Bot setup
     bot = Bot(
