@@ -24,7 +24,7 @@ from ..utils.exceptions import CommandError
 @dataclass
 class Activity:
     text: str
-    callable_: Callable = None
+    callable_: Callable[..., str] = None
     prepend_text: bool = True
 
     async def get_activity(self) -> str:
