@@ -9,13 +9,14 @@ from pprint import pprint
 from typing import Union
 
 import discord
+import numpy as np
 import requests
 import unidecode
 from discord.ext import commands
 
-from .base_cog import BaseCog
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
+from .base_cog import BaseCog
 
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
@@ -246,4 +247,26 @@ class FunCog(BaseCog):
                     c = c*2 # Double spacing
                 t.append(c)
         return "".join(t)
+    
+    @commands.command(name="team")
+    async def split(self, ctx: commands.Context, n_teams: int=2) -> None:
+        """Split users in a voice channel into 2 or more teams."""
+        if n_teams < 2:
+            raise CommandError("Cannot split into less than 2 teams!")
+
+        users = [user async for user in self.get_users_in_voice(ctx)]
+        if len(users) < n_teams:
+            raise CommandError("Number of teams cannot exceed number of users!")
         
+        random.shuffle(users)
+        teams_ = list(np.array_split(users, n_teams))
+        
+        # Create message
+        n = "\n" # backslashes aren't allowed in f-strings
+        teams = "\n".join(
+            [
+            f"Team {i}\n```{n.join([f'* {user}' for user in team])}```" 
+            for i, team in list(enumerate(teams_, start=1))
+            ]
+        )
+        await self.send_embed_message(ctx, title="Teams", description=teams)        
