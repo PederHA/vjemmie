@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 import discord
 import spotipy
+from praw import Reddit
 from discord.ext import commands
 from github import Github
 from googleapiclient.discovery import build
@@ -96,7 +97,11 @@ class BotSetupCog(BaseCog):
                 "3. Retrieve its ID and Secret key"
             )
             return self.remove_cog("RedditCog")
-        reddit_cog.reddit_client = Github(self.bot.secrets.GITHUB_TOKEN)
+        reddit_cog.reddit = Reddit(
+            client_id=self.bot.secrets.REDDIT_ID,
+            client_secret=self.bot.secrets.REDDIT_SECRET,
+            user_agent=self.bot.secrets.REDDIT_USER_AGENT,
+        )
 
     def remove_commands(self, *cmds) -> None:
         for cmd in cmds:

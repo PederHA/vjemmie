@@ -78,7 +78,9 @@ class RedditCog(BaseCog):
         self.sorting_cycle = cycle(self.SORTING_FILTERS) # Command: !rsort
         
         # Initiate loop that clears reddit submission cache daily
-        self.submission_refresh_loop.start()
+        self.init_submissions_cache() # TODO: find out why loop suddenly doesn't start
+                                      # Which is why we have to manually initialize submissions cache here
+        self.loop = self.submission_refresh_loop.start()
 
     def cog_unload(self) -> None:
         self.submission_refresh_loop.cancel()    
@@ -98,7 +100,7 @@ class RedditCog(BaseCog):
     def init_submissions_cache(self) -> None:
         self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
     
-    @tasks.loop(seconds=86400.0)
+    @tasks.loop(seconds=5.0)
     async def submission_refresh_loop(self) -> None:
         """Wipes reddit submission cache once daily"""
         self.init_submissions_cache()
