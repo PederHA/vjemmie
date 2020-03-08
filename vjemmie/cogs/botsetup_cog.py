@@ -1,19 +1,20 @@
 import asyncio
+import sys
 from datetime import datetime, timedelta
 from typing import Optional, Union
-import sys
 
 import discord
 import spotipy
 from discord.ext import commands
+from github import Github
 from googleapiclient.discovery import build
 from spotipy.oauth2 import SpotifyClientCredentials
 
 from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
+from ..utils import spotify, youtube
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
-from ..utils import spotify
-from ..utils import youtube
 from ..utils.printing import eprint
+from . import stats_cog
 from .base_cog import BaseCog, EmbedField
 
 
@@ -23,6 +24,7 @@ class BotSetupCog(BaseCog):
 
         self.setup_youtube()
         self.setup_spotify()
+        self.setup_github()
             
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -66,10 +68,22 @@ class BotSetupCog(BaseCog):
             )
         )
 
+    def setup_github(self) -> None:
+        if not self.bot.secrets.GITHUB_TOKEN:
+            eprint(
+                "GitHub personal access token is missing.\n"
+                "How to fix:\n"
+                "1. Go to https://github.com/settings/tokens\n"
+                "2. Generate new token\n"
+                "3. Enable repo:status\n"
+                "4. Generate personal access token"
+            )
+            return self.disable_command("changelog", "commits")
+
+        stats_cog = self.bot.get_cog("StatsCog")
+        stats_cog.github = Github(self.bot.secrets.GITHUB_TOKEN)
+
     def disable_command(self, *cmds) -> None:
         for cmd in cmds:
-            eprint(f"Disabling command '{self.bot.command_prefix}{cmd}'\n")
+            eprint(f"Disabling command '{self.bot.command_prefix}{cmd}'")
             self.bot.get_command(cmd).enabled = False
-
-
-        

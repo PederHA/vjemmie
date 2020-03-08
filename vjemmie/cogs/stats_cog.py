@@ -24,6 +24,7 @@ from ..utils.datetimeutils import format_time_difference
 
 GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
 
+
 @dataclass
 class DiscordCommand:
     """Represents a Discord command. 
@@ -108,7 +109,7 @@ class StatsCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.bot.start_time = datetime.now()
-        self.github = Github(self.bot.secrets.GITHUB_TOKEN)
+        self.github: Github = None
         self.guilds = self.load_guilds()
         self.dump_command_stats.start()
 
@@ -244,9 +245,9 @@ class StatsCog(BaseCog):
         else:
             raise TypeError("Return type must be 'str' or 'dict'")
 
-    @commands.command(name="get_players")
+    @commands.command(name="audioplayers")
     @owners_only()
-    async def get_players(self, ctx) -> None:
+    async def get_audio_players(self, ctx) -> None:
         """Display active audio players."""
         sound_cog = self.bot.get_cog("SoundCog")
         players = sound_cog.players
