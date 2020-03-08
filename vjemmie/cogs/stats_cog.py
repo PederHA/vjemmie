@@ -23,6 +23,8 @@ from ..utils.datetimeutils import format_time_difference
 
 
 GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
+ 
+githubclient: Github = None # Initialized by BotSetupCog
 
 
 @dataclass
@@ -109,7 +111,6 @@ class StatsCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.bot.start_time = datetime.now()
-        self.github: Github = None
         self.guilds = self.load_guilds()
         self.dump_command_stats.start()
 
@@ -295,7 +296,7 @@ class StatsCog(BaseCog):
             raise ValueError("Number of days cannot exceed 7!")
 
         # Get repo
-        repo = self.github.get_repo(repo)
+        repo = githubclient.get_repo(repo)
 
         # Fetch commits non-blocking
         since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet
