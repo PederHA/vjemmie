@@ -146,8 +146,8 @@ category = "main"
 description = "Composable command line interface toolkit"
 name = "click"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "7.0"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+version = "7.1.1"
 
 [[package]]
 category = "dev"
@@ -255,12 +255,12 @@ description = "Google API Client Library for Python"
 name = "google-api-python-client"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
-version = "1.7.11"
+version = "1.7.12"
 
 [package.dependencies]
 google-auth = ">=1.4.1"
 google-auth-httplib2 = ">=0.0.3"
-httplib2 = ">=0.9.2,<1dev"
+httplib2 = ">=0.17.0,<1dev"
 six = ">=1.6.1,<2dev"
 uritemplate = ">=3.0.0,<4dev"
 
@@ -684,7 +684,7 @@ description = "Python-tesseract is a python wrapper for Google's Tesseract-OCR"
 name = "pytesseract"
 optional = false
 python-versions = "*"
-version = "0.3.2"
+version = "0.3.3"
 
 [package.dependencies]
 Pillow = "*"
@@ -695,7 +695,7 @@ description = "pytest: simple powerful testing with Python"
 name = "pytest"
 optional = false
 python-versions = ">=3.5"
-version = "5.3.5"
+version = "5.4.0"
 
 [package.dependencies]
 atomicwrites = ">=1.0"
@@ -948,7 +948,7 @@ description = "YouTube video downloader"
 name = "youtube-dl"
 optional = false
 python-versions = "*"
-version = "2020.3.6"
+version = "2020.3.8"
 
 [[package]]
 category = "dev"
@@ -1056,8 +1056,8 @@ ciso8601 = [
     {file = "ciso8601-2.1.3.tar.gz", hash = "sha256:bdbb5b366058b1c87735603b23060962c439ac9be66f1ae91e8c7dbd7d59e262"},
 ]
 click = [
-    {file = "Click-7.0-py2.py3-none-any.whl", hash = "sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13"},
-    {file = "Click-7.0.tar.gz", hash = "sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"},
+    {file = "click-7.1.1-py2.py3-none-any.whl", hash = "sha256:e345d143d80bf5ee7534056164e5e112ea5e22716bbb1ce727941f4c8b471b9a"},
+    {file = "click-7.1.1.tar.gz", hash = "sha256:8a18b4ea89d8820c5d0c7da8a64b2c324b4dabb695804dbfea19b9be9d88c0cc"},
 ]
 colorama = [
     {file = "colorama-0.4.3-py2.py3-none-any.whl", hash = "sha256:7d73d2a99753107a36ac6b455ee49046802e59d9d076ef8e47b61499fa29afff"},
@@ -1093,8 +1093,8 @@ geopy = [
     {file = "geopy-1.21.0.tar.gz", hash = "sha256:dc02b43ca5202696907b6b4f72431c8df455c812889dbb4e1240a672857f3adc"},
 ]
 google-api-python-client = [
-    {file = "google-api-python-client-1.7.11.tar.gz", hash = "sha256:a8a88174f66d92aed7ebbd73744c2c319b4b1ce828e565f9ec721352d2e2fb8c"},
-    {file = "google_api_python_client-1.7.11-py2-none-any.whl", hash = "sha256:3121d55d106ef1a2756e8074239512055bd99eb44da417b3dd680f9a1385adec"},
+    {file = "google-api-python-client-1.7.12.tar.gz", hash = "sha256:9fd6a7b032b5e59975869a980655f49f27f1ad4dd51bdd3a9392bb2e46ad7409"},
+    {file = "google_api_python_client-1.7.12-py3-none-any.whl", hash = "sha256:52ee38b5ade3f412a39c7c6c4bdacde73b06512f8b9dadca021021d354aa7fe2"},
 ]
 google-auth = [
     {file = "google-auth-1.11.2.tar.gz", hash = "sha256:1ee22e22f35d6e00f068d7b3999b2ce24ecb5d0dcbd485aa6896d2b83c8907d6"},
@@ -1388,11 +1388,11 @@ pyquery = [
     {file = "pyquery-1.4.1.tar.gz", hash = "sha256:8fcf77c72e3d602ce10a0bd4e65f57f0945c18e15627e49130c27172d4939d98"},
 ]
 pytesseract = [
-    {file = "pytesseract-0.3.2.tar.gz", hash = "sha256:a8c3b74977e8fba6387f483f91f35e59e2ae7f34dfeff2028dc83adcd2afd0ac"},
+    {file = "pytesseract-0.3.3.tar.gz", hash = "sha256:1041f83ad3eed768df145d85275bb9a611861d31fcfe30aa4bfeb79d6529b452"},
 ]
 pytest = [
-    {file = "pytest-5.3.5-py3-none-any.whl", hash = "sha256:ff615c761e25eb25df19edddc0b970302d2a9091fbce0e7213298d85fb61fef6"},
-    {file = "pytest-5.3.5.tar.gz", hash = "sha256:0d5fe9189a148acc3c3eb2ac8e1ac0742cb7618c084f3d228baaec0c254b318d"},
+    {file = "pytest-5.4.0-py3-none-any.whl", hash = "sha256:48c891b40d391ec824477c13d10d5eadf698c83a1671aba491f6db222035d6da"},
+    {file = "pytest-5.4.0.tar.gz", hash = "sha256:76418969e4b9db462a393f1baa13eeb39ba32eccf6013657f4f8295baa234842"},
 ]
 python-magic = [
     {file = "python-magic-0.4.15.tar.gz", hash = "sha256:f3765c0f582d2dfc72c15f3b5a82aecfae9498bd29ca840d72f37d7bd38bfcd5"},
@@ -1543,8 +1543,8 @@ yarl = [
     {file = "yarl-1.4.2.tar.gz", hash = "sha256:58cd9c469eced558cd81aa3f484b2924e8897049e06889e8ff2510435b7ef74b"},
 ]
 youtube-dl = [
-    {file = "youtube_dl-2020.3.6-py2.py3-none-any.whl", hash = "sha256:41c074fee3203df603cf6a81c65de16bde31173326872f6abf75ead934e7482f"},
-    {file = "youtube_dl-2020.3.6.tar.gz", hash = "sha256:771e1ef757f1d31f6bce8e2584839234cbb749282fdf67111bd7272f7183e08e"},
+    {file = "youtube_dl-2020.3.8-py2.py3-none-any.whl", hash = "sha256:f9d33129ea4941bea234cdba811c0f97e61c2235a877cf395a869aeea065e009"},
+    {file = "youtube_dl-2020.3.8.tar.gz", hash = "sha256:1b098b7ae41551f46dbae70e56dbabdf39c8faf50e072d0c0b42c44d64afebf8"},
 ]
 zipp = [
     {file = "zipp-3.1.0-py3-none-any.whl", hash = "sha256:aa36550ff0c0b7ef7fa639055d797116ee891440eac1a56f378e2d3179e0320b"},
