@@ -735,43 +735,49 @@ class BaseCog(commands.Cog):
             limit = self.CHAR_LIMIT
         return [text[i:i+limit] for i in range(0, len(text), limit)]
 
-    async def _split_string_by_lines(self, text: str, limit: int=None) -> Iterator[str]:
+    async def _split_string_by_lines(self, text: str, limit: int=None, strict: bool=False) -> List[str]:
         """Splits a string into `limit`-sized chunks. DEFAULT: 1024
         
-        String is split into lines as denoted by newline char, then lines are
-        joined into n<=limit sized chunks, whereas `_split_string_to_chunks()` 
-        splits string into n<=limit chunks, ignoring any newline chars.
+        The string is split into n<=limit sized chunks based on 
+        occurences of newline chars, whereas `BaseCog._split_string_to_chunks()` 
+        splits string into n<=limit chunks, with no regard for splitting
+        words or sentences based on newline chars.
         """
-        # NOTE:
-        # This looks ugly, but is way more efficient than appending to a string
-        # and checking string length on every iteration of the loop
-
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
-
-        chunk = [] # List t to append
-        n_lines = 0 # Number of lines
+        
+        if len(text) < limit: # no need to split
+            return [text]
+        
+        chunk = "" # Lines in a chunk
         chunk_len = 0 # Size of current chunk
-        join_lines = lambda l: "\n".join(l)
-
-        for line in text.splitlines():
-            l_len = len(line)
-            if chunk_len + l_len > limit - n_lines: # Account for newline chars
-                yield join_lines(chunk)
-                chunk = []
-                chunk_len = 0
-                n_lines = 0
-            chunk.append(line)
-            n_lines += 1
-            chunk_len += l_len
-
-        else:
-            if chunk_len > limit:
-                raise discord.DiscordException(
-                    "String does not have enough newline characters to split by!"
+        chunks = []
+        
+        for line in text.splitlines(keepends=True):
+            line_len = len(line)
+            
+            # Handle lines whose length exceeds limit
+            if line_len > limit:
+                if strict:
+                    raise discord.DiscordException(
+                        "Unable to split string. Line length exceeds limit!"
                     )
+                else: # Fall back on _split_string_to_chunks()
+                    return await self._split_string_to_chunks(text, limit)
+            
+            if chunk_len + line_len > limit:
+                chunks.append(chunk)
+                chunk = ""
+                chunk_len = 0
+            
+            chunk += line
+            chunk_len += line_len
+        
+        else:
             if chunk:
-                yield join_lines(chunk)
+                chunks.append(chunk)
+        
+        return chunks
 
     async def send_embed_message(self,
                                  ctx: commands.Context,
@@ -819,8 +825,8 @@ class BaseCog(commands.Cog):
         if not limit or limit > self.EMBED_CHAR_LIMIT:
             limit = self.EMBED_CHAR_LIMIT
 
-        text_fields = [tf async for tf in self._split_string_by_lines(description, limit)]
-
+        text_fields = await self._split_string_by_lines(description, limit)
+        
         if len(text_fields) > 1:
             t = title if keep_title else Embed.Empty
             embeds = [
