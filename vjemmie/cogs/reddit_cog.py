@@ -649,12 +649,9 @@ class RedditCog(BaseCog):
 
         # Embed image if image URL is not None
         if image_url:
-            embed = await self.get_embed(ctx, title=out_text, image_url=image_url, color=self.COG_COLOR)
-            await ctx.send(embed=embed)
-
+            await self.send_embed_message(ctx, description="", title=out_text, image_url=image_url, color=self.COG_COLOR)
         # Send plain text otherwise
         else:
-            # Break up text posts into 1800 char long chunks
             await self.send_text_message(out_text, ctx)
 
     def _get_commands(self, cmd: RedditCommand) -> str:
