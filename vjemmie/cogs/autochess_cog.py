@@ -142,7 +142,7 @@ class AutochessProfile:
 
         # Show "x {hours/minutes/seconds} ago" if <1 day since update
         if diff.days < 1:
-            _last_updated = format_time_difference(_l_u, timezone=timezone.utc)
+            _last_updated = format_time_difference(_l_u, tz=timezone.utc)
             # Choose largest time unit, then break
             for k, v in _last_updated.items():
                 if v < 1:
