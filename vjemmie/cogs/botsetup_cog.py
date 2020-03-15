@@ -42,7 +42,7 @@ class BotSetupCog(BaseCog):
                 "3. Create an Application\n"
                 "4. Retrieve Client ID and Client Secret\n"
             )
-            return self.disable_commands("spotify")
+            return self.remove_commands("spotify")
 
         spotify.spotify = spotipy.Spotify(
             client_credentials_manager=SpotifyClientCredentials(
@@ -109,8 +109,7 @@ class BotSetupCog(BaseCog):
             self.bot.remove_command(cmd)
 
     def remove_cog(self, cog: str) -> None:
-        _cog = self.bot.get_cog(cog)
-        if not _cog:
+        if not self.bot.get_cog(cog):
             eprint(
                 f"BotSetupCog attempted to disable cog '{cog}', "
                 f"but no such cog exists."
