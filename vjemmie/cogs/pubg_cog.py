@@ -114,7 +114,7 @@ class PUBGCog(BaseCog):
         # Get players from ctx.author's voice channel
         elif players[0] in ["channel", "c", "ch", "chanel"]:
             try:
-                squad = [user async for user in self.get_users_in_voice(ctx, nick=True)]
+                squad = await self.get_users_in_voice_channel(ctx, nick=True)
             except AttributeError:
                 raise CommandError(
                     f"Must be connected to a voice channel to use `{players[0]}` argument."

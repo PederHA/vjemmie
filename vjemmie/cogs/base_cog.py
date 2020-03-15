@@ -358,18 +358,20 @@ class BaseCog(commands.Cog):
 
         return embed
 
-    async def get_users_in_voice(self, ctx: commands.Context, nick: bool=False) -> Iterator[str]:
+    async def get_users_in_voice_channel(self, ctx: commands.Context, nick: bool=False) -> List[str]:
         """
-        Generator of discord user-/nicknames of users in ctx voice channel.
+        Returns list of discord usernames (or nicks) 
+        in ctx.message.author's voice channel.
         """
         if not hasattr(ctx.message.author.voice, "channel"):
             raise CommandError("Message author is not connected to a voice channel.")
+        return [member.nick if nick else member.name for member in ctx.message.author.voice.channel]
 
+    async def find_user_in_voice_channel(self, ctx: commands.Context, name: str, nick: bool=True) -> discord.Member:
         for member in ctx.message.author.voice.channel.members:
-            if member.nick and nick:
-                yield member.nick
-            else:
-                yield member.name
+            if any(name == n for n in [member.nick, member.name]):
+                return member
+        
 
     async def send_log(self, msg: str, *, channel_id: int=None) -> None:
         """Sends log message to log channel

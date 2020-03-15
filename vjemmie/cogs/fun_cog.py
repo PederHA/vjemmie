@@ -105,7 +105,7 @@ class FunCog(BaseCog):
         """    
         # Parse args
         if args and args[0] in ["c", "channel"]:
-            to_roll = [user async for user in self.get_users_in_voice(ctx)]
+            to_roll = await self.get_users_in_voice_channel(ctx)
         elif len(args)>1:
             to_roll = list(args)          
         else:
@@ -253,8 +253,8 @@ class FunCog(BaseCog):
         """Split users in a voice channel into 2 or more teams."""
         if n_teams < 2:
             raise CommandError("Cannot split into less than 2 teams!")
-
-        users = [user async for user in self.get_users_in_voice(ctx)]
+        
+        users = await self.get_users_in_voice_channel(ctx)
         if len(users) < n_teams:
             raise CommandError("Number of teams cannot exceed number of users!")
         
