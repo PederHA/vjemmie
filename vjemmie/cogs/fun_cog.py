@@ -18,6 +18,7 @@ from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
 from .base_cog import BaseCog
 
+
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
     "fuck": "fack",
@@ -255,7 +256,9 @@ class FunCog(BaseCog):
             raise CommandError("Cannot split into less than 2 teams!")
         
         users = await self.get_users_in_voice_channel(ctx)
-        if len(users) < n_teams:
+        if len(users) <= 2:
+            raise CommandError("More than 2 players are required to generate teams!")
+        elif len(users) < n_teams:
             raise CommandError("Number of teams cannot exceed number of users!")
         
         random.shuffle(users)
