@@ -968,6 +968,7 @@ class BaseCog(commands.Cog):
         return sorted([
                         cog for cog in self.bot.cogs.values()
                         if cog.DISABLE_HELP in [False, all_cogs] # [False, True] or [False, False]
+                        and cog.cog_name != "BotSetup"
                        ],
                     key=lambda c: c.cog_name)
 
@@ -1051,6 +1052,7 @@ class BaseCog(commands.Cog):
     async def get_invokable_commands(self, ctx) -> None:
         _commands = self.get_commands()
         return [
-            command for command in _commands if await command.can_run(ctx)
-            and not command.hidden and command.enabled
+            command for command in _commands if not command.hidden 
+            and command.enabled
+            and await command.can_run(ctx)
         ]

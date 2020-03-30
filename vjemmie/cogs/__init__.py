@@ -3,22 +3,22 @@ Add/remove bot cogs in this module.
 """
 from discord.ext import commands
 
-from .admin_cog import *
-from .autochess_cog import *
-from .avatar_cog import *
-
-from .experimental_cog import *
-from .fun_cog import *
-from .image_cog import *
-from .meme_cog import *
-from .pubg_cog import *
-from .reddit_cog import *
-from .sound_cog import *
-from .stats_cog import *
-from .twitter_cog import *
-from .user_cog import *
-from .weather_cog import *
-from .wowprogress_cog import *
+from .admin_cog import AdminCog
+from .autochess_cog import AutoChessCog
+from .avatar_cog import AvatarCog
+from .experimental_cog import ExperimentalCog
+from .fun_cog import FunCog
+from .image_cog import ImageCog
+from .management_cog import ManagementCog
+from .meme_cog import MemeCog
+from .pubg_cog import PUBGCog
+from .reddit_cog import RedditCog
+from .sound_cog import SoundCog
+from .stats_cog import StatsCog
+from .twitter_cog import TwitterCog
+from .user_cog import UserCog
+from .weather_cog import WeatherCog
+from .wowprogress_cog import WoWProgressCog
 
 
 COGS = [
