@@ -250,12 +250,17 @@ class FunCog(BaseCog):
         return "".join(t)
     
     @commands.command(name="team")
-    async def split(self, ctx: commands.Context, n_teams: int=2) -> None:
+    async def split(self, ctx: commands.Context, n_teams: int=2, *ignored) -> None:
         """Split users in a voice channel into 2 or more teams."""
         if n_teams < 2:
             raise CommandError("Cannot split into less than 2 teams!")
         
-        users = await self.get_users_in_voice_channel(ctx)
+        users = [
+            user for user 
+            in await self.get_users_in_voice_channel(ctx)
+            if user not in ignored
+        ]
+
         if len(users) <= 2:
             raise CommandError("More than 2 players are required to generate teams!")
         elif len(users) < n_teams:
