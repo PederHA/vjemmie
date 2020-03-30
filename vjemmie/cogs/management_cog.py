@@ -9,7 +9,6 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
-import boto3
 
 
 from .base_cog import BaseCog, EmbedField
@@ -40,7 +39,6 @@ class ManagementCog(BaseCog):
     """Commands and methods used to manage non-guild related bot functionality."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        self.bot_ec2 = boto3.resource("ec2").Instance(self.bot.secrets.EC2_INSTANCE_ID)
 
     @commands.command(name="reacts")
     @admins_only()
@@ -106,34 +104,3 @@ class ManagementCog(BaseCog):
         
         embed = await self.get_embed(ctx, fields=[f_field, d_field])
         await ctx.send(embed=embed)
-    
-    @commands.command(name="ip")
-    @admins_only()
-    async def ip(self, ctx: commands.Context,  *, ipv6: BoolConverter(["ipv6"])=False) -> None:
-        """Displays bot's public EC2 IPv4/6 address"""  
-        # Fetch IP non-blocking
-        to_run = partial(self.get_ec2_ip, ipv6=ipv6)
-        ip_address = await self.bot.loop.run_in_executor(None, to_run)
-        
-        v = "6" if ipv6 else "4"
-        await ctx.send(f"Public IPv{v} address: {ip_address}")
-    
-    def get_ec2_ip(self, ipv6: bool=False) -> str:
-        """
-        Fetches public IPv4 or IPv6 address of EC2 instance bot is running on.
-
-        IMPORTANT NOTE
-        --------------
-        AWS credentials must be configured through the AWS CLI before this
-        command can be used.
-        """
-        if ipv6:
-            iface = self.bot_ec2.network_interfaces[0]
-            try:
-                ip_address = iface.ipv6_addresses[0]
-            except IndexError:
-                raise AttributeError("Bot's EC2 instance has no associated IPv6 addresses!")
-        else:
-            ip_address = self.bot_ec2.public_ip_address
-        
-        return ip_address
