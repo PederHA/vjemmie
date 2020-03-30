@@ -13,7 +13,7 @@ from discord.ext import commands
 
 from .base_cog import BaseCog, EmbedField
 from .sound_cog import AudioPlayer
-from ..utils.checks import admins_only, disabled_cmd
+from ..utils.checks import admins_only, disabled_cmd, owners_only
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
@@ -56,7 +56,7 @@ class ManagementCog(BaseCog):
                                 await msg.add_reaction(reaction.emoji)
     
     @commands.command(name="cogs", aliases=["get_cogs"])
-    @admins_only() 
+    @owners_only() 
     async def get_cogs_status(self, ctx) -> None:
         """Not sure why I made this but w/e. Might be useful."""
         # Get cogs help status
