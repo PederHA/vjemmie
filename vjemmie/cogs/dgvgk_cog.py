@@ -19,6 +19,8 @@ TIDSTYVERI_FILE = "db/dgvgk/tidstyveri.json"
 
 class DGVGKCog(BaseCog):
 
+    EMOJI = "<:julius:695298300257239081>"
+
     DIRS = ["db/dgvgk"]
     FILES = [TIDSTYVERI_FILE]
 
@@ -57,13 +59,15 @@ class DGVGKCog(BaseCog):
         s += f"{str(td.seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
         return s
         
-    @commands.group(name="tidstyveri", aliases=["tidstyv", "tt"])
+    @commands.group(name="tidstyveri", aliases=["tidstyv", "tt"], usage="<subcommand>")
     async def tidstyveri(self, ctx: commands.Context) -> None:
+        """Tidstyveri-kommandoer"""
         if not ctx.invoked_subcommand:
             await ctx.invoke(self.bot.get_command("help"), "tidstyveri")
 
     @tidstyveri.command(name="start")
     async def tidstyveri_start(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+        """Registrer påbegynt tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
         
@@ -73,6 +77,7 @@ class DGVGKCog(BaseCog):
         
     @tidstyveri.command(name="stop", aliases=["stopp"])
     async def tidstyveri_stop(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+        """Stopp tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
         
@@ -95,6 +100,7 @@ class DGVGKCog(BaseCog):
         
     @tidstyveri.command(name="stats")
     async def tidstyveri_stats(self, ctx: commands.Context) -> None:
+        """Tyv-leaderboard"""
         time_thiefs = self.load_tidstyveri()
         if not time_thiefs:
             raise CommandError("Ingen tidstyver er registrert!")
