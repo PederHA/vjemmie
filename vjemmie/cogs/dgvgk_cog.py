@@ -48,13 +48,13 @@ class DGVGKCog(BaseCog):
         
         hours = td.seconds // 3600
         if hours:
-            s += f"{td.seconds}t " # only show hours if necessary
+            s += f"{str(hours).rjust(2, '0')}t " # only show hours if necessary
 
         minutes = (td.seconds // 60) % 60
-        if minutes:
-            s += f"{minutes}m " 
+        if minutes or hours: # show minutes if hours are shown
+            s += f"{str(minutes).rjust(2, '0')}m " 
 
-        s += f"{td.seconds}s"
+        s += f"{str(td.seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
         return s
         
     @commands.group(name="tidstyveri", aliases=["tidstyv", "tt"])
