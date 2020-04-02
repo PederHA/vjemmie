@@ -899,7 +899,7 @@ class BaseCog(commands.Cog):
         """Checks if a string is an HTTP/HTTPS URL to an image file"""
         # Get url string if url argument is a discord.Asset object
         if isinstance(url, discord.Asset):
-            url = url._url
+            url = str(url)
 
         p = urlparse(url)
         return (
