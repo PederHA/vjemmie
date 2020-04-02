@@ -7,7 +7,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Union, Callable
+from typing import Iterable, Iterator, List, Optional, Union, Callable, Mapping, Any
 from urllib.parse import urlparse, urlsplit
 
 import aiohttp
@@ -1056,3 +1056,38 @@ class BaseCog(commands.Cog):
             and command.enabled
             and await command.can_run(ctx)
         ]
+
+    async def format_key_value_embed(self, ctx: commands.Context, mapping: Mapping[Union[int, discord.User], Any], sort: bool=True, **kwargs) -> discord.Embed:
+        fchar = self.EMBED_FILL_CHAR    # to make expressions more readable
+        
+        if isinstance(mapping, Mapping):
+            mapping = list(mapping.items())
+        else:
+            mapping = list(mapping) # not pretty
+
+        first_key = mapping[0][0] # assume keys are homogenous
+        # support for str keys (if loading a json file, where int keys are not supported)
+        if not any(isinstance(first_key, t) for t in [int, str, discord.User]):
+            raise TypeError("Mapping keys must be either type 'int' or 'discord.User'")
+        
+        # Get discord.User objects if keys are int or str
+        if any(isinstance(first_key, t) for t in [int, str]): 
+            mapping = [(self.bot.get_user(int(k)), v) for k, v in mapping] 
+        
+        # Filter users who cannot be found
+        l = list(filter(lambda m: None.__ne__(m[0]), mapping))
+
+        if sort:
+            l = sorted(l, key=lambda i: i[1], reverse=True)
+
+        longest_name = max([len(k.name) for k, _ in l])
+        out = "\n".join(
+            [
+                f"`{k.name.ljust(longest_name, fchar)}:`{fchar*3}{v}" 
+                for k, v in l
+            ]
+        )
+        
+        thumbnail_url = l[0][0].avatar_url
+           
+        return await self.get_embed(ctx, description=out, **kwargs, thumbnail_url=thumbnail_url)
