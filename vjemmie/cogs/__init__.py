@@ -24,7 +24,8 @@ from .wowprogress_cog import WoWProgressCog
 
 with suppress(ImportError):
     from .pfm_cog import PFMCog
-
+    from .dgvgk_cog import DGVGKCog
+    
 COGS = [
         v for k, v in dict(locals()).items()
         if k.endswith("Cog") and issubclass(v, commands.Cog)

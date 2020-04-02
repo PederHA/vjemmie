@@ -1,59 +1,113 @@
 import socket
+import time
+from datetime import datetime, timedelta
+import json
 
 import discord
 from discord.ext import commands
 import mcstatus
 
 from .base_cog import BaseCog
-from ..utils.converters import IPAddressConverter
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.caching import get_cached
+from ..utils.checks import dgvgk_cmd
 
-CONF = "DGVGK/minecraft.json"
+
+TIDSTYVERI_FILE = "db/dgvgk/tidstyveri.json"
+
 
 class DGVGKCog(BaseCog):
-    """De Gode Venners Gamingkrok commands."""
-    
-    SERVER_IP = "35.228.88.187"
-    SERVER_PORT = 25565
 
-    FILES = [CONF]
+    DIRS = ["db/dgvgk"]
+    FILES = [TIDSTYVERI_FILE]
 
-    def __init__(self) -> None:
-        self._set_ip_port()
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
+        self.tidstyver = {}
 
-    def _set_ip_port(self) -> None:
-
-
-    async def _get_server_status(self) -> mcstatus.pinger.PingResponse:
+    def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
-            server = mcstatus.MinecraftServer(self.SERVER_IP, self.SERVER_PORT)
-            status = server.status()
-        except socket.gaierror:
-            raise CommandError("Unable to connect to server")
-        else:
-            return status
+            t = json.dumps(tidstyveri)
+        except:
+            raise CommandError("Kan ikke lagre tidstyveri. Oops.")
 
-    @commands.group(name="mc")
-    async def mc(self, ctx: commands.Context) -> None:
-        pass
+        with open(TIDSTYVERI_FILE, "w") as f:
+            f.write(t)
 
-    @mc.command(name="ip")
-    async def set_server_ip(self, ctx: commands.Context, ip: IPAddressConverter) -> None:
-        self.SERVER_IP = str(ip)
-        await ctx.send(f"Minecraft server IP set to `{self.SERVER_IP}`")
+    def load_tidstyveri(self) -> dict:
+        with open(TIDSTYVERI_FILE, "r") as f:
+            try:
+                return json.load(f)
+            except:
+                return {}
+    
+    def formater_tidstyveri(self, tid: float) -> None:
+        td = timedelta(seconds=tid)
+        s = ""
+        
+        hours = td.seconds // 3600
+        if hours:
+            s += f"{td.seconds}t " # only show hours if necessary
 
-    @mc.command(name="port")
-    async def set_server_port(self, ctx: commands.Context, port: int) -> None:
-        port = abs(port)
-        if port == 0 or port > 65535:
-            raise CommandError("Port number must be between 1 and 65535")
-        self.SERVER_PORT = port
-        await ctx.send(f"Minecraft server port set to `{self.SERVER_PORT}`")
+        minutes = (td.seconds // 60) % 60
+        if minutes:
+            s += f"{minutes}m " 
 
-    @mc.command(name="players")
-    async def view_players(self, ctx: commands.Context) -> None:
-        status = await self._get_server_status()
-        players = "\n".join([player.name for player in status.players.sample])
-        await self.send_embed_message(ctx, title="Players Online", description=players)
+        s += f"{td.seconds}s"
+        return s
+        
+    @commands.group(name="tidstyveri", aliases=["tidstyv", "tt"])
+    async def tidstyveri(self, ctx: commands.Context) -> None:
+        if not ctx.invoked_subcommand:
+            await ctx.invoke(self.bot.get_command("help"), "tidstyveri")
+
+    @tidstyveri.command(name="start")
+    async def tidstyveri_start(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+        if not member:
+            raise CommandError("Et discord-brukernavn er påkrevd!")
+        
+        self.tidstyver[str(member.id)] = time.time()
+
+        await ctx.send(f"Registrerer at et tidstyveri begått av {member.name} er underveis.")
+        
+    @tidstyveri.command(name="stop", aliases=["stopp"])
+    async def tidstyveri_stop(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+        if not member:
+            raise CommandError("Et discord-brukernavn er påkrevd!")
+        
+        start_time = self.tidstyver.pop(str(member.id), None)
+        if not start_time:
+            raise CommandError("Det er ikke registrert et påbegynt tidstyveri for denne personen!")
+        
+        time_thiefs = self.load_tidstyveri()
+        
+        time_stolen = time.time() - start_time
+        time_thiefs[str(member.id)] = time_thiefs.get(str(member.id), 0) + time_stolen
+        
+        self.save_tidstyveri(time_thiefs)
+
+        await ctx.send(
+            f"Registrert fullført tidstyveri.\n"
+            f"{member.name} stjal {self.formater_tidstyveri(time_stolen)}\n"
+            f"{member.name} har totalt stjålet {self.formater_tidstyveri(time_thiefs[str(member.id)])}!"
+        )
+        
+    @tidstyveri.command(name="stats")
+    async def tidstyveri_stats(self, ctx: commands.Context) -> None:
+        time_thiefs = self.load_tidstyveri()
+        if not time_thiefs:
+            raise CommandError("Ingen tidstyver er registrert!")
+        
+        # Sort users by amount of time stolen
+        tidstyver = dict(
+            sorted(
+                [(self.bot.get_user(int(k)), self.formater_tidstyveri(v)) for k, v in time_thiefs.items()],
+                key=lambda i: i[1],
+                reverse=True
+            )
+        )
+        
+        embed = await self.format_key_value_embed(ctx, tidstyver, sort=False, title="Tidstyver")
+        await ctx.send(embed=embed)
+        
