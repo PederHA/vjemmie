@@ -108,11 +108,12 @@ class DGVGKCog(BaseCog):
         # Sort users by amount of time stolen
         tidstyver = dict(
             sorted(
-                [(self.bot.get_user(int(k)), self.formater_tidstyveri(v)) for k, v in time_thiefs.items()],
+                [(self.bot.get_user(int(k)), v) for k, v in time_thiefs.items()],
                 key=lambda i: i[1],
                 reverse=True
             )
         )
+        tidstyver = {k: self.formater_tidstyveri(v) for k, v in tidstyver.items()}
         
         embed = await self.format_key_value_embed(ctx, tidstyver, sort=False, title="Tidstyver")
         await ctx.send(embed=embed)
