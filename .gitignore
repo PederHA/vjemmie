@@ -4,6 +4,9 @@
 # Python
 __pycache__/
 
+# mypy
+.mypy*
+
 # Startup scripts
 botstartup*
 
@@ -20,6 +23,7 @@ config.py
 docker*
 Docker*
 .docker*
+*.Dockerfile
 
 # Directories
 downloads/
@@ -30,6 +34,7 @@ memes/images*
 sounds/
 temp/
 SoundboardProxy/
+scripts/
 
 # Single files
 cogs/message_cog.py
@@ -45,6 +50,22 @@ alexa.json
 out/audioplayers.json
 utils/oldidk.py
 pfmalexa.py
+devfile.py
+config2.py
+
+# Dependencies
+generate_requirements.ps1
+requirements_discordgit.txt
+checkdeps.py
+pipenvgraph.txt
 
 # Tests
 *pytest*
+im.py
+cogs/test_cog2.py
+tests/logs/
+
+# Logs
+logs/
+
+Pipfile copy

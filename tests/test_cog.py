@@ -68,6 +68,8 @@ discord_io = decorator_factory("discord_io")
 # Requires cmd invoker to be in a voice channel
 voice = decorator_factory("voice")
 
+disabled = decorator_factory("disabled")
+
 
 class TestCog(BaseCog):
     """Automated tests. Pretty shit"""
@@ -154,7 +156,7 @@ class TestCog(BaseCog):
                 coro = getattr(self, test)
 
                 # If test cannot be run, skip it
-                if not self.determine_run_coro(coro, ctx_):
+                if not self.can_run(coro, ctx_):
                     continue 
                 
                 # Test coroutine
@@ -185,10 +187,12 @@ class TestCog(BaseCog):
         
         await self.send_text_message(result, ctx)
 
-    def determine_run_coro(self, coro, ctx: commands.Context) -> bool:
+    def can_run(self, coro, ctx: commands.Context) -> bool:
         """Checks if certain conditions are met, in order to determine
         if coroutine should be tested."""
-        if not self.network_io_enabled and hasattr(coro, "network_io"):
+        if hasattr(coro, "disabled"):
+            return False
+        elif not self.network_io_enabled and hasattr(coro, "network_io"):
             return False
         elif not self.discord_io_enabled and hasattr(coro, "discord_io"):
             return False
@@ -251,6 +255,8 @@ class TestCog(BaseCog):
         # Get operator for assertion statement (default: ==)
         op = await self._get_operator(kwargs) # TODO: UNFINISHED!!
 
+        not_ = kwargs.pop("not_", False)
+
         passed = False
         try:
             # Await coro or command
@@ -270,9 +276,12 @@ class TestCog(BaseCog):
                     if index is not SENTINEL:
                         r = r[0]
                     if in_:
-                        r = getattr(r, in_)
+                        #r = getattr(r, in_)
                         op = operator.contains
-                    assert op(r, assertion)
+                        if not_:
+                            assert not op(r, assertion)
+                        else:
+                            assert op(r, assertion)
 
         except AssertionError:
             await self._format_assertion_error(r, cmd_name, assertion)
@@ -426,10 +435,18 @@ class TestCog(BaseCog):
 
     async def test_funcog_braille(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "braille", "testing braille command")
-    
+        
     async def test_funcog_big_text(self, ctx: commands.Context) -> None:
         chars = "".join([chr(i) for i in range(192, 256)])
         await self.do_test_cog_method("FunCog", "big_text", text=chars)
+
+    @disabled
+    async def test_funcog_big_text_value(self, ctx: commands.Context) -> None:
+        chars = "".join([chr(i) for i in range(192, 256)])
+        cog = self.bot.get_cog("FunCog")
+        big_text = await cog.big_text(chars)
+        for char in chars:
+            await self.do_test_cog_method("FunCog", "big_text", text=chars, assertion=char,  not_=True, in_=big_text)
 
     # PUBGCog
     async def test_pubgcog_drop(self, ctx: commands.Context) -> None:

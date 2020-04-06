@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import requests
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
@@ -42,4 +43,9 @@ def get_spotify_track_id(arg: str) -> str:
     return track_id
 
 
-    return artists, song, album
+def get_playlist_tracks(playlist_id: str) -> list:
+    r = requests.get(f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks", 
+        # data=body_params, # what is this?
+        auth = (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+    )
+    print(r)
