@@ -106,14 +106,13 @@ class DGVGKCog(BaseCog):
             raise CommandError("Ingen tidstyver er registrert!")
         
         # Sort users by amount of time stolen
-        tidstyver = dict(
-            sorted(
+        tidstyver = sorted(
                 [(self.bot.get_user(int(k)), v) for k, v in time_thiefs.items()],
                 key=lambda i: i[1],
                 reverse=True
-            )
         )
-        tidstyver = {k: self.formater_tidstyveri(v) for k, v in tidstyver.items()}
+        
+        tidstyver = {k: self.formater_tidstyveri(v) for k, v in tidstyver}
         
         embed = await self.format_key_value_embed(ctx, tidstyver, sort=False, title="Tidstyver")
         await ctx.send(embed=embed)
