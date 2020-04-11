@@ -203,6 +203,6 @@ class DGVGKCog(BaseCog):
         if not players:
             raise CommandError("No players on record!")
         
-        players = sorted(players, key=p.rating.mu)
+        players = sorted(players, key=lambda p: p.rating.mu)
         p = {p.uid: p.mu for p in players}
         await self.format_key_value_embed(ctx, p)
