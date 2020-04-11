@@ -2,12 +2,14 @@ import socket
 import time
 from datetime import datetime, timedelta
 import json
+from typing import Dict
 
 import discord
 from discord.ext import commands
-import mcstatus
+import trueskill
 
 from .base_cog import BaseCog
+from ..ladder import load_players, make_teams, rate, Player, Game, PLAYERS_FILE, ENV_FILE
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.caching import get_cached
@@ -21,12 +23,13 @@ class DGVGKCog(BaseCog):
 
     EMOJI = "<:julius:695298300257239081>"
 
-    DIRS = ["db/dgvgk"]
-    FILES = [TIDSTYVERI_FILE]
+    DIRS = ["db/dgvgk", "db/dgvgk/ladder"]
+    FILES = [TIDSTYVERI_FILE, PLAYERS_FILE, ENV_FILE]
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         self.tidstyver = {}
+        self.game = None
 
     def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
@@ -117,3 +120,89 @@ class DGVGKCog(BaseCog):
         embed = await self.format_key_value_embed(ctx, tidstyver, sort=False, title="Tidstyver")
         await ctx.send(embed=embed)
         
+    @commands.group(name="inhouse", aliases=["ih"])
+    async def inhouse(self, ctx: commands.Context) -> None:
+        if not ctx.invoked_subcommand:
+            await ctx.send(self.bot.get_command("help", "inhouse"))
+
+    @inhouse.command(name="teams")
+    async def inhouse_teams(self, ctx: commands.Context, *ignored) -> None:
+        ignored_users = [
+            await commands.MemberConverter().convert(ctx, user) 
+            for user in ignored
+        ]
+        
+        # Make list of Discord user ID of participants
+        userids = [
+            user.id for user 
+            in await self.get_users_in_voice_channel(ctx)
+            if user not in ignored_users
+        ]
+
+        # Get rating of all players participating
+        players = {
+            int(uid): player 
+            for uid, player in load_players()
+            if uid in userids
+        }
+        for userid in userids:
+            if userid not in players:
+                players[userid] = Player(
+                    uid=userid, 
+                    rating=trueskill.Rating()
+                )
+        
+        game = make_teams(players, team_size=len(players)//2)
+        
+        await self.post_game_info(ctx, game)
+
+        self.game = game
+
+    async def post_game_info(self, ctx: commands.Context, game: Game) -> None:
+        def get_team_str(team: Dict[int, Player], n: int) -> str:
+            return f"Team {n}\n```\n" + "\n".join(f"* {self.bot.get_user(uid).name}" for uid in team) + "\n```"
+        description = (
+            f"{get_team_str(game.team1, 1)}\n"
+            f"{get_team_str(game.team2, 2)}\n"
+            f"Team 1 Win Probability: {round(game.win_probability*100)}%"
+        )
+        await self.send_embed_message(ctx, title="Teams", description=description)
+    
+    @inhouse.command(name="winner", aliases=["win", "w"])
+    async def inhouse_winner(self, ctx: commands.Context, winner: str) -> None:
+        if not self.game:
+            raise CommandError("No game is currently in progress!")
+
+        if not winner:
+            raise CommandError(
+                "Winner team argument must be one of '<n>', 'team <n>', 'team<n>, 't<n>'\n"
+                "Example: `!inhouse winner team1`"
+            )
+        
+        t1_win = winner in ["1", "team 1", "team1", "t1"]
+        if t1_win:
+            winners, losers = self.game.team1, self.game.team2
+        else:
+            winners, losers = self.game.team2, self.game.team1
+        rate(winners, losers)
+        
+        await ctx.send(
+            f"Successfully registered a win for team {1 if t1_win else 2}. "
+            "Rating has been updated."
+        )
+
+    @inhouse.command(name="game")
+    async def inhouse_game(self, ctx: commands.Context) -> None:
+        if not self.game:
+            return await ctx.send("No game is currently in progress!")
+        await self.post_game_info(ctx, self.game)
+
+    @inhouse.command(name="stats", aliases=["leaderboard", "leaderboards"])
+    async def inhouse_stats(self, ctx: commands.Context) -> None:
+        players = load_players()
+        if not players:
+            raise CommandError("No players on record!")
+        
+        players = sorted(players, key=p.rating.mu)
+        p = {p.uid: p.mu for p in players}
+        await self.format_key_value_embed(ctx, p)
