@@ -147,10 +147,8 @@ class DGVGKCog(BaseCog):
         }
         for userid in userids:
             if userid not in players:
-                players[userid] = Player(
-                    uid=userid, 
-                    rating=trueskill.Rating()
-                )
+                players[userid] = Player(uid=userid, 
+                                         rating=trueskill.Rating())
         
         game = make_teams(players, team_size=len(players)//2)
         
@@ -184,8 +182,11 @@ class DGVGKCog(BaseCog):
             winners, losers = self.game.team1, self.game.team2
         else:
             winners, losers = self.game.team2, self.game.team1
+        
         rate(winners, losers)
         
+        self.game = None
+
         await ctx.send(
             f"Successfully registered a win for team {1 if t1_win else 2}. "
             "Rating has been updated."
@@ -203,6 +204,23 @@ class DGVGKCog(BaseCog):
         if not players:
             raise CommandError("No players on record!")
         
-        players = sorted(players, key=lambda p: p.rating.mu)
-        p = {p.uid: p.mu for p in players}
-        await self.format_key_value_embed(ctx, p)
+        players = sorted(players.values(), key=lambda p: p.rating.mu, reverse=True)
+        
+        description = "\n".join([await self.fmt_player_stats(p, i) for p, i in enumerate(players, 1)])
+        top_player_url = self.bot.get_user(players[0].uid).avatar_url
+        
+        await self.send_embed_message(ctx, 
+                                      title="DGVGK Inhouse Rankings", 
+                                      description=description, 
+                                      thumbnail_url=top_player_url)
+
+    async def fmt_player_stats(self, player: Player, n: int) -> str:
+        return (f"**{n}. {self.bot.get_user(player.uid).name}**\n"
+                f"Rating: {round(player.rating.mu*40)}\n"
+                f"Matches: {player.wins+player.losses}\n"
+                f"Wins: {player.wins}\n"
+                f"Losses: {player.losses}\n")
+
+    @inhouse.command(name="init")
+    async def inhouse_init(self, ctx: commands.Context) -> None:
+        pass
