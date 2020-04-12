@@ -150,7 +150,7 @@ class DGVGKCog(BaseCog):
             if uid in userids
         }
 
-        # Add new players (if they exist)
+        # Add new players (if there are any)
         for userid in userids:
             if userid not in players:
                 players[userid] = Player(uid=userid, 
@@ -233,3 +233,12 @@ class DGVGKCog(BaseCog):
     @inhouse.command(name="init")
     async def inhouse_init(self, ctx: commands.Context) -> None:
         pass
+
+    @inhouse.command(name="cancel")
+    async def inhouse_cancel(self, ctx: commands.Context) -> None:
+        if not self.game:
+            raise CommandError("No game is currently in progress!")
+
+        self.game = None
+
+        await ctx.send("Successfully cancelled the game.")
