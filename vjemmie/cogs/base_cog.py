@@ -154,7 +154,7 @@ class BaseCog(commands.Cog):
         bot_member = ctx.guild.get_member(self.bot.user.id)
         return bot_member.color
 
-    async def format_markdown_list(self, items: Iterable[str], *, formatting: str="", item_name: str=None, enum: bool=False) -> str:
+    async def format_markdown_list(self, items: Iterable[str], *, formatting: str="", title: str=None, enum: bool=False) -> str:
         """
         Creates a multi-line codeblock in markdown formatting
         listing items in iterable `items` on separate lines.
@@ -168,7 +168,7 @@ class BaseCog(commands.Cog):
         ----------
         items : `Iterable`
             Iterable of strings to format
-        item_name : `str`, optional
+        title : `str`, optional
             Description of items in iterable. Default: None
         enum : `bool`, optional
             Adds index number next to each item listing. Default: False
@@ -180,9 +180,9 @@ class BaseCog(commands.Cog):
 
         Example
         -------
-        >>>format_markdown_list(["foo", "bar", "baz"], "generic items")
+        >>>format_markdown_list(["foo", "bar", "baz"], "Title")
         '```
-        Available generic items:
+        Title:
 
         1. foo
         2. bar
@@ -192,17 +192,16 @@ class BaseCog(commands.Cog):
         if formatting not in md_formats:
             formatting = ""
 
-        _out = []
-        _out.append(f"```{formatting}\n")
+        _out = [f"```{formatting}"]
 
-        if item_name:
-            _out.append(f"Available {item_name}:\n\n")
+        if title:
+            _out.append(f"{title}:\n")
 
         idx = ""
         for i, item in enumerate(items, 1):
             if enum:
                 idx = f"{i}. "
-            _out.append(f"{idx}{item}\n")
+            _out.append(f"{idx}{item}")
         else:
             _out.append("```")
         return "\n".join(_out)
@@ -243,13 +242,11 @@ class BaseCog(commands.Cog):
                 raise CommandError(f"Could not interpret {color}")
             else:
                 return color_classmethod()
-
         # Parse int arg
         elif isinstance(color, int):
             return discord.Color(color)
-
         else:
-            raise CommandError("Argument must be type(str) or type(int)")
+            raise CommandError("Argument must be type 'str' or type 'int'")
 
     async def get_embed(self,
                         ctx: commands.Context,
@@ -1056,9 +1053,9 @@ class BaseCog(commands.Cog):
         return ctx
 
     async def get_invokable_commands(self, ctx) -> None:
-        _commands = self.get_commands()
         return [
-            command for command in _commands if not command.hidden 
+            command for command in self.get_commands() 
+            if not command.hidden 
             and command.enabled
             and await command.can_run(ctx)
         ]
