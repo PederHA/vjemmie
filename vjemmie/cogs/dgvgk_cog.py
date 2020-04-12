@@ -14,6 +14,7 @@ from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.caching import get_cached
 from ..utils.checks import dgvgk_cmd
+from ..utils.voting import vote, SESSIONS
 
 
 TIDSTYVERI_FILE = "db/dgvgk/tidstyveri.json"
@@ -69,6 +70,7 @@ class DGVGKCog(BaseCog):
             await ctx.invoke(self.bot.get_command("help"), "tidstyveri")
 
     @tidstyveri.command(name="start")
+    @vote(votes=2)
     async def tidstyveri_start(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
         """Registrer påbegynt tyveri"""
         if not member:
