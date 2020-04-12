@@ -74,7 +74,7 @@ def dump_players(players: Dict[int, Player]) -> None:
 
 
 def load_players() -> Dict[int, Player]:
-    with open("players.json", "r") as f:
+    with open(PLAYERS_FILE, "r") as f:
         players = json.load(f)
 
     return {

@@ -35,11 +35,10 @@ class DGVGKCog(BaseCog):
     def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
             t = json.dumps(tidstyveri)
+            with open(TIDSTYVERI_FILE, "w") as f:
+                f.write(t)
         except:
             raise CommandError("Kan ikke lagre tidstyveri. Oops.")
-
-        with open(TIDSTYVERI_FILE, "w") as f:
-            f.write(t)
 
     def load_tidstyveri(self) -> dict:
         with open(TIDSTYVERI_FILE, "r") as f:
@@ -127,7 +126,7 @@ class DGVGKCog(BaseCog):
         if not ctx.invoked_subcommand:
             await ctx.send(self.bot.get_command("help", "inhouse"))
 
-    @inhouse.command(name="teams")
+    @inhouse.command(name="teams", aliases=["start", "create"])
     async def inhouse_teams(self, ctx: commands.Context, *ignored) -> None:
         ignored_users = [
             await commands.MemberConverter().convert(ctx, user) 
@@ -137,21 +136,26 @@ class DGVGKCog(BaseCog):
         # Make list of Discord user ID of participants
         userids = [
             user.id for user 
-            in await self.get_users_in_voice_channel(ctx)
+            in ctx.message.author.voice.channel.members
             if user not in ignored_users
         ]
 
-        # Get rating of all players participating
+        if len(userids) < 2:
+            raise CommandError("At least 2 players are required to start a game!")
+
+        # Load existing players from db
         players = {
             int(uid): player 
-            for uid, player in load_players()
+            for uid, player in load_players().items()
             if uid in userids
         }
+
+        # Add new players (if they exist)
         for userid in userids:
             if userid not in players:
                 players[userid] = Player(uid=userid, 
                                          rating=trueskill.Rating())
-        
+
         game = make_teams(players, team_size=len(players)//2)
         
         await self.post_game_info(ctx, game)
@@ -160,7 +164,10 @@ class DGVGKCog(BaseCog):
 
     async def post_game_info(self, ctx: commands.Context, game: Game) -> None:
         def get_team_str(team: Dict[int, Player], n: int) -> str:
-            return f"Team {n}\n```\n" + "\n".join(f"* {self.bot.get_user(uid).name}" for uid in team) + "\n```"
+            return (f"Team {n}\n```\n" + "\n".join(
+                        f"* {self.bot.get_user(p.uid).name.ljust(20)} "
+                        f"({round(p.rating.mu*40)})" for p in team) + "\n```"
+                    )
         description = (
             f"{get_team_str(game.team1, 1)}\n"
             f"{get_team_str(game.team2, 2)}\n"
@@ -169,14 +176,14 @@ class DGVGKCog(BaseCog):
         await self.send_embed_message(ctx, title="Teams", description=description)
     
     @inhouse.command(name="winner", aliases=["win", "w"])
-    async def inhouse_winner(self, ctx: commands.Context, winner: str) -> None:
+    async def inhouse_winner(self, ctx: commands.Context, winner: str=None) -> None:
         if not self.game:
             raise CommandError("No game is currently in progress!")
 
         if not winner:
             raise CommandError(
-                "Winner team argument must be one of '<n>', 'team <n>', 'team<n>, 't<n>'\n"
-                "Example: `!inhouse winner team1`"
+                "Winner team argument must be one of `<n>`, `team <n>`, `team<n>`, `t<n>`\n"
+                f"Example: `{self.bot.command_prefix}{ctx.invoked_with} team1`"
             )
         
         t1_win = winner in ["1", "team 1", "team1", "t1"]
@@ -208,7 +215,7 @@ class DGVGKCog(BaseCog):
         
         players = sorted(players.values(), key=lambda p: p.rating.mu, reverse=True)
         
-        description = "\n".join([await self.fmt_player_stats(p, i) for p, i in enumerate(players, 1)])
+        description = "\n".join([await self.fmt_player_stats(p, i) for i, p in enumerate(players, 1)])
         top_player_url = self.bot.get_user(players[0].uid).avatar_url
         
         await self.send_embed_message(ctx, 
