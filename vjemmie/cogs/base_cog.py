@@ -28,6 +28,7 @@ from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                               FileTypeError, InvalidVoiceChannel, CommandError,
                               NoContextException)
 from ..utils.experimental import get_ctx
+from ..utils.voting import NotEnoughVotes
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
             'coffeescript', 'cpp', 'cs', 'css',
@@ -57,7 +58,8 @@ IGNORE_TRACEBACK = [
     PrawForbidden,
     CommandError,
     DownloadError,
-    commands.errors.DisabledCommand
+    commands.errors.DisabledCommand,
+    NotEnoughVotes
 ]
 
 IGNORE_EXCEPTION = [
@@ -436,6 +438,10 @@ class BaseCog(commands.Cog):
 
         # Check if error stems from lack of privileges
         if isinstance(error, commands.CheckFailure):
+            # only post this catch-all message for general check failures
+            # Subclassed check failures should be handled by their own coroutine
+            if issubclass(error.__class__, commands.CheckFailure):
+                return
             return await ctx.send("Insufficient privileges to execute command!")
 
         # Ignore cooldown exceptions
