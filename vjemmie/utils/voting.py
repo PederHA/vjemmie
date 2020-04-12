@@ -113,7 +113,7 @@ class VotingSession():
             await ctx.send(f"Sufficient votes received!") # NOTE: remove?
         else:
             s = "s" if self.remaining > 1 else ""
-            areis = "are" is self.remaining > 1 else "is"
+            areis = "are" if self.remaining > 1 else "is"
             await ctx.send(f"Vote added! {self.remaining} more vote{s} within the next {int(self.duration - self.elapsed)}s {areis} required.")
 
     async def _add_vote(self, ctx: commands.Context) -> None:
