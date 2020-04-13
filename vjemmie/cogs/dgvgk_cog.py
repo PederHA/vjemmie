@@ -13,7 +13,7 @@ from ..ladder import load_players, make_teams, rate, Player, Game, PLAYERS_FILE,
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.caching import get_cached
-from ..utils.checks import dgvgk_cmd
+from ..utils.checks import dgvgk_cmd, admins_only
 from ..utils.voting import vote, SESSIONS
 
 
@@ -122,6 +122,7 @@ class DGVGKCog(BaseCog):
         await ctx.send(embed=embed)
         
     @commands.group(name="inhouse", aliases=["ih"])
+    @dgvgk_cmd()
     async def inhouse(self, ctx: commands.Context) -> None:
         if not ctx.invoked_subcommand:
             await ctx.send(self.bot.get_command("help", "inhouse"))
@@ -165,9 +166,10 @@ class DGVGKCog(BaseCog):
     async def post_game_info(self, ctx: commands.Context, game: Game) -> None:
         def get_team_str(team: Dict[int, Player], n: int) -> str:
             return (f"Team {n}\n```\n" + "\n".join(
-                        f"* {self.bot.get_user(p.uid).name.ljust(20)} "
-                        f"({round(p.rating.mu*40)})" for p in team) + "\n```"
+                        f"* {self.bot.get_user(p.uid).name.ljust(20)}"
+                        for p in team) + "\n```"
                     )
+
         description = (
             f"{get_team_str(game.team1, 1)}\n"
             f"{get_team_str(game.team2, 2)}\n"
@@ -208,6 +210,7 @@ class DGVGKCog(BaseCog):
         await self.post_game_info(ctx, self.game)
 
     @inhouse.command(name="stats", aliases=["leaderboard", "leaderboards"])
+    @admins_only()
     async def inhouse_stats(self, ctx: commands.Context) -> None:
         players = load_players()
         if not players:
