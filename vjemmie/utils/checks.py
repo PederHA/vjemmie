@@ -43,7 +43,7 @@ def is_not_blacklisted():
 
 def guild_predicate(ctx, guild_id):
     if hasattr(ctx.author, "guild"):
-        return ctx.message.author.guild.id == guild_id
+        return ctx.message.author.guild.id == guild_id or ctx.message.author.guild.id == TEST_SERVER_ID
     return False
 
 
