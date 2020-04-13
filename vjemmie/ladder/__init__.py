@@ -92,30 +92,22 @@ def load_players() -> Dict[int, Player]:
     }
 
 
-def make_teams(players: List[Player], team_size: int=4) -> Game:
+def make_teams(players: Dict[int, Player], team_size: int=4) -> Game:
     """
     Tries to find the most balanced team combination.
     I am literally the worst at math.
     """
     p = sorted([p for p in players.values()], key=lambda p: p.rating)
     comb = list(combinations(p, team_size))
-    
-    best = Game()
 
+    games = []
     # Brute-force, because we are stupid like that
     for pt1 in comb:
         for pt2 in comb:
-            if len(list(set(p.uid for p in pt1+pt2))) == len(comb[0]) * 2:
+            if len(list(set(p.uid for p in pt1+pt2))) == len(comb[0]) * 2:     
                 prob = win_probability(pt1, pt2)
-                if (
-                    (prob >= 0.5 and (prob - 0.5) < (best.win_probability - 0.5))
-                    or
-                    (prob < 0.5 and (prob - 0.5) > (best.win_probability - 0.5))
-                    or not best.win_probability
-                ):
-                    best.win_probability =  prob
-                    best.team1 = pt1
-                    best.team2 = pt2
+                games.append(Game(team1=pt1, team2=pt2, win_probability=prob))
+    best = min(games, key=lambda g: abs(g.win_probability-0.5))
     return best
 
 
