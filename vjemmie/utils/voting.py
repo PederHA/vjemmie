@@ -10,8 +10,8 @@ from discord.ext import commands
 
 from .exceptions import CommandError
 
-
-SESSIONS = defaultdict(dict)
+# Nested dicts are trash, but really easy to use
+SESSIONS = defaultdict(lambda: defaultdict(dict)) # don't shoot me for this, please
 
 
 class NotEnoughVotes(commands.CheckFailure):
@@ -32,6 +32,7 @@ class VotingSession():
                  ctx: commands.Context,
                  threshold: int, 
                  duration: float,
+                 topic: str
                 ) -> None:
         """
         Parameters
@@ -47,9 +48,10 @@ class VotingSession():
         self.duration = duration
         self.bot: commands.Bot = ctx.bot
         self.ctx: commands.Context = ctx
+        self.topic = topic
         self.loop: asyncio.Task = None
         self.reset()
-        self._commandstr = f"{ctx.bot.command_prefix}{ctx.command.qualified_name}"
+        self._commandstr = f"{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}"
         # TODO: Add superuser vote weighting
         #       Add superuser supervote (triggers action)
     
@@ -138,24 +140,25 @@ class VotingSession():
         return ctx.message.author.id in self.votes
 
 
-async def _vote(ctx, votes: int, duration: int):
-    name = ctx.command.qualified_name
+async def _vote(ctx: commands.Context, votes: int, duration: int) -> None:
+    qname = ctx.command.qualified_name
     gid = ctx.guild.id
+    voted = get_voted_name(ctx)
     try:
-        await SESSIONS[gid][name].add_vote(ctx)
+        await SESSIONS[gid][qname][voted].add_vote(ctx)
     except KeyError:
-        SESSIONS[gid][name] = VotingSession(ctx, votes, duration)
-        await SESSIONS[gid][name].add_vote(ctx)
+        SESSIONS[gid][qname][voted] = VotingSession(ctx, votes, duration, voted)
+        await SESSIONS[gid][qname][voted].add_vote(ctx)
 
 
-def vote(votes: int=2, duration: int=300):
+def vote(votes: int=2, duration: int=300) -> bool:
     async def predicate(ctx):
         if votes < 2: # Can't have a voting session with less than 2 required votes
             return True
 
         await _vote(ctx, votes, duration)
         
-        session = SESSIONS[ctx.guild.id][ctx.command.qualified_name]
+        session = SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_name(ctx)]
         if await session.check_votes():
             del session # delete voting session after completion
         else:
@@ -163,3 +166,8 @@ def vote(votes: int=2, duration: int=300):
         return True
     
     return commands.check(predicate)
+
+def get_voted_name(ctx: commands.Context) -> str:
+    """This is NOT robust."""
+    # "!tt start vjemmie" -> "vjemmie"
+    return ctx.message.content.rsplit(ctx.invoked_subcommand.name)[-1].strip()
