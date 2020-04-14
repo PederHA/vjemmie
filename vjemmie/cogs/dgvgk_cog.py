@@ -10,6 +10,7 @@ import trueskill
 
 from .base_cog import BaseCog
 from ..ladder import load_players, make_teams, rate, Player, Game, PLAYERS_FILE, ENV_FILE
+from ..utils.converters import NonCaseSensMemberConverter
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.caching import get_cached
@@ -70,7 +71,7 @@ class DGVGKCog(BaseCog):
 
     @tidstyveri.command(name="start")
     @vote(votes=2)
-    async def tidstyveri_start(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+    async def tidstyveri_start(self, ctx: commands.Context, member: NonCaseSensMemberConverter=None) -> None:
         """Registrer påbegynt tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
@@ -80,7 +81,7 @@ class DGVGKCog(BaseCog):
         await ctx.send(f"Registrerer at et tidstyveri begått av {member.name} er underveis.")
         
     @tidstyveri.command(name="stop", aliases=["stopp"])
-    async def tidstyveri_stop(self, ctx: commands.Context, member: commands.MemberConverter=None) -> None:
+    async def tidstyveri_stop(self, ctx: commands.Context, member: NonCaseSensMemberConverter=None) -> None:
         """Stopp tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
@@ -130,7 +131,7 @@ class DGVGKCog(BaseCog):
     @inhouse.command(name="teams", aliases=["start", "create"])
     async def inhouse_teams(self, ctx: commands.Context, *ignored) -> None:
         ignored_users = [
-            await commands.MemberConverter().convert(ctx, user) 
+            await NonCaseSensMemberConverter().convert(ctx, user) 
             for user in ignored
         ]
         
