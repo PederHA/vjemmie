@@ -357,7 +357,7 @@ class BaseCog(commands.Cog):
 
         return embed
 
-    async def get_users_in_voice_channel(self, ctx: commands.Context, nick: bool=False) -> List[str]:
+    async def get_usernames_in_voice_channel(self, ctx: commands.Context, nick: bool=False) -> List[str]:
         """
         Returns list of discord usernames or nicks (EXCLUDING THE BOT ITSELF) 
         in ctx.message.author's voice channel .

@@ -106,7 +106,7 @@ class FunCog(BaseCog):
         """    
         # Parse args
         if args and args[0] in ["c", "channel"]:
-            to_roll = await self.get_users_in_voice_channel(ctx)
+            to_roll = await self.get_usernames_in_voice_channel(ctx)
         elif len(args)>1:
             to_roll = list(args)          
         else:
@@ -257,7 +257,7 @@ class FunCog(BaseCog):
         
         users = [
             user for user 
-            in await self.get_users_in_voice_channel(ctx)
+            in await self.get_usernames_in_voice_channel(ctx)
             if user not in ignored
         ]
 
