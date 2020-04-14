@@ -4,14 +4,22 @@ import subprocess
 from datetime import datetime
 from typing import Dict
 from collections import defaultdict
+from enum import Enum
 
 import discord
 from discord.ext import commands
 
 from .exceptions import CommandError
+from .converters import NonCaseSensMemberConverter
 
 # Nested dicts are trash, but really easy to use
 SESSIONS = defaultdict(lambda: defaultdict(dict)) # don't shoot me for this, please
+
+
+class TopicType(Enum):
+    default = 0
+    member = 1
+    # more to come ...
 
 
 class NotEnoughVotes(commands.CheckFailure):
@@ -51,7 +59,7 @@ class VotingSession():
         self.topic = topic
         self.loop: asyncio.Task = None
         self.reset()
-        self._commandstr = f"{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}"
+        self._commandstr = ctx.message.content
         # TODO: Add superuser vote weighting
         #       Add superuser supervote (triggers action)
     
@@ -116,7 +124,11 @@ class VotingSession():
         else:
             s = "s" if self.remaining > 1 else ""
             areis = "are" if self.remaining > 1 else "is"
-            await ctx.send(f"Vote added! {self.remaining} more vote{s} within the next {int(self.duration - self.elapsed)}s {areis} required.")
+            await ctx.send(
+                f"Vote added! {self.remaining} more vote{s} within the next " 
+                f"{int(self.duration - self.elapsed)}s {areis} required.\n"
+                f"Type `{self._commandstr}` to add votes."
+            )
 
     async def _add_vote(self, ctx: commands.Context) -> None:
         self.votes[ctx.message.author.id] = Vote(ctx)
@@ -143,7 +155,7 @@ class VotingSession():
 async def _vote(ctx: commands.Context, votes: int, duration: int) -> None:
     qname = ctx.command.qualified_name
     gid = ctx.guild.id
-    voted = get_voted_name(ctx)
+    voted = get_voted_topic(ctx)
     try:
         await SESSIONS[gid][qname][voted].add_vote(ctx)
     except KeyError:
@@ -151,14 +163,20 @@ async def _vote(ctx: commands.Context, votes: int, duration: int) -> None:
         await SESSIONS[gid][qname][voted].add_vote(ctx)
 
 
-def vote(votes: int=2, duration: int=300) -> bool:
+def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) -> bool:
     async def predicate(ctx):
         if votes < 2: # Can't have a voting session with less than 2 required votes
             return True
+        name = get_voted_topic(ctx)
+
+        # This raises a BadArgument exception if the member argument is invalid
+        # The exception handler in BaseCog will catch this
+        if topic is TopicType.member:
+            await NonCaseSensMemberConverter().convert(ctx, name)
 
         await _vote(ctx, votes, duration)
         
-        session = SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_name(ctx)]
+        session = SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
         if await session.check_votes():
             del session # delete voting session after completion
         else:
@@ -167,7 +185,18 @@ def vote(votes: int=2, duration: int=300) -> bool:
     
     return commands.check(predicate)
 
-def get_voted_name(ctx: commands.Context) -> str:
+
+def get_voted_topic(ctx: commands.Context) -> str:
     """This is NOT robust."""
     # "!tt start vjemmie" -> "vjemmie"
-    return ctx.message.content.rsplit(ctx.invoked_subcommand.name)[-1].strip()
+    return ctx.message.content.rsplit(ctx.invoked_with)[-1].strip()
+
+
+def purge_session(ctx: commands.Context) -> None:
+    """Unused."""
+    del SESSIONS[ctx.command.qualified_name][ctx.guild.id][get_voted_topic(ctx)]
+
+
+def get_session(ctx: commands.Context) -> VotingSession:
+    """Unused."""
+    return SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
