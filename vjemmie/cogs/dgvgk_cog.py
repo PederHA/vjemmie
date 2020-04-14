@@ -138,7 +138,7 @@ class DGVGKCog(BaseCog):
         # Make list of Discord user ID of participants
         userids = [
             user.id for user 
-            in ctx.message.author.voice.channel.members
+            in await self.get_members_in_voice_channel(ctx)
             if user not in ignored_users
         ]
 
