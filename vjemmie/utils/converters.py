@@ -86,7 +86,10 @@ class NonCaseSensMemberConverter(IDConverter):
 
         def get_from_guild(guild: discord.Guild, argument: Union[str, int]) -> Optional[discord.Member]:
             for member in guild.members:
-                if member.name.lower() == argument or member.nick.lower() == argument:
+                if (
+                    member.name.lower() == argument or 
+                    member.nick and member.nick.lower() == argument
+                ):
                     return member
     
         # This is a really ugly re-purposing of the original MemberConverter
