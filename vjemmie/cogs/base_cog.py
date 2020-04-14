@@ -370,6 +370,18 @@ class BaseCog(commands.Cog):
             if member.id != self.bot.user.id
         ]
 
+    async def get_members_in_voice_channel(self, ctx: commands.Context) -> List[str]:
+        """
+        Returns list of `discord.Member` objects (EXCLUDING THE BOT ITSELF) 
+        from ctx.message.author's voice channel .
+        """
+        if not hasattr(ctx.message.author.voice, "channel"):
+            raise CommandError("You are not connected to a voice channel.")
+        return [
+            member for member in ctx.message.author.voice.channel.members 
+            if member.id != self.bot.user.id
+        ]
+
     async def find_user_in_voice_channel(self, ctx: commands.Context, name: str, nick: bool=True) -> discord.Member:
         for member in ctx.message.author.voice.channel.members:
             if any(name == n for n in [member.nick, member.name]):
