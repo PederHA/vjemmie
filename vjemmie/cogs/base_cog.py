@@ -406,7 +406,7 @@ class BaseCog(commands.Cog):
         except discord.HTTPException:
             print(f"Failed to send message to channel {channel_id}.")
 
-    async def log_error(self, ctx: commands.Context, error_msg: str) -> None:
+    async def log_error(self, ctx: commands.Context, error_msg: str=None) -> None:
         """Logs command exception to log channel
         
         Parameters
@@ -418,7 +418,9 @@ class BaseCog(commands.Cog):
             Traceback returned by traceback.format_exc() from
             BaseCog._unknown_error()
         """
-
+        if not error_msg:
+            error_msg = traceback.format_exc()
+        
         # Send traceback
         await self.send_text_message(error_msg, channel_id=self.ERROR_CHANNEL_ID)
 
