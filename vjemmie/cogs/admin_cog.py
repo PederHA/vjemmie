@@ -161,14 +161,16 @@ class AdminCog(BaseCog):
             String to send.
         """
         msg = " ".join(msg)
-        guilds = self.bot.guilds
-        for guild in guilds:
-            channel = guild.text_channels[0]
+        failed = []
+        for guild in self.bot.guilds:
             try:
+                channel = guild.text_channels[0]
                 await channel.send(message)
             except:
-                # CBA spamming log channel with every message attempt
-                print(f"Failed to send message to guild {guild.name}")
+                failed.append(guild.name)
+        if failed:
+            guilds = ", ".join(guilds)
+            await ctx.send(f"Failed to send message to the following guilds: {guilds}")
 
     @commands.group(name="log", aliases=["logs"])
     async def log(self, ctx: commands.Context) -> None:
@@ -176,13 +178,15 @@ class AdminCog(BaseCog):
             raise CommandError("A subcommand is required!")
 
     def _get_log_dir(self) -> None:
-        try:
-            immortal_dir = os.environ["IMMORTAL_SDIR"]
-        except KeyError:
-            raise CommandError("Immortal SDIR environment variable is not set!")
+        vjemmie_dir = Path(os.environ.get("VJEMMIE_DIR")) or Path.home() / "vjemmie"
+        if not vjemmie_dir.exists():
+            raise CommandError(
+                "Unable to locate vjemmie directory. "
+                "Environment variable 'VJEMMIE_DIR' should be set to the bot's directory."
+            )
 
         # Check if log dir exists
-        log_dir = Path(immortal_dir) / "logs"
+        log_dir = vjemmie_dir / "logs"
         if not log_dir.exists():
             raise CommandError("Unable to locate log directory!")
         
@@ -195,11 +199,11 @@ class AdminCog(BaseCog):
         log_dir = self._get_log_dir()
         
         # Check if log file exists
-        log = log_dir / log_name
-        if not log.exists():
-            raise CommandError(f"`{str(log)}` does not exist!")
+        logfile = log_dir / log_name
+        if not logfile.exists():
+            raise CommandError(f"`{str(logfile)}` does not exist!")
         
-        return log    
+        return logfile    
 
     @log.command(name="get")
     async def post_log(self, ctx: commands.Context, log_name: str=None, encoding: str="utf-8") -> None:
