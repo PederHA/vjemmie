@@ -144,7 +144,9 @@ class DGVGKCog(BaseCog):
 
         if len(userids) < 2:
             raise CommandError("At least 2 players are required to start a game!")
-
+        elif len(userids) % 2 != 0:
+            raise CommandError("Can only create teams for an even number of players!")
+        
         # Load existing players from db
         players = {
             int(uid): player 
@@ -195,13 +197,16 @@ class DGVGKCog(BaseCog):
         else:
             winners, losers = self.game.team2, self.game.team1
         
-        rate(winners, losers)
+        try:
+            rate(winners, losers)
+        except:
+            await self.log_error(ctx) # Not ideal, is it?
+            raise CommandError("Something went wrong when attempting to update rating!")
         
         self.game = None
 
         await ctx.send(
             f"Successfully registered a win for team {1 if t1_win else 2}. "
-            "Rating has been updated."
         )
 
     @inhouse.command(name="game")
