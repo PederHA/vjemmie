@@ -40,7 +40,7 @@ class VotingSession():
                  ctx: commands.Context,
                  threshold: int, 
                  duration: float,
-                 topic: str
+                 topic: str=""
                 ) -> None:
         """
         Parameters
@@ -152,33 +152,32 @@ class VotingSession():
         return ctx.message.author.id in self.votes
 
 
-async def _vote(ctx: commands.Context, votes: int, duration: int) -> None:
-    qname = ctx.command.qualified_name
-    gid = ctx.guild.id
-    voted = get_voted_topic(ctx)
-    try:
-        await SESSIONS[gid][qname][voted].add_vote(ctx)
-    except KeyError:
-        SESSIONS[gid][qname][voted] = VotingSession(ctx, votes, duration, voted)
-        await SESSIONS[gid][qname][voted].add_vote(ctx)
-
-
 def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) -> bool:
     async def predicate(ctx):
         if votes < 2: # Can't have a voting session with less than 2 required votes
             return True
-        name = get_voted_topic(ctx)
-
+        
         # This raises a BadArgument exception if the member argument is invalid
         # The exception handler in BaseCog will catch this
         if topic is TopicType.member:
+            name = get_voted_topic(ctx)
             await NonCaseSensMemberConverter().convert(ctx, name)
 
-        await _vote(ctx, votes, duration)
-        
-        session = SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
+        # Make sure an active session exists, otherwise create one
+        try:
+            await get_session(ctx)
+        except KeyError:
+            if topic is TopicType.default:
+                await create_session(ctx, votes, duration)
+            elif topic is TopicType.member:
+                name = get_voted_topic(ctx)
+                await NonCaseSensMemberConverter().convert(ctx, name)
+                await create_session(ctx, votes, duration, name)
+        await add_vote(ctx)
+
+        session = await get_session(ctx)
         if await session.check_votes():
-            del session # delete voting session after completion
+            await purge_session(ctx) # delete voting session after completion
         else:
             raise NotEnoughVotes
         return True
@@ -192,11 +191,23 @@ def get_voted_topic(ctx: commands.Context) -> str:
     return ctx.message.content.rsplit(ctx.invoked_with)[-1].strip()
 
 
-def purge_session(ctx: commands.Context) -> None:
-    """Unused."""
+async def create_session(ctx: commands.Context, *args, **kwargs) -> VotingSession:
+    session = VotingSession(ctx, *args, **kwargs)
+    SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)] = session
+    return session
+
+
+async def get_session(ctx: commands.Context) -> VotingSession:
+    """Attempts to retrieve a voting session based on context."""
+    return SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
+
+
+async def purge_session(ctx: commands.Context) -> None:
+    """Attempts to delete a voting session based on context."""
     del SESSIONS[ctx.command.qualified_name][ctx.guild.id][get_voted_topic(ctx)]
 
 
-def get_session(ctx: commands.Context) -> VotingSession:
-    """Unused."""
-    return SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
+async def add_vote(ctx: commands.Context) -> None:
+    """Attempts to add a vote to a voting session based on context."""
+    sess = await get_session(ctx)
+    await sess.add_vote(ctx)
