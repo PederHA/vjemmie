@@ -204,7 +204,7 @@ async def get_session(ctx: commands.Context) -> VotingSession:
 
 async def purge_session(ctx: commands.Context) -> None:
     """Attempts to delete a voting session based on context."""
-    del SESSIONS[ctx.command.qualified_name][ctx.guild.id][get_voted_topic(ctx)]
+    del SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
 
 
 async def add_vote(ctx: commands.Context) -> None:
