@@ -156,12 +156,6 @@ def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) ->
     async def predicate(ctx):
         if votes < 2: # Can't have a voting session with less than 2 required votes
             return True
-        
-        # This raises a BadArgument exception if the member argument is invalid
-        # The exception handler in BaseCog will catch this
-        if topic is TopicType.member:
-            name = get_voted_topic(ctx)
-            await NonCaseSensMemberConverter().convert(ctx, name)
 
         # Make sure an active session exists, otherwise create one
         try:
@@ -170,9 +164,12 @@ def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) ->
             if topic is TopicType.default:
                 await create_session(ctx, votes, duration)
             elif topic is TopicType.member:
+                # This raises a BadArgument exception if the member argument is invalid
+                # The exception handler in BaseCog will catch this
                 name = get_voted_topic(ctx)
                 await NonCaseSensMemberConverter().convert(ctx, name)
                 await create_session(ctx, votes, duration, name)
+        
         await add_vote(ctx)
 
         session = await get_session(ctx)
