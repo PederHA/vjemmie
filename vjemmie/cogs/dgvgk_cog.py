@@ -126,7 +126,7 @@ class DGVGKCog(BaseCog):
     @dgvgk_cmd()
     async def inhouse(self, ctx: commands.Context) -> None:
         if not ctx.invoked_subcommand:
-            await ctx.send(self.bot.get_command("help", "inhouse"))
+            await ctx.invoke(self.bot.get_command("help"), "inhouse")
 
     @inhouse.command(name="teams", aliases=["start", "create"])
     async def inhouse_teams(self, ctx: commands.Context, *ignored) -> None:
