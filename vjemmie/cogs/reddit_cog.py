@@ -16,7 +16,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import discord
 import praw
-from prawcore.exceptions import Forbidden
+from prawcore.exceptions import Forbidden, NotFound
 from discord.ext import commands, tasks
 
 from .base_cog import BaseCog, EmbedField
@@ -624,12 +624,18 @@ class RedditCog(BaseCog):
                 async with ctx.message.channel.typing():
                     posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
                     self.submissions[ctx.guild.id][subreddit][sorting][time] = posts
-            except Forbidden:
+            except (Forbidden, NotFound) as e:
+                if isinstance(e, Forbidden):
+                    s = "Subreddit might be quarantined."
+                else:
+                    s = "Verify that the subreddit exists and is spelled correctly."
+                # Why send_error_msg() here instead of raise CommandError?
+                # Why doesn't this exception propagate properly?
                 return await self.send_error_msg(
                     ctx,
                     f"Cannot retrieve **r/{subreddit}** submissions! " 
-                    "Subreddit might be quarantined."
-                    )
+                    f"{s}."
+                )
             
         if rtn_posts:
             return posts
