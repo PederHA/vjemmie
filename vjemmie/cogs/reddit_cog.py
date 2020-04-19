@@ -633,8 +633,7 @@ class RedditCog(BaseCog):
                 # Why doesn't this exception propagate properly?
                 return await self.send_error_msg(
                     ctx,
-                    f"Cannot retrieve **r/{subreddit}** submissions! " 
-                    f"{s}."
+                    f"Cannot retrieve **r/{subreddit}** submissions! {s}"
                 )
             
         if rtn_posts:
