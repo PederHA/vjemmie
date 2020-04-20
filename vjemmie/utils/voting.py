@@ -201,6 +201,11 @@ async def get_session(ctx: commands.Context) -> VotingSession:
 
 async def purge_session(ctx: commands.Context) -> None:
     """Attempts to delete a voting session based on context."""
+    session = await get_session(ctx)
+    try:
+        await session.stop_loop()
+    except AttributeError:
+        pass
     del SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
 
 
