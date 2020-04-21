@@ -1,16 +1,17 @@
 import asyncio
 import inspect
 import subprocess
-from datetime import datetime
-from typing import Dict
 from collections import defaultdict
+from contextlib import suppress
+from datetime import datetime
 from enum import Enum
+from typing import Dict
 
 import discord
 from discord.ext import commands
 
-from .exceptions import CommandError
 from .converters import NonCaseSensMemberConverter
+from .exceptions import CommandError
 
 # Nested dicts are trash, but really easy to use
 SESSIONS = defaultdict(lambda: defaultdict(dict)) # don't shoot me for this, please
@@ -33,33 +34,39 @@ class Vote:
         self.time: datetime = ctx.message.created_at
 
 
-class VotingSession():
+class VotingSession:
     """Represents a voting session."""
 
     def __init__(self,
                  ctx: commands.Context,
                  threshold: int, 
                  duration: float,
-                 topic: str=""
+                 loopinterval: int=10
                 ) -> None:
         """
         Parameters
         ----------
+        ctx : `discord.ext.commands.Context`
+            Discord Context
         threshold : `int`
             Number of votes required to pass the vote.
         duration : `float`
             Duration of voting session in seconds.
-        bot : `commands.Bot`
-            Discord Bot instance
+        loopinterval : int
+            How often to check if session is still active.
         """
+        self.ctx: commands.Context = ctx
         self.threshold = threshold
         self.duration = duration
+        if loopinterval > duration:
+            self.loopinterval = duration / 2          
+        else:
+            self.loopinterval = loopinterval
+            
         self.bot: commands.Bot = ctx.bot
-        self.ctx: commands.Context = ctx
-        self.topic = topic
         self.loop: asyncio.Task = None
         self.reset()
-        self._commandstr = ctx.message.content
+        self.commandstr = ctx.message.content
         # TODO: Add superuser vote weighting
         #       Add superuser supervote (triggers action)
     
@@ -69,9 +76,10 @@ class VotingSession():
         self.votes: Dict[int, Vote] = {}
         if self.loop:
             self.bot.loop.create_task(self.stop_loop())
+            self.loop = None
 
     @property
-    def remaining(self) -> int:
+    def votes_remaining(self) -> int:
         return self.threshold - len(self.votes)
 
     @property
@@ -82,22 +90,36 @@ class VotingSession():
     def elapsed(self) -> float:
         return (datetime.now() - self.start).total_seconds()
 
+    @property
+    def time_remaining_str(self) -> str:
+        remaining = self.duration - self.elapsed
+        if remaining >= 60:
+            return f"{round(remaining/60)} minutes"
+        else:
+            return f"{int(remaining)} seconds"
+
+    def __del__(self) -> None:
+        """Ensures an active loop is cancelled when object is deleted."""
+        with suppress(AttributeError, asyncio.CancelledError):
+            self.loop.cancel()
+        
     async def start_loop(self) -> None:
         self.loop = self.bot.loop.create_task(self.sessionloop())
 
     async def stop_loop(self) -> None:
-        if not self.loop:
-            raise AttributeError("No session loop is active.")
-        self.loop.cancel()
+        if self.loop:
+            self.loop.cancel()
 
-    async def sessionloop(self, interval: int=10) -> None:
+    async def sessionloop(self) -> None:
         """Periodically checks if voting session is still active."""
         while True:
             if self.elapsed > self.duration:
                 await self.ctx.send(
-                    f"Voting session for `{self._commandstr}` ended. Not enough votes.")
-                self.reset()
-            await asyncio.sleep(interval)
+                    f"Voting session for `{self.commandstr}` ended. Not enough votes."
+                )
+                return await purge_session(self.ctx)
+            await asyncio.sleep(self.loopinterval)
+
 
     async def check_votes(self) -> bool:
         """Checks if sufficient votes are reached."""
@@ -111,9 +133,6 @@ class VotingSession():
                 await self._add_vote(ctx)
             else:
                 return # this is a little messy
-        else:
-            self.reset() # reset voting session
-            await self._add_vote(ctx)
 
         # Start voting session loop
         if not self.loop:
@@ -122,12 +141,12 @@ class VotingSession():
         if await self.check_votes():
             await ctx.send(f"Sufficient votes received!") # NOTE: remove?
         else:
-            s = "s" if self.remaining > 1 else ""
-            areis = "are" if self.remaining > 1 else "is"
+            s = "s" if self.votes_remaining > 1 else ""
+            areis = "are" if self.votes_remaining > 1 else "is"
             await ctx.send(
-                f"Vote added! {self.remaining} more vote{s} within the next " 
-                f"{int(self.duration - self.elapsed)}s {areis} required.\n"
-                f"Type `{self._commandstr}` to add votes."
+                f"Vote added! {self.votes_remaining} more vote{s} within the next " 
+                f"{self.time_remaining_str} {areis} required.\n"
+                f"Type `{self.commandstr}` to add votes."
             )
 
     async def _add_vote(self, ctx: commands.Context) -> None:
@@ -146,7 +165,7 @@ class VotingSession():
                     time_msg += "s"
             await ctx.send(
                 "You have already voted for "
-                f"`{self._commandstr}` "
+                f"`{self.commandstr}` "
                 f"within the last {time_msg}."
             )
         return ctx.message.author.id in self.votes
@@ -168,7 +187,7 @@ def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) ->
                 # The exception handler in BaseCog will catch this
                 name = get_voted_topic(ctx)
                 await NonCaseSensMemberConverter().convert(ctx, name)
-                await create_session(ctx, votes, duration, name)
+                await create_session(ctx, votes, duration)
         
         await add_vote(ctx)
 
@@ -201,11 +220,6 @@ async def get_session(ctx: commands.Context) -> VotingSession:
 
 async def purge_session(ctx: commands.Context) -> None:
     """Attempts to delete a voting session based on context."""
-    session = await get_session(ctx)
-    try:
-        await session.stop_loop()
-    except AttributeError:
-        pass
     del SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
 
 
