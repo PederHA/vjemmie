@@ -1,22 +1,22 @@
+import json
 import socket
 import time
 from datetime import datetime, timedelta
-import json
 from typing import Dict
 
 import discord
-from discord.ext import commands
 import trueskill
+from discord.ext import commands
 
-from .base_cog import BaseCog
-from ..ladder import load_players, make_teams, rate, Player, Game, PLAYERS_FILE, ENV_FILE
+from ..ladder import (ENV_FILE, PLAYERS_FILE, Match, Player, dump_players,
+                      get_new_player, load_players, make_teams, rate)
+from ..utils.caching import get_cached
+from ..utils.checks import admins_only, dgvgk_cmd
 from ..utils.converters import NonCaseSensMemberConverter
 from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
-from ..utils.caching import get_cached
-from ..utils.checks import dgvgk_cmd, admins_only
-from ..utils.voting import vote, SESSIONS, TopicType
-
+from ..utils.voting import SESSIONS, TopicType, vote
+from .base_cog import BaseCog
 
 TIDSTYVERI_FILE = "db/dgvgk/tidstyveri.json"
 
@@ -77,7 +77,7 @@ class DGVGKCog(BaseCog):
             raise CommandError("Et discord-brukernavn er påkrevd!")
         
         self.tidstyver[str(member.id)] = time.time()
-
+        # TODO: User mention
         await ctx.send(f"Registrerer at et tidstyveri begått av {member.name} er underveis.")
         
     @tidstyveri.command(name="stop", aliases=["stopp"])
@@ -157,8 +157,7 @@ class DGVGKCog(BaseCog):
         # Add new players (if there are any)
         for userid in userids:
             if userid not in players:
-                players[userid] = Player(uid=userid, 
-                                         rating=trueskill.Rating())
+                players[userid] = get_new_player(int(userid))
 
         game = make_teams(players, team_size=len(players)//2)
         
@@ -166,12 +165,16 @@ class DGVGKCog(BaseCog):
 
         self.game = game
 
-    async def post_game_info(self, ctx: commands.Context, game: Game) -> None:
+    async def post_game_info(self, ctx: commands.Context, game: Match) -> None:
         def get_team_str(team: Dict[int, Player], n: int) -> str:
-            return (f"Team {n}\n```\n" + "\n".join(
-                        f"* {self.bot.get_user(p.uid).name.ljust(20)}"
-                        for p in team) + "\n```"
-                    )
+            return (
+                f"Team {n}\n```\n" + 
+                "\n".join(
+                    f"* {self.bot.get_user(p.uid).name.ljust(20)}"
+                    for p in team
+                ) + 
+                "\n```"
+            )
 
         description = (
             f"{get_team_str(game.team1, 1)}\n"
@@ -251,3 +254,35 @@ class DGVGKCog(BaseCog):
         self.game = None
 
         await ctx.send("Successfully cancelled the game.")
+
+    @inhouse.command(name="reset")
+    @admins_only()
+    async def inhouse_reset(self, ctx: commands.Context) -> None:
+        players = load_players()
+        if not players:
+            await ctx.send("Nothing to be done. No players in database.")
+            return
+
+        for uid in players: # We don't even need to iterate over values
+            players[uid] = get_new_player(uid)
+        dump_players(players)
+
+        await ctx.send("Successfully reset stats for all players!")
+
+    @inhouse.command(name="adjust")
+    @admins_only()
+    async def inhouse_adjust(self, ctx: commands.Context, player: NonCaseSensMemberConverter, new_rating: float) -> None:
+        """Adjusts the rating of a specific player. 
+        NOTE: This WILL create rating inflation/deflation.
+        """
+        if new_rating >= 1000:
+            new_rating = new_rating / 40
+        
+        players = load_players()
+
+        orig_rating = players[player.id].rating
+        players[player.id].rating = trueskill.Rating(mu=new_rating, sigma=orig_rating.sigma)
+
+        dump_players(players)
+
+        await ctx.send(f"Changed **{player.name}**'s rating from {orig_rating.mu*40} to {new_rating*40}!")
