@@ -56,7 +56,8 @@ class Player:
 
 
 @dataclass
-class Game:
+class Match:
+    """Represents a potential match by the matchmaker."""
     team1: List[Player] = field(default_factory=list)
     team2: List[Player] = field(default_factory=list)
     win_probability: float = 0.0
@@ -79,7 +80,7 @@ def load_players() -> Dict[int, Player]:
 
     return {
         int(uid): Player(
-            uid=player["uid"],
+            uid=int(uid),
             rating=Rating(
                 mu=player["rating"]["mu"],
                 sigma=player["rating"]["sigma"]
@@ -92,7 +93,7 @@ def load_players() -> Dict[int, Player]:
     }
 
 
-def make_teams(players: Dict[int, Player], team_size: int=4) -> Game:
+def make_teams(players: Dict[int, Player], team_size: int=4) -> Match:
     """
     Tries to find the most balanced team combination.
     I am literally the worst at math.
@@ -100,14 +101,14 @@ def make_teams(players: Dict[int, Player], team_size: int=4) -> Game:
     p = sorted([p for p in players.values()], key=lambda p: p.rating)
     comb = list(combinations(p, team_size))
 
-    games = []
+    matches = []
     # Brute-force, because we are stupid like that
     for pt1 in comb:
         for pt2 in comb:
             if len(list(set(p.uid for p in pt1+pt2))) == len(comb[0]) * 2:     
                 prob = win_probability(pt1, pt2)
-                games.append(Game(team1=pt1, team2=pt2, win_probability=prob))
-    best = min(games, key=lambda g: abs(g.win_probability-0.5))
+                matches.append(Match(team1=pt1, team2=pt2, win_probability=prob))
+    best = min(matches, key=lambda g: abs(g.win_probability-0.5))
     return best
 
 
@@ -152,3 +153,6 @@ def win_probability(team1, team2):
     ts = trueskill.global_env()
     return ts.cdf(delta_mu / denom)
 
+
+def get_new_player(uid: int) -> Player:
+    return Player(uid=int(uid), rating=Rating())
