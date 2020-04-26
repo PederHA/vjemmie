@@ -33,3 +33,6 @@ YOUTUBE_API_KEY = "" # For command !yt
 
 # AWS
 EC2_INSTANCE_ID = "" # Disregard maybe?
+
+# Merriam-Webster API
+MERRIAM_WEBSTER_KEY = ""

@@ -13,11 +13,13 @@ import numpy as np
 import requests
 import unidecode
 from discord.ext import commands
+from mwdictionary import MWClient
 
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
 from .base_cog import BaseCog
 
+mw: MWClient = None
 
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
@@ -278,3 +280,12 @@ class FunCog(BaseCog):
             ]
         )
         await self.send_embed_message(ctx, title="Teams", description=teams)        
+
+    @commands.command(name="synonyms")
+    async def word_synonyms(self, ctx: commands.Context, word: str) -> None:
+        w = await mw.aget(word.lower())
+        if not w.synonyms:
+            await ctx.send("Word has no synonyms!")
+        else:
+            synonyms = ", ".join([f"`{s}`" for s in w.synonyms])
+        await ctx.send(f"**{word.capitalize()}** synonyms:\n{synonyms}")

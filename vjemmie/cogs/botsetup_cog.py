@@ -10,23 +10,24 @@ from discord.ext import commands
 from github import Github
 from googleapiclient.discovery import build
 from spotipy.oauth2 import SpotifyClientCredentials
+from mwdictionary import MWClient
 
 from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
 from ..utils import spotify, youtube
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
 from ..utils.printing import eprint
-from . import reddit_cog, stats_cog
+from . import reddit_cog, stats_cog, fun_cog
 from .base_cog import BaseCog, EmbedField
 
 
 class BotSetupCog(BaseCog):
     def __init__(self, bot) -> None:
         self.bot = bot
-
         self.setup_youtube()
         self.setup_spotify()
         self.setup_github()
         self.setup_reddit()
+        self.setup_mwdictionary()
             
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -102,6 +103,17 @@ class BotSetupCog(BaseCog):
             client_secret=self.bot.secrets.REDDIT_SECRET,
             user_agent=self.bot.secrets.REDDIT_USER_AGENT,
         )
+
+    def setup_mwdictionary(self) -> None:
+        if not (self.bot.secrets.MERRIAM_WEBSTER_KEY):
+            eprint(
+                "Merriam-Webster API credentials are missing.\n"
+                "How to fix:\n"
+                "1. Go to https://dictionaryapi.com/register/index\n"
+                "2. Create a new account & request college thesaurus key"
+            )
+            return self.remove_commands("synonyms")
+        fun_cog.mw = MWClient(key=self.bot.secrets.MERRIAM_WEBSTER_KEY)
 
     def remove_commands(self, *cmds) -> None:
         for cmd in cmds:
