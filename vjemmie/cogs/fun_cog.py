@@ -281,11 +281,16 @@ class FunCog(BaseCog):
         )
         await self.send_embed_message(ctx, title="Teams", description=teams)        
 
-    @commands.command(name="synonyms")
+    @commands.command(name="synonyms", aliases=["syn"])
     async def word_synonyms(self, ctx: commands.Context, word: str) -> None:
-        w = await mw.aget(word.lower())
+        try:
+            w = await mw.aget(word.lower())
+        except ValueError:
+            return await ctx.send(f"No definition found for **{word}**.")
+        
         if not w.synonyms:
-            await ctx.send("Word has no synonyms!")
+            return await ctx.send("Word has no synonyms!")
         else:
             synonyms = ", ".join([f"`{s}`" for s in w.synonyms])
+        
         await ctx.send(f"**{word.capitalize()}** synonyms:\n{synonyms}")
