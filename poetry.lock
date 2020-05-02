@@ -502,8 +502,8 @@ version = "4.7.5"
 
 [[package]]
 category = "main"
-description = "API Wrapper for the Merriam-Webster API."
-name = "mwdictionary"
+description = "API Wrapper for the Merriam-Webster Collegiate Thesaurus API."
+name = "mwthesaurus"
 optional = false
 python-versions = ">=3.7,<4.0"
 version = "0.1.1"
@@ -1057,7 +1057,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "891a64ed49934b99d92320026b53be2666ec824a8300f572a13783fdd98662cc"
+content-hash = "ae90a6f6323379a4553b12dc750e130cfda3a95086820e5970732d5e2d8e3a27"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1333,9 +1333,9 @@ multidict = [
     {file = "multidict-4.7.5-cp38-cp38-win_amd64.whl", hash = "sha256:544fae9261232a97102e27a926019100a9db75bec7b37feedd74b3aa82f29969"},
     {file = "multidict-4.7.5.tar.gz", hash = "sha256:aee283c49601fa4c13adc64c09c978838a7e812f85377ae130a24d7198c0331e"},
 ]
-mwdictionary = [
-    {file = "mwdictionary-0.1.1-py3-none-any.whl", hash = "sha256:a4ea0bb25a32baa7f88a9ec2d6492287699217c8ad91cce9bc726934ad055e77"},
-    {file = "mwdictionary-0.1.1.tar.gz", hash = "sha256:8049b55472b1f98f13aa94905eae4cd57d9a552c0ab82e7e7a3565d6a18d3fca"},
+mwthesaurus = [
+    {file = "mwthesaurus-0.1.1-py3-none-any.whl", hash = "sha256:b3f32760d61b27e23f95037e6a202b140fc00ea3115225b55afb81d632be68a4"},
+    {file = "mwthesaurus-0.1.1.tar.gz", hash = "sha256:90dbf5f49dd2598affc0793313a245e4bab17eaec227722fef88770b58d5d8aa"},
 ]
 numpy = [
     {file = "numpy-1.18.1-cp35-cp35m-macosx_10_6_intel.whl", hash = "sha256:20b26aaa5b3da029942cdcce719b363dbe58696ad182aff0e5dcb1687ec946dc"},

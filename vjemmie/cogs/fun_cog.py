@@ -5,6 +5,7 @@ import random
 import traceback
 import unicodedata
 from functools import partial
+from itertools import chain
 from pprint import pprint
 from typing import Union
 
@@ -13,7 +14,7 @@ import numpy as np
 import requests
 import unidecode
 from discord.ext import commands
-from mwdictionary import MWClient
+from mwthesaurus import MWClient
 
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
@@ -284,13 +285,15 @@ class FunCog(BaseCog):
     @commands.command(name="synonyms", aliases=["syn"])
     async def word_synonyms(self, ctx: commands.Context, word: str) -> None:
         try:
-            w = await mw.aget(word.lower())
+            definition = await mw.aget(word.lower())
         except ValueError:
             return await ctx.send(f"No definition found for **{word}**.")
+        except AttributeError:
+            return await ctx.send(f"Unable to fetch synonyms for {word}")
         
-        if not w.synonyms:
+        synonyms = chain.from_iterable(word.synonyms for word in definition)
+        if not synonyms:
             return await ctx.send("Word has no synonyms!")
-        else:
-            synonyms = ", ".join([f"`{s}`" for s in w.synonyms])
         
-        await ctx.send(f"**{word.capitalize()}** synonyms:\n{synonyms}")
+        synstr = ", ".join(synonyms)
+        await self.send_text_message(f"**{word.capitalize()}** synonyms:\n{synstr}", ctx)

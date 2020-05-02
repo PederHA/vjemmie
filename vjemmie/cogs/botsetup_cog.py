@@ -1,7 +1,7 @@
 import asyncio
 import sys
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import discord
 import spotipy
@@ -10,7 +10,7 @@ from discord.ext import commands
 from github import Github
 from googleapiclient.discovery import build
 from spotipy.oauth2 import SpotifyClientCredentials
-from mwdictionary import MWClient
+from mwthesaurus import MWClient
 
 from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
 from ..utils import spotify, youtube
@@ -27,7 +27,7 @@ class BotSetupCog(BaseCog):
         self.setup_spotify()
         self.setup_github()
         self.setup_reddit()
-        self.setup_mwdictionary()
+        self.setup_mwthesaurus()
             
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -43,7 +43,7 @@ class BotSetupCog(BaseCog):
                 "3. Create an Application\n"
                 "4. Retrieve Client ID and Client Secret\n"
             )
-            return self.remove_commands("spotify")
+            return self.remove_commands(["spotify"])
 
         spotify.spotify = spotipy.Spotify(
             client_credentials_manager=SpotifyClientCredentials(
@@ -61,7 +61,7 @@ class BotSetupCog(BaseCog):
                 "3. Enable YouTube Data API v3\n"
                 "4. Create an API Key"
             )
-            return self.remove_commands("yt")
+            return self.remove_commands(["yt"])
          
         youtube.youtube = build(
             YOUTUBE_API_SERVICE_NAME,
@@ -79,7 +79,7 @@ class BotSetupCog(BaseCog):
                 "3. Enable repo:status\n"
                 "4. Generate personal access token"
             )
-            return self.remove_commands("changelog", "commits")
+            return self.remove_commands(["changelog", "commits"])
         
         stats_cog.githubclient = Github(self.bot.secrets.GITHUB_TOKEN)
 
@@ -104,7 +104,7 @@ class BotSetupCog(BaseCog):
             user_agent=self.bot.secrets.REDDIT_USER_AGENT,
         )
 
-    def setup_mwdictionary(self) -> None:
+    def setup_mwthesaurus(self) -> None:
         if not (self.bot.secrets.MERRIAM_WEBSTER_KEY):
             eprint(
                 "Merriam-Webster API credentials are missing.\n"
@@ -112,11 +112,11 @@ class BotSetupCog(BaseCog):
                 "1. Go to https://dictionaryapi.com/register/index\n"
                 "2. Create a new account & request college thesaurus key"
             )
-            return self.remove_commands("synonyms")
+            return self.remove_commands(["synonyms"])
         fun_cog.mw = MWClient(key=self.bot.secrets.MERRIAM_WEBSTER_KEY)
 
-    def remove_commands(self, *cmds) -> None:
-        for cmd in cmds:
+    def remove_commands(self, commands: List[str]) -> None:
+        for cmd in commands:
             eprint(f"Disabling command '{self.bot.command_prefix}{cmd}'")
             self.bot.remove_command(cmd)
 
