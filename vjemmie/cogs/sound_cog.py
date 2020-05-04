@@ -37,14 +37,14 @@ from ..utils.youtube import youtube_get_top_result
 from .base_cog import BaseCog
 
 ytdlopts = {
-    'format': 'bestaudio/best', # Try format "250" ?
+    'format': 'bestaudio',
     'outtmpl': f'{YTDL_DIR}/%(title)s.%(ext)s',
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
+    'logtostderr': True,
+    'quiet': False,
+    'no_warnings': False,
     'default_search': 'auto',
     'source_address': '0.0.0.0'  # ipv6 addresses cause issues sometimes
 }
