@@ -1,4 +1,5 @@
 import random
+from typing import Optional
 
 import discord
 from discord.ext import commands
@@ -17,6 +18,7 @@ class MemeCog(BaseCog):
         self.wordlist = []
         self.models = {}
         self.daddy_verbs = self.load_daddy_verbs()
+        self.files = {}
             
     def load_daddy_verbs(self) -> None:
         try:
@@ -25,8 +27,31 @@ class MemeCog(BaseCog):
         except:
             print("Failed to load 'memes/txt/verbs.txt'")
             self.verb_me_daddy.enabled = False
-
     
+    async def random_line_from_gptfile(self, path: str, encoding="utf-8", **kwargs) -> None:
+        """Kinda primitive rn. Needs some sort of caching for bigger files."""
+        if path not in self.files:
+            with open(path, "r", encoding="utf-8", **kwargs) as f:
+                self.files[path] = f.read().split("====================")
+        return random.choice(self.files[path])
+    
+    @commands.group(name="gpt")
+    async def gpt(self, ctx: commands.Context) -> None:
+        if not ctx.invoked_subcommand:
+            await ctx.invoke(self.bot.get_command("help"), "gpt")
+
+    @gpt.command(name="pfm")
+    async def gpt_bernie(self, ctx: commands.Context, n_lines: Optional[int]=None) -> None:
+        if not n_lines:
+            line = await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt")
+            await ctx.send(line)
+        else:
+            lines = "\n".join(
+                [await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt") for n in range(n_lines)]
+            )
+            await self.send_text_message(lines, ctx)
+        
+
     @commands.command(name="goodshit")
     async def goodshit(self, ctx: commands.Context) -> None:
         """👌👀👌👀👌👀👌👀👌👀"""
