@@ -46,7 +46,7 @@ class MemeCog(BaseCog):
             line = await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt")
             await ctx.send(line)
         else:
-            lines = "\n".join(
+            lines = "".join(
                 [await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt") for n in range(n_lines)]
             )
             await self.send_text_message(lines, ctx)
