@@ -249,7 +249,7 @@ class BaseCog(commands.Cog):
             raise CommandError("Argument must be type 'str' or type 'int'")
 
     async def get_embed(self,
-                        ctx: commands.Context,
+                        ctx: commands.Context=None,
                         *,
                         author: Optional[str]=None,
                         author_url: str=Embed.Empty,
@@ -268,8 +268,8 @@ class BaseCog(commands.Cog):
         
         Parameters
         ----------
-        ctx : `commands.Context`
-            Discord Context
+        ctx : `commands.Context`, optional
+            Discord Context. A required parameter if footer==True.
         author : `str`, optional
             Author name displayed on topmost line of embed.
             Intended for name of embed author, but can be anything.
@@ -324,10 +324,11 @@ class BaseCog(commands.Cog):
                              url=author_url,
                              icon_url=icon_url)
         # Add footer
-        if footer:
+        if footer and ctx:
             embed.set_footer(text=f"Requested by {ctx.message.author.name}",
                              icon_url=ctx.message.author.avatar_url)
-
+        # TODO: footer==True fails silently if ctx==None, throw exception
+        
         # Add embed fields
         if fields:
             for field in fields:
