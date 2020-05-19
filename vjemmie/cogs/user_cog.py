@@ -85,10 +85,11 @@ class UserCog(BaseCog):
         title = f"**`{_cmd_name}`**"
 
         # Embed description
-        description = []
-        description.append(f"_{cmd.help_doc}_\n")
-        description.append(f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}")
-        description.append(f"**Usage:** `{_cmd_name} {cmd.usage or ''}`")
+        description = [
+            f"_{cmd.help_doc}_\n",
+            f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}",
+            f"**Usage:** `{_cmd_name} {cmd.usage or ''}`"
+        ]
 
         # Include subcommands if they exist
         if isinstance(cmd, commands.Group):
