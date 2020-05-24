@@ -86,7 +86,7 @@ class AdminCog(BaseCog):
 
     @commands.command(name="restart")
     async def restart_bot(self, ctx: commands.Context) -> None:
-        subprocess.run(["supervisorctl", "restart", "vjemmie"])
+        subprocess.run(["supervisorctl", "restart", "vjemmie"], shell=True)
 
     @commands.command(aliases=["ca"])
     @admins_only()
