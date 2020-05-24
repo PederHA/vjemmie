@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import os
+import subprocess
 from pathlib import Path
 from collections import namedtuple
 from dataclasses import dataclass
@@ -82,6 +83,10 @@ class AdminCog(BaseCog):
     async def _change_activity(self, activity_name: str) -> None:
         activity = discord.Game(activity_name)
         await self.bot.change_presence(activity=activity)
+
+    @commands.command(name="restart")
+    async def restart_bot(self, ctx: commands.Context) -> None:
+        subprocess.run(["supervisorctl", "restart", "vjemmie"])
 
     @commands.command(aliases=["ca"])
     @admins_only()
