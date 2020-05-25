@@ -10,7 +10,7 @@ from functools import partial
 from typing import Optional, Union, Awaitable, Callable
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from .base_cog import BaseCog, EmbedField
 from ..config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS
@@ -52,10 +52,13 @@ class AdminCog(BaseCog):
         """Sets activity and prints a message when cog is instantiated 
         and added to the bot.
         """
+        
+        self.system_diagnostics_loop.start()
+        self.activity_rotation.start()
         print("Bot logged in")
-        await self.run_activity_rotation()
 
-    async def run_activity_rotation(self) -> None:
+    @tasks.loop()
+    async def activity_rotation(self) -> None:
         p = self.bot.command_prefix
 
         activities = [
@@ -103,11 +106,12 @@ class AdminCog(BaseCog):
         if activity_name:
             # Disable activity rotation when manually changing bot activity
             self.ACTIVITY_ROTATION = False
+            self.activity_rotation.stop()
             await self._change_activity(activity_name)
         elif not activity_name and not self.ACTIVITY_ROTATION:
             # Run activity rotation
             self.ACTIVITY_ROTATION = True
-            await self.run_activity_rotation()
+            self.activity_rotation.start()
         # Do nothing if activity rotation is active and no argument is passed in
 
     @commands.command(name="serverlist")
