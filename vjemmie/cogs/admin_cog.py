@@ -47,14 +47,13 @@ class AdminCog(BaseCog):
     ACTIVITY_ROTATION = True
     AC_ROTATION_INTERVAL = 10
 
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
+        self.activity_rotation.start()
+
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        """Sets activity and prints a message when cog is instantiated 
-        and added to the bot.
-        """
-        
-        self.system_diagnostics_loop.start()
-        self.activity_rotation.start()
+        """Prints message when cog is ready."""
         print("Bot logged in")
 
     @tasks.loop()
@@ -106,7 +105,7 @@ class AdminCog(BaseCog):
         if activity_name:
             # Disable activity rotation when manually changing bot activity
             self.ACTIVITY_ROTATION = False
-            self.activity_rotation.stop()
+            self.activity_rotation.cancel()
             await self._change_activity(activity_name)
         elif not activity_name and not self.ACTIVITY_ROTATION:
             # Run activity rotation
