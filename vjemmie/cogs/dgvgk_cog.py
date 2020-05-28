@@ -2,7 +2,7 @@ import json
 import socket
 import time
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, List
 
 import discord
 import trueskill
@@ -75,8 +75,13 @@ class DGVGKCog(BaseCog):
         """Registrer påbegynt tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
+        elif str(member.id) in self.tidstyver:
+            raise CommandError("Denne brukeren stjeler allerede tid!")
+        elif member.id == self.bot.user.id:
+            raise CommandError("Kan ikke starte tidstyveri for botten selv!")
         
         self.tidstyver[str(member.id)] = time.time()
+        
         # TODO: User mention
         await ctx.send(f"Registrerer at et tidstyveri begått av {member.name} er underveis.")
         
@@ -115,12 +120,11 @@ class DGVGKCog(BaseCog):
                 [(self.bot.get_user(int(k)), v) for k, v in time_thiefs.items()],
                 key=lambda i: i[1],
                 reverse=True
-        )
-        
+        )   
         tidstyver = {k: self.formater_tidstyveri(v) for k, v in tidstyver}
         
-        embed = await self.format_key_value_embed(ctx, tidstyver, sort=False, title="Tidstyver")
-        await ctx.send(embed=embed)
+        await self.send_key_value_message(ctx, tidstyver, title="Tidstyveri", sort=False)
+
         
     @commands.group(name="inhouse", aliases=["ih"])
     @dgvgk_cmd()
@@ -166,7 +170,7 @@ class DGVGKCog(BaseCog):
         self.game = game
 
     async def post_game_info(self, ctx: commands.Context, game: Match) -> None:
-        def get_team_str(team: Dict[int, Player], n: int) -> str:
+        def get_team_str(team: List[Player], n: int) -> str:
             return (
                 f"Team {n}\n```\n" + 
                 "\n".join(

@@ -7,7 +7,8 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Union, Callable, Mapping, Any
+from typing import (
+    Any, Callable, Iterable, Iterator, List, Mapping, Optional, Tuple, Union)
 from urllib.parse import urlparse, urlsplit
 
 import aiohttp
@@ -19,14 +20,15 @@ from discord.ext import commands
 from prawcore.exceptions import Forbidden as PrawForbidden
 from youtube_dl import DownloadError
 
-from ..config import (  # DISABLE_HELP,
-    AUTHOR_MENTION, DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED,
-    GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE,
-    COMMAND_INVOCATION_CHANNEL, ERROR_CHANNEL_ID)
+from ..config import (AUTHOR_MENTION,  # DISABLE_HELP,
+                      COMMAND_INVOCATION_CHANNEL, DOWNLOAD_CHANNEL_ID,
+                      DOWNLOADS_ALLOWED, ERROR_CHANNEL_ID,
+                      GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
+                      MAX_DL_SIZE)
 from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
-                              CategoryError, CommandError, FileSizeError,
-                              FileTypeError, InvalidVoiceChannel, CommandError,
-                              NoContextException)
+                                CategoryError, CommandError, FileSizeError,
+                                FileTypeError, InvalidVoiceChannel,
+                                NoContextException)
 from ..utils.experimental import get_ctx
 from ..utils.voting import NotEnoughVotes
 
@@ -1075,37 +1077,70 @@ class BaseCog(commands.Cog):
             and await command.can_run(ctx)
         ]
 
-    async def format_key_value_embed(self, ctx: commands.Context, mapping: Mapping[Union[int, discord.User], Any], sort: bool=True, **kwargs) -> discord.Embed:
-        fchar = self.EMBED_FILL_CHAR    # to make expressions more readable
-        
+    async def filter_user_mapping(self, 
+                                   mapping: Mapping[Union[int, discord.User], Any]
+                                  ) -> List[Tuple[discord.User, Any]]:
+        # Convert to list to grab by index
         if isinstance(mapping, Mapping):
             mapping = list(mapping.items())
         else:
             mapping = list(mapping) # not pretty
 
         first_key = mapping[0][0] # assume keys are homogenous
-        # support for str keys (if loading a json file, where int keys are not supported)
+        
+        # Silently support str keys 
+        # (if loading a json file, where int keys are not supported)
+        if isinstance(first_key, str):
+            try:
+                int(first_key)
+            except ValueError:
+                raise TypeError("Mapping keys must be Discord user IDs, not string literals.")
+            
         if not any(isinstance(first_key, t) for t in [int, str, discord.User]):
             raise TypeError("Mapping keys must be either type 'int' or 'discord.User'")
         
         # Get discord.User objects if keys are int or str
         if any(isinstance(first_key, t) for t in [int, str]): 
             mapping = [(self.bot.get_user(int(k)), v) for k, v in mapping] 
-        
         # Filter users who cannot be found
         l = list(filter(lambda m: None.__ne__(m[0]), mapping))
-
-        if sort:
-            l = sorted(l, key=lambda i: i[1], reverse=True)
-
-        longest_name = max([len(k.name) for k, _ in l])
-        out = "\n".join(
-            [
-                f"`{k.name.ljust(longest_name, fchar)}:`{fchar*3}{v}" 
-                for k, v in l
-            ]
-        )
         
-        thumbnail_url = l[0][0].avatar_url
-           
-        return await self.get_embed(ctx, description=out, **kwargs, thumbnail_url=thumbnail_url)
+        return l
+        
+    async def _format_user_mapping(self, 
+                                   mapping: List[Tuple[discord.User, Any]], 
+                                   ) -> str:  
+        longest_name = max([len(k.name) for k, _ in mapping])
+        fchar = self.EMBED_FILL_CHAR # to make expression more readable
+        return "\n".join([
+            f"`{k.name.ljust(longest_name, fchar)}:`{fchar*3}{v}" 
+            for k, v in mapping
+            ])
+        
+    async def send_key_value_message(self, 
+                                     ctx: commands.Context, 
+                                     mapping: Mapping[Union[int, discord.User], Any],
+                                     title: str,
+                                     *, 
+                                     sort: bool=True,
+                                     thumbnail: bool=True,
+                                     **kwargs) -> None:
+        # Get message body
+        m = await self.filter_user_mapping(mapping)
+        if not m:
+            raise ValueError("No valid users found in mapping.")
+        if sort:
+            m = sorted(m, key=lambda i: i[1], reverse=True)
+        desc = await self._format_user_mapping(m)
+            
+        if thumbnail:
+            thumbnail_url = m[0][0].avatar_url
+        else:
+            thumbnail_url = None
+
+        await self.send_embed_message(ctx, 
+                                      title=title, 
+                                      description=desc, 
+                                      thumbnail_url=thumbnail_url,
+                                      **kwargs
+                                      )
