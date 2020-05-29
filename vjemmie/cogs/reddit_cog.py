@@ -33,6 +33,11 @@ reddit: praw.Reddit = None # Initialized by RedditCog
 RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"], defaults=[[], False])
 
 
+async def _reddit_command_base(obj: commands.Cog, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
+    """Method used as a base for adding custom subreddit commands."""
+    await obj.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
+
+
 class RedditCog(BaseCog):
     """Reddit commands."""
 
@@ -79,17 +84,6 @@ class RedditCog(BaseCog):
         
         # Initiate loop that clears reddit submission cache daily
         self.submission_refresh_loop.start()
-
-    def cog_unload(self) -> None:
-        self.submission_refresh_loop.cancel()    
-
-    def load_subs(self) -> dict:
-        subs = get_cached("db/reddit/subs.json")
-        return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub in subs.items()} if subs else {}
-
-    def dump_subs(self) -> None:
-        if self.subs:
-            dump_json("db/reddit/subs.json", self.subs)
     
     @property
     def NSFW_WHITELIST(self):
@@ -101,13 +95,39 @@ class RedditCog(BaseCog):
     @tasks.loop(seconds=86400.0)
     async def submission_refresh_loop(self) -> None:
         """Wipes reddit submission cache once daily"""
-        self.init_submissions_cache()
+        self.init_submissions_cache()    
+    
+    def cog_unload(self) -> None:
+        self.submission_refresh_loop.cancel()        
 
+    def load_subs(self) -> dict:
+        subs = get_cached("db/reddit/subs.json")
+        return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub in subs.items()} if subs else {}
+
+    def dump_subs(self) -> None:
+        if self.subs:
+            dump_json("db/reddit/subs.json", self.subs)
+    
+    def _add_sub(self, subreddit_command: RedditCommand) -> None:
+        """Creates a bot command from `RedditCommand` object and adds it
+        to the bot's commands.
+        """
+        # *_ catches additional fields if they are added in the future, and prevents errors
+        subreddit, aliases, is_text, *_ = subreddit_command 
+        
+        # Create a partial async subreddit method
+        _cmd = asyncio.coroutine(partial(_reddit_command_base, subreddit=subreddit, is_text=is_text))
+        
+        # Get a bot command object
+        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
+        cmd.cog = self
+        cmd.help = f"Gets a random post from r/{cmd.name}"
+
+        self.bot.add_command(cmd)
+    
     @commands.group(name="reddit", usage="<subcommand>")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
-        """Reddit command. Arguments:
-
-            < list of subcommands displayed here in output of `!help reddit` >
+        """Reddit commands
         """
         # Try to get subcommand
         cmd = self.bot.get_command(f"reddit {opt}")
@@ -164,30 +184,6 @@ class RedditCog(BaseCog):
             commands_ = self._get_commands(new_command)
             s = "s" if "," in commands_ else "" # Duplicate code yikes
             await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
-
-    def _add_sub(self, subreddit_command: RedditCommand) -> None:
-        """Creates a bot command from `RedditCommand` object and adds it
-        to the bot's commands.
-        """
-        # *_ catches additional fields if they are added in the future, and prevents errors
-        subreddit, aliases, is_text, *_ = subreddit_command 
-        
-        # Create a partial async subreddit method
-        _cmd = asyncio.coroutine(partial(self._reddit_command_base, subreddit=subreddit, is_text=is_text))
-        
-        # Get a bot command object
-        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
-
-        self.bot.add_command(cmd)
-
-    async def _reddit_command_base(self, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
-        """Method used as a base for adding custom subreddit commands.
-        
-        NOTE 8/9/2019
-        ----
-        Not sure how useful this method is over calling `get_from_reddit() `directly.
-        """
-        await self.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
 
     @reddit.command(name="remove", aliases=["remove_sub"])
     @admins_only()
