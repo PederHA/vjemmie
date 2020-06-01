@@ -65,12 +65,9 @@ class AvatarCog(BaseCog):
             user_avatar_url = user
         
         if isinstance(user_avatar_url, discord.asset.Asset):
-            user_avatar_url = str(user_avatar_url) # Asset.__str__ gives us a hyperlink
-
-        # Download user's avatar
-        # NOTE: as of discord.py 1.1.0 there is a new avatar.read() method
-        # but I cba changing anything rn
-        _avatar = await self.download_from_url(ctx, user_avatar_url)
+            _avatar = io.BytesIO(await user_avatar_url.read())
+        else:
+            _avatar = await self.download_from_url(ctx, user_avatar_url)
 
         avatar = Image.open(_avatar)
         background = Image.open(f"memes/templates/{template}", "r")
