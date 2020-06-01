@@ -58,11 +58,14 @@ class AvatarCog(BaseCog):
         """
         # Use message author's avatar if no user is specified
         if not user:
-            user_avatar_url = ctx.message.author.avatar_url._url.split("?")[0] # remove ?size=1024 suffix since a lower res image danker anyway
+            user_avatar_url = ctx.message.author.avatar_url # remove ?size=1024 suffix since a lower res image danker anyway
         elif isinstance(user, discord.Member):
-            user_avatar_url = user.avatar_url._url
+            user_avatar_url = user.avatar_url
         elif isinstance(user, str):
             user_avatar_url = user
+        
+        if isinstance(user_avatar_url, discord.asset.Asset):
+            user_avatar_url = str(user_avatar_url) # Asset.__str__ gives us a hyperlink
 
         # Download user's avatar
         # NOTE: as of discord.py 1.1.0 there is a new avatar.read() method
