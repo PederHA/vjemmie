@@ -308,3 +308,8 @@ class AvatarCog(BaseCog):
     async def oof(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/V1CSHXa.jpg"""
         await self._composite_images(ctx, "oof.jpg", (531, 531), (0, 0), user)
+
+    @commands.command(name="bigounce")
+    async def bigounce(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
+        """https://i.imgur.com/apDeSO6.jpg"""
+        await self._composite_images(ctx, "bigounce.png", (504, 504), (0, 0), user, template_overlay=True)
