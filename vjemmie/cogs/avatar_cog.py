@@ -1,6 +1,7 @@
 import io
 from itertools import zip_longest
 from typing import List, Tuple, Union
+from unidecode import unidecode
 
 import discord
 from discord.ext import commands
@@ -21,7 +22,7 @@ class AvatarCog(BaseCog):
                              resize:Union[Tuple[int,int], list],
                              offset:Union[Tuple[int,int], list],
                              user: MemberOrURLConverter=None, # I suppose this could just be Union[str, discord.Member]
-                             text: Union[List[dict], dict]=None,
+                             text: List[dict]=None,
                              template_overlay: bool=False) -> None:
         """Creates a composite image of a user's avatar and a given template.
         
@@ -47,10 +48,8 @@ class AvatarCog(BaseCog):
             A Discord user. If specified, this user's avatar is 
             downloaded in place of the message author's.
         
-        text : `Union[List[dict], dict]`, optional
-            Dict should contain arguments corresponding to 
-            `ImageCog._add_text()` parameters. Passing in a list 
-            indicates multiple text overlays.
+        text : `List[dict]`, optional
+            List of kwargs corresponding to `ImageCog._add_text()` parameters.
         
         template_overlay : `bool`, optional
             If True, the order of template and avatar is reversed, 
@@ -58,16 +57,18 @@ class AvatarCog(BaseCog):
         """
         # Use message author's avatar if no user is specified
         if not user:
-            user_avatar_url = ctx.message.author.avatar_url # remove ?size=1024 suffix since a lower res image danker anyway
+            avatar_url = ctx.message.author.avatar_url # remove ?size=1024 suffix since a lower res image danker anyway
         elif isinstance(user, discord.Member):
-            user_avatar_url = user.avatar_url
+            avatar_url = user.avatar_url
         elif isinstance(user, str):
-            user_avatar_url = user
-        
-        if isinstance(user_avatar_url, discord.asset.Asset):
-            _avatar = io.BytesIO(await user_avatar_url.read())
+            avatar_url = user
         else:
-            _avatar = await self.download_from_url(ctx, user_avatar_url)
+            raise TypeError("Argument 'user' must be type 'discord.User' or an image URL of type 'str'")
+        
+        if isinstance(avatar_url, discord.asset.Asset):
+            _avatar = io.BytesIO(await avatar_url.read())
+        else:
+            _avatar = await self.download_from_url(ctx, avatar_url)
 
         avatar = Image.open(_avatar)
         background = Image.open(f"memes/templates/{template}", "r")
@@ -81,11 +82,8 @@ class AvatarCog(BaseCog):
 
         # Add text
         if text:
-            if isinstance(text, dict):
-                background = await self._add_text(ctx, background, **text)
-            elif isinstance(text, list):
-                for txt in text:
-                    background = await self._add_text(ctx, background, **txt)
+            for txt in text:
+                background = await self._add_text(ctx, background, **txt)
 
         # Save image to file-like object
         result = io.BytesIO()
