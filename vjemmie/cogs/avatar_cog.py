@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 
 import discord
 from discord.ext import commands
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 from .base_cog import BaseCog
 from ..utils.converters import MemberOrURLConverter
@@ -171,6 +171,7 @@ class AvatarCog(BaseCog):
                         size: int = 20,
                         offset: Tuple[int, int] = (0, 0),
                         color: Tuple[int, int, int, int] = (255, 255, 255, 255),
+                        shadow: bool = False,
                         content: str = None) -> Image.Image:
         """Adds text to an image by creating an alpha composite of a given
         image and one or more generated lines of text.
@@ -208,6 +209,22 @@ class AvatarCog(BaseCog):
         _txt = Image.new("RGBA", background.size)
         # Get font
         font = ImageFont.truetype(f"memes/fonts/{font}", size)
+        
+        if shadow:
+            _shadow = Image.new("RGBA", background.size)
+            s = ImageDraw.Draw(_shadow)
+            s.text(
+                (
+                    # Offset + 1% of width/height of image
+                    offset[0]+(background.size[0]//100), 
+                    offset[1]+(background.size[1]//100)
+                ), 
+                content, 
+                font=font, 
+                fill=(0, 0, 0, 92)
+            )
+            _shadow = _shadow.filter(ImageFilter.BLUR)
+            _txt = Image.alpha_composite(_txt, _shadow)
         # Get a drawing context
         d = ImageDraw.Draw(_txt)
         d.text(offset, content, font=font, fill=color)
