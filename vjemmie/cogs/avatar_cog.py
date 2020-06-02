@@ -325,3 +325,17 @@ class AvatarCog(BaseCog):
     async def bigounce(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/apDeSO6.jpg"""
         await self._composite_images(ctx, "bigounce.png", (504, 504), (0, 0), user, template_overlay=True)
+
+    @commands.command(name="bigounce2")
+    async def bigounce2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
+        """https://i.imgur.com/apDeSO6.jpg with username"""
+        uname = user.name if user else ctx.message.author.name
+        text = {
+            "content": unidecode(uname).upper(),
+            "size": 30,
+            "offset": (198, 433),
+            "font": "Cocogoose Pro-trial.ttf",
+            "color": (234, 246, 247, 255),
+            "shadow": True
+        }
+        await self._composite_images(ctx, "bigounce2.png", (504, 504), (0, 0), user, template_overlay=True, text=[text])
