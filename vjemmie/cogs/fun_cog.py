@@ -309,3 +309,14 @@ class FunCog(BaseCog):
         
         synstr = ", ".join(synonyms)
         await self.send_text_message(f"**{word.capitalize()}** synonyms:\n{synstr}", ctx)
+
+    @commands.command(name="timer")
+    async def timer(self, ctx: commands.Context, minutes: int) -> None:
+        if minutes <= 0:
+            raise CommandError("Sleep duration cannot be 0 minutes or less.")
+        self.bot.loop.create_task(self._timer(ctx, minutes))
+
+    async def _timer(self, ctx: commands.Context, minutes: int) -> None:
+        await ctx.send(f"Timer started for {minutes} minute{'s' if minutes > 1 else ''}")
+        await asyncio.sleep(minutes*60)
+        await ctx.send(f"Timer ended after {minutes} minutes {ctx.message.author.mention}")
