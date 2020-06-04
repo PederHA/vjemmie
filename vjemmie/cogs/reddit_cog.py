@@ -117,6 +117,8 @@ class RedditCog(BaseCog):
         
         # Create a partial async subreddit method
         _cmd = asyncio.coroutine(partial(_reddit_command_base, subreddit=subreddit, is_text=is_text))
+        if not hasattr(_cmd, "__module__"): # This is needed in Python 3.8
+            _cmd.__module__ = _cmd.func.__module__
         
         # Get a bot command object
         cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
