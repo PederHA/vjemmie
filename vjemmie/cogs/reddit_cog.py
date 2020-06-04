@@ -489,11 +489,11 @@ class RedditCog(BaseCog):
     def _is_image_content(self, url: str) -> bool:
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
 
-    def _is_nsfw(self, ctx: commands.Context, sub: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
+    def _can_send_sub_or_post(self, ctx: commands.Context, sub: Union[praw.models.Submission, praw.models.Subreddit]) -> bool:
         """Determines if subreddit or reddit submission is appropriate for a channel."""
         # Always allow if channel is marked NSFW
         if ctx.channel.nsfw:
-            return False
+            return True
         
         if isinstance(sub, praw.models.Submission):
             subreddit = sub.subreddit.display_name.lower()
@@ -502,10 +502,9 @@ class RedditCog(BaseCog):
             subreddit = sub.display_name.lower()
             over_18 = sub.over18
         else:
-            raise TypeError('Argument "sub" must be a praw Submission or Subreddit')
+            raise TypeError("Argument 'sub' must be a praw Submission or Subreddit")
 
-        return True if over_18 and subreddit not in self.NSFW_WHITELIST else False
-
+        return not over_18 or subreddit in self.NSFW_WHITELIST
 
     async def _get_random_reddit_post(self, guild_id: int, subreddit: str, sorting: str, time: str, is_text: bool) -> praw.models.Submission:
         """Attempts to select a random reddit post that has not
@@ -573,7 +572,7 @@ class RedditCog(BaseCog):
         # Add post to cog instance's posts
         return _out, image_url
 
-    async def _get_subreddit_posts(self,
+    def _get_subreddit_posts(self,
                                    ctx,
                                    subreddit: str,
                                    sorting: str = None,
@@ -584,16 +583,15 @@ class RedditCog(BaseCog):
         sub = reddit.subreddit(subreddit)
 
         # Check if NSFW subreddit
-        if self._is_nsfw(ctx, sub):
-            #if sub.over18 and not ctx.channel.nsfw and subreddit.lower() not in self.NSFW_WHITELIST:
+        if not self._can_send_sub_or_post(ctx, sub):
             raise CommandError("Cannot post NSFW content in a non-NSFW channel!")
 
         # Get posts generator
         if sorting == "hot":
             posts = sub.hot()
         else:
-            posts = sub.top(time_filter=time, limit=post_limit)
-        return list(posts)
+            posts = sub.top(time_filter=time, limit=post_limit)      
+        return list(posts) # Consume all items in the generator and return as list
     
     async def get_from_reddit(self,
                               ctx: commands.Context,
@@ -618,7 +616,9 @@ class RedditCog(BaseCog):
         if not posts:
             try:
                 async with ctx.message.channel.typing():
-                    posts = await self._get_subreddit_posts(ctx, subreddit, sorting, time, post_limit, allow_nsfw)
+                    # Praw is not async, so we have to run the method in a new thread
+                    to_run = partial(self._get_subreddit_posts, ctx, subreddit, sorting, time, post_limit, allow_nsfw)
+                    posts = await self.bot.loop.run_in_executor(None, to_run)
                     self.submissions[ctx.guild.id][subreddit][sorting][time] = posts
             except (Forbidden, NotFound) as e:
                 if isinstance(e, Forbidden):
@@ -632,13 +632,12 @@ class RedditCog(BaseCog):
                     f"Cannot retrieve **r/{subreddit}** submissions! {s}"
                 )
             
-        if rtn_posts:
+        if rtn_posts: # Way too hacky
             return posts
         
         # Select a random post from list of posts
         post = await self._get_random_reddit_post(ctx.guild.id, subreddit, sorting, time, is_text)
 
-        
         # Obtain (title, image URL) or (selftext, None) if is_text==True
         out_text, image_url = await self._format_reddit_post(post, subreddit, is_text)
 
