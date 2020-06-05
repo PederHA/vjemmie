@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from unittest.mock import Mock
 from functools import wraps, partial
 from pathlib import Path
-from typing import Coroutine, Awaitable, ContextManager, Any, TypeVar, Callable
+from typing import Coroutine, Awaitable, ContextManager, Any, TypeVar, Callable, Optional
 
 import discord
 from discord.ext import commands
@@ -50,10 +50,10 @@ def decorator_factory(attr_k: str, attr_v: Any=SENTINEL) -> Any: # Callable[[Any
     """
     if attr_v is SENTINEL:
         attr_v = True
-    def outer(f: Awaitable) -> Awaitable:
+    def outer(f: Callable) -> Callable:
         setattr(f, attr_k, attr_v)
         @wraps(f)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs) -> Optional[Any]:
             return await f(*args, **kwargs)
         return wrapper
     return outer
@@ -86,7 +86,7 @@ class TestCog(BaseCog):
         self.network_io_enabled = False # Enables commands such as: !meme, !reddit get, !twitter add
         self.discord_io_enabled = False # Enables commands such as: !fuckup, !mlady
 
-        self.test_id = None # id of a set of active tests
+        self.test_id: Optional[int] = None # id of a set of active tests
 
     @commands.command(name="tverbose", aliases=["terminal_verbose"])
     async def toggle_terminal_verbose(self, ctx: commands.Context) -> None:
@@ -219,7 +219,8 @@ class TestCog(BaseCog):
         that disables message sending while tests are running."""
         async def new_send(*args, **kwargs):
             pass
-        new_send.testing = True # NOTE: Useless? What was the plan here?
+        setattr(new_send, "testing", True) # NOTE: Useless? What was the plan here?
+        #new_send.testing = True 
 
         new_ctx = copy.copy(ctx) 
         if not self.msg_enabled:
@@ -290,7 +291,7 @@ class TestCog(BaseCog):
             if not passed:
                 raise TestError(msg)
     
-    async def _get_operator(self, kwargs: dict) -> operator:
+    async def _get_operator(self, kwargs: dict) -> Callable:
         op = kwargs.pop("op", None)
         if inspect.isbuiltin(op):
             return op
@@ -363,9 +364,7 @@ class TestCog(BaseCog):
     async def do_test_cog_method(self, cog_name: str, meth_name: str, *args, **kwargs) -> None:
         """Tests a non-command method in a Cog."""
         cog = self.bot.get_cog(cog_name)
-
         method = getattr(cog, meth_name, None)
-
         await self._do_test(method, *args, **kwargs)
         
 

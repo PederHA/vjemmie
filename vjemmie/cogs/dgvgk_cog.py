@@ -2,7 +2,7 @@ import json
 import socket
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import discord
 import trueskill
@@ -30,8 +30,8 @@ class DGVGKCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        self.tidstyver = {}
-        self.game = None
+        self.tidstyver: Dict[str, float] = {}
+        self.game: Optional[Match] = None
 
     def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
@@ -48,7 +48,7 @@ class DGVGKCog(BaseCog):
             except:
                 return {}
     
-    def formater_tidstyveri(self, tid: float) -> None:
+    def formater_tidstyveri(self, tid: float) -> str:
         td = timedelta(seconds=tid)
         s = ""
         
@@ -229,10 +229,10 @@ class DGVGKCog(BaseCog):
         if not players:
             raise CommandError("No players on record!")
         
-        players = sorted(players.values(), key=lambda p: p.rating.mu, reverse=True)
+        plist = sorted(players.values(), key=lambda p: p.rating.mu, reverse=True)
         
-        description = "\n".join([await self.fmt_player_stats(p, i) for i, p in enumerate(players, 1)])
-        top_player_url = self.bot.get_user(players[0].uid).avatar_url
+        description = "\n".join([await self.fmt_player_stats(p, i) for i, p in enumerate(plist, 1)])
+        top_player_url = self.bot.get_user(plist[0].uid).avatar_url
         
         await self.send_embed_message(ctx, 
                                       title="DGVGK Inhouse Rankings", 

@@ -7,7 +7,7 @@ from collections import Counter
 from itertools import islice
 from pathlib import Path
 from time import perf_counter, time, time_ns
-from typing import List, Union, Dict, Tuple, Optional
+from typing import List, Union, Dict, Tuple, Optional, Any
 
 import discord
 from discord.ext import commands, tasks
@@ -34,12 +34,12 @@ class DiscordCommand:
     Keeps track of total numbers of times the command is used 
     in a guild, as well as per-user statistics.
     """
-    name: str = None
+    name: str = ""
     times_used: int = 0
     users: Counter = field(init=False, default_factory=Counter)
 
     @property
-    def top_user(self) -> Optional[Tuple[int, int]]:
+    def top_user(self) -> Optional[List[Tuple[Any, int]]]:
         top_user = self.get_top_users(limit=1)
         return top_user.most_common() if top_user else None
 
@@ -47,7 +47,7 @@ class DiscordCommand:
         self.times_used += 1
         self.users[ctx.message.author.id] += 1
 
-    def get_top_users(self, limit: int) -> Counter:
+    def get_top_users(self, limit: Optional[int]) -> Counter:
         """Get users who have invoked the command the most often."""
         if not limit or limit < 0:
             limit = None
@@ -336,3 +336,4 @@ class StatsCog(BaseCog):
 
     def get_bot_ping_ms(self) -> int:
         return round(self.bot.ws.latency*100)
+

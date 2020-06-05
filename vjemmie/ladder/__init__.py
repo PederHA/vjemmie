@@ -112,7 +112,7 @@ def make_teams(players: Dict[int, Player], team_size: int=4) -> Match:
     return best
 
 
-def rate(winners: List[Player], losers: List[Player]) -> Tuple[List[Player]]:
+def rate(winners: List[Player], losers: List[Player]) -> Tuple[List[Player], List[Player]]:
     w = {p.uid: p.rating for p in winners}
     l = {p.uid: p.rating for p in losers}
 
@@ -123,7 +123,7 @@ def rate(winners: List[Player], losers: List[Player]) -> Tuple[List[Player]]:
     return winners, losers
 
 
-def update_rating(winners: Dict[int, Player], losers: Dict[int, Player]) -> List[Player]:
+def update_rating(winners: Dict[int, Player], losers: Dict[int, Player]) -> None:
     players = load_players()
     def update(team: Dict[int, Player], win: bool=True):
         for uid, rating in team.items():
