@@ -1,5 +1,3 @@
-from __future__ import annotations # For classmethod return type (see PEP 563)
-
 import time
 from datetime import datetime
 from functools import partial
@@ -38,7 +36,7 @@ class User:
     reacts: Dict[int, Emoji] = field(default_factory=dict)
 
     @classmethod
-    def fromdict(cls, d: dict) -> User:
+    def fromdict(cls, d: dict) -> object: # from __future__ import annotations in >=3.8
         obj = cls.__new__(cls)
         obj.id = d["id"]
         obj.total_reacts = d["total_reacts"]

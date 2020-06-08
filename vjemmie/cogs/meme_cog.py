@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import random
 from asyncio import coroutine
 from functools import partial
@@ -14,7 +12,7 @@ from .base_cog import BaseCog
 from ..utils.commands import add_command
 
 
-async def gpt_command(cls: MemeCog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
+async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
     if not path:
         raise ValueError("No path lol")
 
