@@ -1,11 +1,32 @@
+from __future__ import annotations
+
 import random
-from typing import Optional
+from asyncio import coroutine
+from functools import partial
+from typing import Optional, List, Union, Dict
+from pathlib import Path
 
 import discord
 from discord.ext import commands
 import markovify
+from markovify import NewlineText
 from .base_cog import BaseCog
+from ..utils.commands import add_command
 
+
+async def gpt_command(cls: MemeCog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
+    if not path:
+        raise ValueError("No path lol")
+
+    if not n_lines:
+        line = await cls.random_line_from_gptfile(path)
+        await ctx.send(line)
+    else:
+        lines = "".join(
+            [await cls.random_line_from_gptfile(path) for n in range(n_lines)]
+        )
+        await cls.send_text_message(lines, ctx)
+    
 
 class MemeCog(BaseCog):
     """Text meme commands"""
@@ -15,23 +36,38 @@ class MemeCog(BaseCog):
     def __init__(self, bot) -> None:
         super().__init__(bot)
         self.experimental = False
-        self.wordlist = []
-        self.models = {}
+        self.wordlist: List[str] = []
+        self.models: Dict[str, NewlineText] = {}
         self.daddy_verbs = self.load_daddy_verbs()
-        self.files = {}
+        self.files: Dict[str, List[str]] = {}
+        self.create_gpt_commands()
+
+    def create_gpt_commands(self) -> None:
+        for file_ in Path("memes/txt/gpt").iterdir():
+            if file_.suffix != ".txt":
+                continue
             
-    def load_daddy_verbs(self) -> None:
+            add_command(self, 
+                        gpt_command, 
+                        name=file_.stem, 
+                        group=self.gpt, 
+                        path=str(file_), # command kwargs
+                        n_lines=10
+                        )
+
+    def load_daddy_verbs(self) -> List[str]:
         try:
             with open("memes/txt/verbs.txt", "r", encoding="utf-8") as f:
                 return f.read().splitlines()
         except:
             print("Failed to load 'memes/txt/verbs.txt'")
-            self.verb_me_daddy.enabled = False
+            self.verb_me_daddy.enabled = False # Disable command
+            return list()
     
-    async def random_line_from_gptfile(self, path: str, encoding="utf-8", **kwargs) -> None:
+    async def random_line_from_gptfile(self, path: str, encoding: str="utf-8", **kwargs) -> str:
         """Kinda primitive rn. Needs some sort of caching for bigger files."""
         if path not in self.files:
-            with open(path, "r", encoding="utf-8", **kwargs) as f:
+            with open(path, "r", encoding=encoding, **kwargs) as f:
                 self.files[path] = f.read().split("====================")
         return random.choice(self.files[path])
     
@@ -39,18 +75,6 @@ class MemeCog(BaseCog):
     async def gpt(self, ctx: commands.Context) -> None:
         if not ctx.invoked_subcommand:
             await ctx.invoke(self.bot.get_command("help"), "gpt")
-
-    @gpt.command(name="pfm")
-    async def gpt_bernie(self, ctx: commands.Context, n_lines: Optional[int]=None) -> None:
-        if not n_lines:
-            line = await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt")
-            await ctx.send(line)
-        else:
-            lines = "".join(
-                [await self.random_line_from_gptfile("memes/txt/gpt/pfm.txt") for n in range(n_lines)]
-            )
-            await self.send_text_message(lines, ctx)
-        
 
     @commands.command(name="goodshit")
     async def goodshit(self, ctx: commands.Context) -> None:
