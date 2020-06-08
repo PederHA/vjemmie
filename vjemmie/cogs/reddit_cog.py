@@ -21,6 +21,7 @@ from discord.ext import commands, tasks
 
 from .base_cog import BaseCog, EmbedField
 from ..utils.checks import admins_only
+from ..utils.commands import add_command
 from ..utils.caching import get_cached
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CommandError
@@ -109,23 +110,19 @@ class RedditCog(BaseCog):
             dump_json("db/reddit/subs.json", self.subs)
     
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
-        """Creates a bot command from `RedditCommand` object and adds it
+        """Creates a bot command from a `RedditCommand` object and adds it
         to the bot's commands.
         """
         # *_ catches additional fields if they are added in the future, and prevents errors
-        subreddit, aliases, is_text, *_ = subreddit_command 
-        
-        # Create a partial async subreddit method
-        _cmd = asyncio.coroutine(partial(_reddit_command_base, subreddit=subreddit, is_text=is_text))
-        if not hasattr(_cmd, "__module__"): # This is needed in Python 3.8
-            _cmd.__module__ = _cmd.func.__module__
-        
-        # Get a bot command object
-        cmd = commands.command(name=subreddit, aliases=aliases)(_cmd)
-        cmd.cog = self
-        cmd.help = f"Gets a random post from r/{cmd.name}"
-
-        self.bot.add_command(cmd)
+        subreddit, aliases, is_text, *_ = subreddit_command
+        add_command(self, 
+                    _reddit_command_base,
+                    name=subreddit,
+                    aliases=aliases,
+                    help=f"Gets a random post from r/{subreddit}",
+                    subreddit=subreddit,
+                    is_text=is_text
+                   )
     
     @commands.group(name="reddit", usage="<subcommand>")
     async def reddit(self, ctx: commands.Context, opt: str=None, *args) -> None:
