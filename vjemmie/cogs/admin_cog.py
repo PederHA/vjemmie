@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import os
+import sys
 import subprocess
 from pathlib import Path
 from collections import namedtuple
@@ -11,15 +12,17 @@ from typing import Optional, Union, Awaitable, Callable
 
 import discord
 from discord.ext import commands, tasks
+import psutil
 
 from .base_cog import BaseCog, EmbedField
-from ..config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS
+from ..config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS, OWNER_ID
 from ..utils.access_control import (Categories, add_trusted_member,
                                   add_trusted_role, get_trusted_members,
                                   get_trusted_roles, remove_trusted_member,
                                   remove_trusted_role)
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
 from ..utils.exceptions import CommandError
+from ..utils.printing import eprint
 
 
 @dataclass
@@ -49,6 +52,8 @@ class AdminCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
+        
+        self.system_diagnostics_loop.start()
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -156,7 +161,7 @@ class AdminCog(BaseCog):
     @commands.command(name="announce",
                       aliases=["send_all", "broadcast"])
     @admins_only()
-    async def sendtoall(self, ctx: commands.Context, *msg) -> None:
+    async def sendtoall(self, ctx: commands.Context, *, message: str) -> None:
         """
         Attempts to send text message to every server the bot
         is a member of.
@@ -165,10 +170,9 @@ class AdminCog(BaseCog):
         ----------
         ctx : `commands.Context`
             Discord context
-        msg: `tuple`
+        message: str
             String to send.
         """
-        msg = " ".join(msg)
         failed = []
         for guild in self.bot.guilds:
             try:
@@ -177,7 +181,7 @@ class AdminCog(BaseCog):
             except:
                 failed.append(guild.name)
         if failed:
-            guilds = ", ".join(guilds)
+            guilds = ", ".join(failed)
             await ctx.send(f"Failed to send message to the following guilds: {guilds}")
 
     @commands.group(name="log", aliases=["logs"])
@@ -347,7 +351,7 @@ class AdminCog(BaseCog):
         else:
             return await ctx.send(
                 # Should improve wording of this message
-                f"No message with id {message_id} found or it is too old."
+                f"No message with id {message_id} in the most recent 500 messages sent."
                 )
 
     @commands.group(name="trusted")
@@ -436,3 +440,86 @@ class AdminCog(BaseCog):
         roles = "\n".join([role.name for role in roles])
 
         return roles
+
+    @tasks.loop(seconds=86400.0)
+    async def system_diagnostics_loop(self) -> None:
+        # do status loop
+        coros = [
+            self.check_disk_usage,
+            self.check_memory_usage,
+            self.check_cpu_usage
+        ]
+
+        fields = list(filter(None.__ne__, [await coro() for coro in coros]))
+        if not fields:
+            return
+            fields = [EmbedField(
+                name="❌ **Disk Usage**", 
+                value="Disk is full! Downloads are disabled until at least 10% disk space is available."
+            )]
+
+
+        embed = await self.get_embed(
+            footer=False, 
+            title=f"{self.bot.user.name} Diagnostics Report", 
+            description=" ",
+            fields=fields,
+            #author=self.bot.user.name,
+            #author_icon=self.bot.user.avatar_url
+        )
+        owner = self.bot.get_user(OWNER_ID)
+        if not owner:
+            eprint(f"Unable to find a user with ID {OWNER_ID}")
+            return
+        
+        # Get DM channel or create one
+        if owner.dm_channel:
+            dm_channel = owner.dm_channel
+        else:
+            dm_channel = await owner.create_dm()
+
+        await dm_channel.send(embed=embed)
+
+    async def check_disk_usage(self) -> Optional[EmbedField]:
+        usage = psutil.disk_usage(Path(__file__).root)
+        if usage.percent > 99.0:
+            #config.DOWNLOADS_ALLOWED = False
+            # TODO: Fix
+            return EmbedField(
+                name="❌ **Disk Usage**", 
+                value="Disk is full! Downloads are disabled until at least 10% disk space is available."
+            )
+        elif usage.percent > 90.0:
+            return EmbedField(
+                name="⚠️ **Disk Usage**", 
+                value="Disk usage exceeds 90%! Free up disk space or consider disabling downloads."
+            )
+        
+    async def check_memory_usage(self) -> Optional[EmbedField]:
+        usage = psutil.virtual_memory()
+        if usage.percent > 90.0:
+            return EmbedField(
+                name="⚠️ **Memory Usage**", 
+                value="Less than 10% free memory! Consider upgrading hosting solution or stopping unnecessary processes."
+            )
+        
+    async def check_cpu_usage(self) -> Optional[EmbedField]:
+        if sys.platform == "windows":
+            from psutil._pswindows import _loadavg_inititialized # yes, spelling error in psutil LOL
+            # psutil.getloadavg() needs to be "primed" on Windows for minimum 5 seconds
+            # https://psutil.readthedocs.io/en/latest/#psutil.getloadavg
+            #
+            # We don't really need to check _loadavg_initialized, but we can
+            # just do it here to avoid sleeping for 5.5 seconds every time
+            if not _loadavg_inititialized: 
+                psutil.getloadavg() 
+                await asyncio.sleep(5.5)
+        
+        usage = [x / psutil.cpu_count() * 100 for x in psutil.getloadavg()]
+
+        # NOTE: if any(core > 99.0 for core in usage) ?
+        if usage[0] > 90.0:
+            return EmbedField(
+                name="⚠️ **CPU Usage**", 
+                value="Average CPU usage is 90%! Consider upgrading hosting solution or stopping unnecessary processes."
+            )
