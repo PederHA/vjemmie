@@ -49,12 +49,12 @@ class AdminCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        self.activity_rotation.start()
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Prints message when cog is ready."""
         print("Bot logged in")
+        self.activity_rotation.start()
 
     @tasks.loop()
     async def activity_rotation(self) -> None:
