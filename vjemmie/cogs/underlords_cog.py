@@ -11,7 +11,6 @@ from typing import Union, Tuple, Dict, List
 from dataclasses import dataclass
 
 import discord
-import requests
 import ciso8601
 from bs4 import BeautifulSoup
 from discord.ext import commands
@@ -25,6 +24,7 @@ from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.checks import admins_only
 from ..utils.datetimeutils import format_time_difference
+from ..utils.http import get, post
 
 USERS_FILE = "db/underlords/users.json"
 
@@ -72,6 +72,7 @@ RANKS = {
     "Lord of White Spire": 40
 } # NOTE: need to handle Lord number rank
 
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
 
 @dataclass
 class UnderlordsProfile:
@@ -248,9 +249,7 @@ class UnderlordsCog(BaseCog):
         self.dump_users(users)
 
     async def scrape_op_gg_stats(self, steamid, userid) -> UnderlordsProfile:
-        url = f"https://autochess.op.gg/user/{steamid}"
-        to_run = partial(requests.get, url)
-        r = await self.bot.loop.run_in_executor(None, to_run)
+        r = await get(f"https://autochess.op.gg/user/{steamid}")
 
         if r.status_code != 200:
             raise CommandError("No response from stats API.")
@@ -322,8 +321,7 @@ class UnderlordsCog(BaseCog):
 
     async def request_opgg_renew(self, user: discord.User, steamid: str) -> None:
         renew_url = f"https://autochess.op.gg/api/user/{steamid}/request-renew"
-        to_run = partial(requests.post, renew_url, headers={"User-Agent": USER_AGENT})
-        r = await self.bot.loop.run_in_executor(None, to_run)
+        r = await post(renew_url, headers={"User-Agent": USER_AGENT})
         if r.status_code != 201:
             raise CommandError(f"Failed to renew stats for {user.name}")
 

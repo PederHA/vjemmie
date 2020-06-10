@@ -5,7 +5,6 @@ from functools import partial
 from typing import Optional, Union, Tuple
 
 import discord
-import requests
 import pytesseract
 from discord.ext import commands
 from PIL import Image, ImageEnhance, ImageStat, ImageOps
@@ -17,6 +16,7 @@ from ..utils.checks import owners_only, pfm_cmd
 from ..utils.exceptions import (BotException, FileSizeError,
                               InvalidURLError, NonImgUrlError,
                               WordExceededLimit, CommandError)
+from ..utils.http import post
 
 
 class ImageCog(BaseCog):
@@ -183,8 +183,7 @@ class ImageCog(BaseCog):
         resized_img = await self._resize_img(img)
 
         # Upload image to remove.bg and receive no-bg version of image
-        to_run = partial(self._use_removebg_api, resized_img)
-        img_nobg = await self.bot.loop.run_in_executor(None, to_run)
+        img_nobg = await self._use_removebg_api(resized_img)
         
         if not img_nobg:
             raise CommandError("Could not remove background! Try again later.")
@@ -192,19 +191,19 @@ class ImageCog(BaseCog):
         embed = await self.get_embed_from_img_upload(ctx, img_nobg, "nobg.png")
         await ctx.send(embed=embed)
     
-    def _use_removebg_api(self, image) -> Optional[io.BytesIO]:
-        response = requests.post(
+    async def _use_removebg_api(self, image) -> Optional[io.BytesIO]:
+        response = await post(
             'https://api.remove.bg/v1.0/removebg',
             files={'image_file': image},
             data={'size': 'auto'},
             headers={'X-Api-Key': self.bot.secrets.REMOVEBG_KEY},
         )
-        if response.status_code == requests.codes.ok:
-            img_nobg = io.BytesIO(response.content)
-            img_nobg.seek(0)
-            return img_nobg
-        else:
+        if response.status_code != 200:
             raise ConnectionError(response)
+
+        img_nobg = io.BytesIO(response.content)
+        img_nobg.seek(0)
+        return img_nobg
    
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)

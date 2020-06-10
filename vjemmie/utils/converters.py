@@ -1,11 +1,10 @@
 from ipaddress import ip_address, IPv4Address, IPv6Address
 import re
-from typing import Optional, Iterable, Union
+from typing import Optional, Iterable, Union, Dict
 from urllib.parse import urlparse, ParseResult
 from functools import partial
 from collections import defaultdict
 
-import requests
 import discord
 
 from discord.ext import commands
@@ -15,6 +14,7 @@ from discord.ext.commands.errors import BadArgument
 from .exceptions import CommandError
 from .messaging import fetch_message
 from ..config import YES_ARGS
+from ..utils.http import post
 
 
 class MemberOrURLConverter(IDConverter):
@@ -218,12 +218,11 @@ class ImgURLConverter(URLConverter):
 
 
 class SteamID64Converter(commands.Converter):
-    attempts = defaultdict(int)
+    attempts: Dict[int, int] = defaultdict(int)
 
     async def convert(self, ctx: commands.Context, arg: str) -> Optional[str]:
         # Look up arg on steamid.io
-        lookup = partial(requests.post, "https://steamid.io/lookup", data={"input": arg})
-        r = await ctx.bot.loop.run_in_executor(None, lookup)
+        r = await post("https://steamid.io/lookup", data={"input": arg})
         
         if r.status_code != 200:
             raise ConnectionError("SteamID lookup returned non-200 code")

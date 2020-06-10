@@ -5,7 +5,6 @@ from typing import Union, Tuple, Dict
 from dataclasses import dataclass
 
 import discord
-import requests
 import ciso8601
 from bs4 import BeautifulSoup
 from discord.ext import commands
@@ -18,6 +17,7 @@ from ..utils.exceptions import CommandError
 from ..utils.serialize import dump_json
 from ..utils.checks import admins_only
 from ..utils.datetimeutils import format_time_difference
+from ..utils.http import get, post
 
 USERS_FILE = "db/autochess/users.json"
 RANKS = {
@@ -218,9 +218,7 @@ class AutoChessCog(BaseCog):
         self.dump_users(users)
 
     async def scrape_op_gg_stats(self, steamid, userid) -> AutochessProfile:
-        url = f"https://autochess.op.gg/user/{steamid}"
-        to_run = partial(requests.get, url)
-        r = await self.bot.loop.run_in_executor(None, to_run)
+        r = await get(url = f"https://autochess.op.gg/user/{steamid}")
 
         if r.status_code != 200:
             raise CommandError("No response from stats API.")
@@ -291,9 +289,7 @@ class AutoChessCog(BaseCog):
         return profile
 
     async def request_opgg_renew(self, user: discord.User, steamid: str) -> None:
-        renew_url = f"https://autochess.op.gg/api/user/{steamid}/request-renew"
-        to_run = partial(requests.post, renew_url, headers={"User-Agent": USER_AGENT})
-        r = await self.bot.loop.run_in_executor(None, to_run)
+        r = await post(renew_url, headers={"User-Agent": USER_AGENT})
         if r.status_code != 201:
             raise CommandError(f"Failed to renew stats for {user.name}")
 

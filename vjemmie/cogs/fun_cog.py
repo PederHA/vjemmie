@@ -11,7 +11,6 @@ from typing import Union
 
 import discord
 import numpy as np
-import requests
 import unidecode
 from discord.ext import commands
 from mwthesaurus import MWClient

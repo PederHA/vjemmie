@@ -14,22 +14,22 @@ from urllib.parse import urlparse, urlsplit
 import aiohttp
 import discord
 import psutil
-import requests
 from discord import Embed
 from discord.ext import commands
+from httpcore._exceptions import ConnectError, ConnectTimeout
 from prawcore.exceptions import Forbidden as PrawForbidden
 from youtube_dl import DownloadError
 
-from ..config import (AUTHOR_MENTION,  # DISABLE_HELP,
-                      COMMAND_INVOCATION_CHANNEL, DOWNLOAD_CHANNEL_ID,
-                      DOWNLOADS_ALLOWED, ERROR_CHANNEL_ID,
-                      GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
-                      MAX_DL_SIZE)
+from ..config import (
+    AUTHOR_MENTION, COMMAND_INVOCATION_CHANNEL, DOWNLOAD_CHANNEL_ID,
+    DOWNLOADS_ALLOWED, ERROR_CHANNEL_ID, GUILD_HISTORY_CHANNEL,
+    IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
 from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                                 CategoryError, CommandError, FileSizeError,
                                 FileTypeError, InvalidVoiceChannel,
                                 NoContextException)
 from ..utils.experimental import get_ctx
+from ..utils.http import get
 from ..utils.voting import NotEnoughVotes
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
@@ -47,7 +47,10 @@ SHOW_ERROR = [
     commands.errors.MissingRequiredArgument,
     MemoryError,
     discord.DiscordException,
-    DownloadError
+    DownloadError, # youtube-dl
+    TypeError,
+    ConnectError, # httpx
+    ConnectTimeout # httpx
     ]
 SHOW_ERROR += VJEMMIE_EXCEPTIONS
 
@@ -98,8 +101,8 @@ class BaseCog(commands.Cog):
     EMOJI = ":question:"
 
     # Directories and files necessary for cog
-    DIRS = []
-    FILES = []
+    DIRS: List[str] = []
+    FILES: List[str] = []
 
     # Help strings
     SIGNATURE_HELP = "**Signature Legend**\n●`<arg>` is a required argument\n●`[arg]` is an optional argument\n\n"
@@ -109,6 +112,7 @@ class BaseCog(commands.Cog):
         self.setup()
 
     def setup(self, default_factory: Callable=dict) -> None:
+        """Creates files and folders required for the cog."""
         # Create required directories
         for directory in self.DIRS:
             p = Path(directory)
@@ -373,7 +377,7 @@ class BaseCog(commands.Cog):
             if member.id != self.bot.user.id
         ]
 
-    async def get_members_in_voice_channel(self, ctx: commands.Context) -> List[str]:
+    async def get_members_in_voice_channel(self, ctx: commands.Context) -> List[discord.Member]:
         """
         Returns list of `discord.Member` objects (EXCLUDING THE BOT ITSELF) 
         from ctx.message.author's voice channel .
@@ -557,29 +561,34 @@ class BaseCog(commands.Cog):
         `io.BytesIO`
             The downloaded contents of the URL
         """
-        # Get session
-        session = await self.get_aiohttp_session(ctx)
-
         # Check if host responds
-        try:
-            resp = await session.get(url)
-        except aiohttp.ClientConnectionError:
-            raise discord.DiscordException("No response from destination host")
+        #try:
+        resp = await get(url) # Why raise our own exceptions? Let the exception handler manage it.
+        #except ConnectError:
+        #    raise discord.DiscordException(
+        #        "No response from destination host. "
+        #        "Is the URL spelled correctly?"
+        #    )
+        #except ConnectTimeout:
+        #    raise 
 
         # Check content size
-        if resp.content_length > self.MAX_DL_SIZE:
+        content_length = int(resp.headers["Content-Length"])
+        if content_length > self.MAX_DL_SIZE:
             raise FileSizeError(f"File exceeds maximum limit of {self.MAX_DL_SIZE_FMT}")
 
         # Check available RAM
-        if resp.content_length * 2 > psutil.virtual_memory().available:
+        # TODO: Should keep track of ALL downloads. 
+        # We might start several large downloads concurrently this way
+        if content_length * 2 > psutil.virtual_memory().available:
             raise MemoryError(f"Not enough memory to download file!")
 
         # Download content
-        data = await resp.read()
+        data = await resp.aread()
 
         return io.BytesIO(data)
 
-    async def rehost_image_to_discord(self, ctx: commands.Context, image_url: str=None) -> discord.Message:
+    async def rehost_image_to_discord(self, ctx: commands.Context, image_url: str) -> discord.Message:
         """Downloads an image file from url `image_url` and uploads it to a
         Discord text channel.
         

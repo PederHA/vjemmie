@@ -8,9 +8,7 @@ from dataclasses import dataclass, field, asdict
 import json
 
 import discord
-import requests
 import websockets
-from aiohttp import web
 from discord.ext import commands
 from websockets.server import WebSocketServerProtocol
 from pathvalidate import sanitize_filename
