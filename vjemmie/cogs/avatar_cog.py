@@ -314,12 +314,7 @@ class AvatarCog(BaseCog):
     @commands.command(name="lordofthepit")
     async def lordofthepit(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/IRntn02.jpg"""
-        await self._composite_images(ctx, "lordofthepit.jpg", (559, 410), (57, 110), user)
-
-    @commands.command(name="oof")
-    async def oof(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
-        """https://i.imgur.com/V1CSHXa.jpg"""
-        await self._composite_images(ctx, "oof.jpg", (531, 531), (0, 0), user)
+        await self._composite_images(ctx, "lordofthepit.jpg", [(559, 410)], [(57, 110)], user)
 
     @commands.command(name="bigounce")
     async def bigounce(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
