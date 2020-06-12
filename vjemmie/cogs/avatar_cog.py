@@ -2,6 +2,7 @@ import io
 from itertools import zip_longest
 from typing import List, Tuple, Union
 from unidecode import unidecode
+from dataclasses import dataclass
 
 import discord
 from discord.ext import commands
@@ -11,6 +12,28 @@ from .base_cog import BaseCog
 from ..utils.converters import MemberOrURLConverter
 
 
+@dataclass
+class Avatar: # Should be a collections.namedtuple or typing.NamedTuple instead tbh
+    """Size and position of a user's avatar."""
+    w: int # Width
+    h: int # Height
+    x: int # X Position
+    y: int # Y Position
+
+
+@dataclass
+class Text:
+    """Represents text to be added to an image. 
+    Attributes correspond with parameters of AvatarCog._add_text()`
+    """
+    content: str
+    size: int
+    offset: Tuple[int, int] # x, y
+    font: str
+    color: Tuple[int, int, int, int] # RGBA
+    shadow: bool = False
+  
+
 class AvatarCog(BaseCog):
     """Create images featuring a user's avatar."""
     
@@ -19,10 +42,9 @@ class AvatarCog(BaseCog):
     async def _composite_images(self,
                              ctx: commands.Context,
                              template: str,
-                             resize:List[Tuple[int, int]],
-                             offset:List[Tuple[int, int]],
+                             avatars: List[Avatar],
                              user: MemberOrURLConverter=None, # I suppose this could just be Union[str, discord.Member]
-                             text: List[dict]=None,
+                             text: List[Text]=None,
                              template_overlay: bool=False) -> None:
         """Creates a composite image of a user's avatar and a given template.
         
@@ -35,21 +57,18 @@ class AvatarCog(BaseCog):
             File name of image to be used as template. 
             Must be located in memes/templates/
         
-        resize : `List[Tuple[int, int]]`
-            List of tuples (width, height). Multiple tuples
-            indicate that multiple instances of a user's avatar is 
-            to be added to the template image.
-        
-        offset : `List[Tuple[int, int]]`
-            List of tuples (x_position, y_position).
-            Same logic as `resize` with regards to lists.
-        
+        avatars : `List[Avatar]`
+            List of objects describing avatar size and position.
+            For each object in list, an avatar with the specified size
+            and position is added to the final image.
+
         user : `commands.MemberConverter`, optional
             A Discord user. If specified, this user's avatar is 
             downloaded in place of the message author's.
         
-        text : `List[dict]`, optional
-            List of kwargs corresponding to `ImageCog._add_text()` parameters.
+        text : `List[Text]`, optional
+            List of Text objects, whose attributes correspond with 
+            `AvatarCog._add_text()` parameters.
         
         template_overlay : `bool`, optional
             If True, the order of template and avatar is reversed, 
@@ -78,12 +97,12 @@ class AvatarCog(BaseCog):
             background.putalpha(255) # puts an alpha channel on the image
 
         # Add avatar to template
-        background = await self._do_paste(background, avatar, resize, offset, template_overlay)
+        background = await self._do_paste(background, avatar, avatars, template_overlay)
 
         # Add text
         if text:
             for txt in text:
-                background = await self._add_text(ctx, background, **txt)
+                background = await self._add_text(ctx, background, **txt.__dict__)
 
         # Save image to file-like object
         result = io.BytesIO()
@@ -94,11 +113,12 @@ class AvatarCog(BaseCog):
         embed = await self.get_embed_from_img_upload(ctx, result, "out.png")
         await ctx.send(embed=embed)
     
-    async def _resize_paste(self, 
-                      background: Image.Image, 
-                      overlay: Image.Image, 
-                      resize: Tuple[int, int], 
-                      offset: Tuple[int, int]) -> Image.Image:
+    async def _resize_paste(
+                        self, 
+                        background: Image.Image, 
+                        overlay: Image.Image, 
+                        avatar: Avatar
+                    ) -> Image.Image:
         """Resizes an image `overlay` and pastes it to `background`
 
         NOTE
@@ -113,37 +133,32 @@ class AvatarCog(BaseCog):
             Image that will have overlay pasted to it
         overlay : `Image.Image`
             Image to paste on to background
-        resize : `Tuple[int, int]`
-            Pasted image size in pixels (w, h)
-        offset : `Tuple[int, int]`
-            Pasted image offset in pixels (x, y)
+        avatar: `Avatar`
+            Dimensions and position of avatar to paste.
         
         Returns
         -------
         `Image.Image`
             Image background with Image overlay pasted on top of it
         """
-        overlay = overlay.resize(resize, resample=Image.BICUBIC)
-        background.paste(overlay, offset, overlay.convert("RGBA"))
+        overlay = overlay.resize((avatar.w, avatar.h), resample=Image.BICUBIC)
+        background.paste(overlay, (avatar.x, avatar.y), overlay.convert("RGBA"))
         return background 
     
     async def _do_paste(self, 
                   background: Image.Image, 
                   user_avatar: Image.Image, 
-                  resize: List[Tuple[int, int]], 
-                  offset: List[Tuple[int, int]],
+                  avatars: List[Avatar],
                   template_overlay: bool) -> Image.Image:
-        # Fill with first value of shortest list if number of elements are not identical
-        fill_value = max(resize, offset)[0] if len(resize) != len(offset) else None
         # Paste user avatars
-        for off, rsz in zip_longest(offset, resize, fillvalue=fill_value):
+        for av in avatars:
             # Template goes on top of image
             if template_overlay:
                 new = Image.new("RGBA", background.size)
-                new = await self._resize_paste(new, user_avatar, rsz, off)
+                new = await self._resize_paste(new, user_avatar, av)
                 background = Image.alpha_composite(new, background)
             else: # Image goes on top of template
-                background = await self._resize_paste(background, user_avatar, rsz, off)
+                background = await self._resize_paste(background, user_avatar, av)
         # FIXME: Potentially undefined variable error here if len(offset) + len(resize) == 0
         return background 
 
@@ -220,104 +235,203 @@ class AvatarCog(BaseCog):
     @commands.command(name="fuckup", aliases=["nasa"])
     async def nasa(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
-        await self._composite_images(ctx, "nasa.jpg", [(100, 100)], [(347, 403)], user)
+        await self._composite_images(
+            ctx, 
+            template="nasa.jpg", 
+            avatars=[Avatar(w=100, h=100, x=347, y=403)], 
+            user=user
+        )
 
     @commands.command(name="northkorea", aliases=["nk"])
     async def northkorea(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/PiqzXNs.jpg"""
-        await self._composite_images(ctx, "northkorea1.jpg", [(295, 295)], [(712, 195)], user)
+        await self._composite_images(
+            ctx, 
+            template="northkorea1.jpg",
+            avatars=[Avatar(w=295, h=295, x=712, y=195)],
+            user=user
+        )
 
     @commands.command(name="cancer", aliases=["cer"])
     async def cancer(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/vDtktIq.jpg"""
-        await self._composite_images(ctx, "cancer.jpg", [(762, 740)], [(772, 680)], user)
+        await self._composite_images(
+            ctx, 
+            template="cancer.jpg", 
+            avatars=[Avatar(w=762, h=740, x=772, y=680)], 
+            user=user
+        )
 
     @commands.command(name="mlady", aliases=["neckbeard"])
     async def mlady(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/2LQkErQ.png"""
-        await self._composite_images(ctx, "mlady.png", [(275, 275)], [(86, 78)], user, template_overlay=True)
+        await self._composite_images(
+            ctx, 
+            template="mlady.png",
+            avatars=[Avatar(w=275, h=275, x=86, y=78)], 
+            user=user, 
+            template_overlay=True
+        )
     
     @commands.command(name="mlady2", aliases=["neckbeard2"])
     async def mlady2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/2LQkErQ.png"""
-        await self._composite_images(ctx, "mlady2.png", [(200, 200)], [(161, 101)], user, template_overlay=True)
+        await self._composite_images(
+            ctx, 
+            template="mlady2.png", 
+            avatars=[Avatar(w=200, h=200, x=161, y=101)], 
+            user=user, 
+            template_overlay=True
+        )
 
     @commands.command(name="loud", aliases=["loudest"])
     async def loud(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/y7y7MRt.jpg"""
-        await self._composite_images(ctx, "loud.jpg", [(190, 190)], [(556, 445)], user)
+        await self._composite_images(
+            ctx, 
+            template="loud.jpg", 
+            avatars=[Avatar(w=190, h=190, x=556, y=445)], 
+            user=user
+        )
 
     @commands.command(name="guys", aliases=["guyswant"])
     async def guys_only_want_one_thing(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/5oUe8VN.jpg"""
-        await self._composite_images(ctx, "guyswant.jpg", [(400, 400)], [(121, 347)], user)
+        await self._composite_images(
+            ctx, 
+            template="guyswant.jpg", 
+            avatars=[Avatar(w=400, h=400, x=121, y=347)], 
+            user=user
+        )
 
     @commands.command(name="furry")
     async def furry(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Jq3uu02.png"""
-        await self._composite_images(ctx, "furry.png", [(230, 230)], [(26, 199)], user, template_overlay=True)
+        await self._composite_images(
+            ctx, 
+            template="furry.png", 
+            avatars=[Avatar(w=230, h=230, x=26, y=199)], 
+            user=user, 
+            template_overlay=True
+        )
 
     @commands.command(name="autism", aliases=["thirtyseven"])
     async def autism(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HcjIbpP.jpg"""
-        await self._composite_images(ctx, "autism.jpg", [(303, 255)], [(0, 512)], user)
+        await self._composite_images(
+            ctx, 
+            template="autism.jpg", 
+            avatars=[Avatar(w=303, h=255, x=0, y=512)], 
+            user=user
+        )
 
     @commands.command(name="disabled")
     async def disabled(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/hZSghxu.jpg"""
-        await self._composite_images(ctx, "disabled.jpg", [(320, 320)], [(736, 794)], user)
+        await self._composite_images(
+            ctx, 
+            template="disabled.jpg", 
+            avatars=[Avatar(w=320, h=320, x=736, y=794)], 
+            user=user
+        )
 
     @commands.command(name="autism2")
     async def autism2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/6lxlqPk.jpg"""
-        text_content = user.name if user else ctx.message.author.name
-        text = {
-            "content": text_content,
-            "size": 20,
-            "offset": (96, 0),
-            "font": "LiberationSans-Regular.ttf",
-            "color": (0, 0, 0, 255)
-            }
-        text2 = dict(text)
-        text2["offset"] = (96, 551)
-        _txt = [text, text2]
-        await self._composite_images(ctx, "autism2.jpg", [(73, 73), (73, 73), (46, 46)], [(15, 1), (15, 551), (123, 709)], user, text=_txt)
+        text1 = Text(
+            content=user.name if user else ctx.message.author.name,
+            size=20,
+            offset=(96, 0),
+            font="LiberationSans-Regular.ttf",
+            color=(0, 0, 0, 255)
+        )
+        text2 = Text(**text1.__dict__)
+        text2.offset = (96, 551)
+
+        await self._composite_images(
+            ctx, 
+            template="autism2.jpg", 
+            avatars = [
+                Avatar(w=73, h=73, x=15, y=1), 
+                Avatar(w=73, h=73, x=15, y=551),
+                Avatar(w=46, h=46, x=123, y=709)
+            ],
+            user=user, 
+            text=[text1, text2]
+        )
 
     @commands.command(name="fatfuck")
     async def fatfuck(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Vbkfu4u.jpg"""
-        await self._composite_images(ctx, "fatfuck.jpg", [(385, 385)], [(67, 0)], user)
+        await self._composite_images(
+            ctx, 
+            template="fatfuck.jpg", 
+            avatars=[Avatar(w=385, h=385, x=67, y=0)],
+            user=user
+        )
 
     @commands.command(name="saxophone")
     async def saxophone(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/Gfw036Q.png"""
-        await self._composite_images(ctx, "saxophone.png", [(366, 358)], [(0, 0), (0, 361)], user, template_overlay=True)
+        await self._composite_images(
+            ctx, 
+            template="saxophone.png", 
+            avatars=[
+                Avatar(w=366, h=358, x=0, y=0), 
+                Avatar(w=366, h=358, x=0, y=361)
+            ],
+            user=user,
+            template_overlay=True
+        )
 
     @commands.command(name="fingercircle")
     async def fingercircle(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/HnpJkvB.jpg"""
-        await self._composite_images(ctx, "fingercircle.jpg", [(251, 278)], [(317, 20)], user)
+        await self._composite_images(
+            ctx, 
+            template="fingercircle.jpg", 
+            avatars=[Avatar(w=251, h=278, x=317, y=20)],
+            user=user
+        )
     
     @commands.command(name="lordofthepit")
     async def lordofthepit(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/IRntn02.jpg"""
-        await self._composite_images(ctx, "lordofthepit.jpg", [(559, 410)], [(57, 110)], user)
+        await self._composite_images(
+            ctx, 
+            template="lordofthepit.jpg", 
+            avatars=[Avatar(w=559, h=410, x=57, y=110)],
+            user=user
+        )
 
     @commands.command(name="bigounce")
     async def bigounce(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/apDeSO6.jpg"""
-        await self._composite_images(ctx, "bigounce.png", [(504, 504)], [(0, 0)], user, template_overlay=True)
+        await self._composite_images(
+            ctx, 
+            template="bigounce.png", 
+            avatars=[Avatar(w=504, h=504, x=0, y=0)], 
+            user=user, 
+            template_overlay=True
+        )
 
     @commands.command(name="bigounce2")
     async def bigounce2(self, ctx: commands.Context, user: MemberOrURLConverter=None) -> None:
         """https://i.imgur.com/apDeSO6.jpg with username"""
         uname = user.name if user else ctx.message.author.name
-        text = {
-            "content": unidecode(uname).upper(),
-            "size": 31,
-            "offset": (194, 431),
-            "font": "Cocogoose Pro-trial.ttf",
-            "color": (234, 246, 247, 255),
-            "shadow": True
-        }
-        await self._composite_images(ctx, "bigounce2.png", [(504, 504)], [(0, 0)], user, template_overlay=True, text=[text])
+        text = Text(
+            content=unidecode(uname).upper(),
+            size=31,
+            offset=(194, 431),
+            font="Cocogoose Pro-trial.ttf",
+            color=(234, 246, 247, 255),
+            shadow=True
+        )
+        await self._composite_images(
+            ctx, 
+            template="bigounce2.png", 
+            avatars=[Avatar(w=504, h=504, x=0, y=0)], 
+            user=user, 
+            template_overlay=True, 
+            text=[text]
+        )
