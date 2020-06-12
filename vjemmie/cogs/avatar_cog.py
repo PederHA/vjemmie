@@ -119,14 +119,9 @@ class AvatarCog(BaseCog):
                         overlay: Image.Image, 
                         avatar: Avatar
                     ) -> Image.Image:
-        """Resizes an image `overlay` and pastes it to `background`
+        """Resizes an image (param `overlay`) and pastes it onto another
+        image (param `background`)
 
-        NOTE
-        ----
-        Generally, type of arguments to parameters `resize` and `offset`
-        should be identical to avoid unintended results. However, there are
-        protections in place if types do not match.
-        
         Parameters
         ----------
         background : `Image.Image`
@@ -159,7 +154,6 @@ class AvatarCog(BaseCog):
                 background = Image.alpha_composite(new, background)
             else: # Image goes on top of template
                 background = await self._resize_paste(background, user_avatar, av)
-        # FIXME: Potentially undefined variable error here if len(offset) + len(resize) == 0
         return background 
 
     async def _add_text(self,
