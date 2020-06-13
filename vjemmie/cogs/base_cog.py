@@ -562,15 +562,18 @@ class BaseCog(commands.Cog):
             The downloaded contents of the URL
         """
         # Check if host responds
-        #try:
-        resp = await get(url) # Why raise our own exceptions? Let the exception handler manage it.
-        #except ConnectError:
-        #    raise discord.DiscordException(
-        #        "No response from destination host. "
-        #        "Is the URL spelled correctly?"
-        #    )
-        #except ConnectTimeout:
-        #    raise 
+        try:
+            resp = await get(url)
+        except ConnectError:
+            raise discord.DiscordException(
+                "No response from destination host. "
+                "Is the URL spelled correctly?"
+            )
+        except ConnectTimeout:
+            raise discord.DiscordException(
+                f"Failed to download from `{url}`. "
+                "Connection timed out."
+        )
 
         # Check content size
         content_length = int(resp.headers["Content-Length"])
