@@ -1080,8 +1080,9 @@ class BaseCog(commands.Cog):
 
     async def get_invokable_commands(self, ctx) -> None:
         return [
-            command for command in self.get_commands() 
-            if not command.hidden 
+            command for command in self.bot.commands
+            if command.cog == self
+            and not command.hidden 
             and command.enabled
             and await command.can_run(ctx)
         ]
