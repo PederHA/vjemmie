@@ -120,6 +120,7 @@ class RedditCog(BaseCog):
                     name=subreddit,
                     aliases=aliases,
                     help=f"Gets a random post from r/{subreddit}",
+                    hidden=True,
                     subreddit=subreddit,
                     is_text=is_text
                    )
