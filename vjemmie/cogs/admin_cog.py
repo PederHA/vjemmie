@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Optional, Union, Awaitable, Callable
+from contextlib import suppress
 
 import discord
 from discord.ext import commands, tasks
@@ -52,14 +53,18 @@ class AdminCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
-        
-        self.system_diagnostics_loop.start()
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Prints message when cog is ready."""
         print("Bot logged in")
-        self.activity_rotation.start()
+        # Any consise way to check if the loop is in progress?
+        # https://discordpy.readthedocs.io/en/latest/ext/tasks/index.html?highlight=tasks%20loop#discord.ext.tasks.Loop.is_running
+        # tasks.Loop.is_running() doesn't even seem to exist.
+        # This problem could be solved if the loop is started in __init__, but that
+        # doesn't work for whatever reason.
+        with suppress(RuntimeError):
+            self.activity_rotation.start()
 
     @tasks.loop()
     async def activity_rotation(self) -> None:
