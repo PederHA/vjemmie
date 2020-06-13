@@ -10,7 +10,8 @@ def add_command(cog: commands.Cog,
                 name: str,
                 aliases: Optional[List[str]]=None,
                 help: Optional[str]=None,
-                group: Optional[commands.Group]=None, 
+                hidden: bool=False,
+                group: Optional[commands.Group]=None,
                 **kwargs
                ) -> None:
     _cmd = coroutine(partial(coro, **kwargs)) # Create partial coro from passed in coro
@@ -30,4 +31,5 @@ def add_command(cog: commands.Cog,
     cmd_func = group.command if group else commands.command
     cmd = cmd_func(name=name, aliases=aliases, cog=cog, help=help)(_cmd)
     cmd.cog = cog
+    cmd.hidden = hidden
     cog.bot.add_command(cmd)
