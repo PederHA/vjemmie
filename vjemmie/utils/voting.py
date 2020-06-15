@@ -9,6 +9,7 @@ from typing import Dict
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.errors import BadArgument
 
 from .converters import NonCaseSensMemberConverter
 from .exceptions import CommandError
@@ -39,9 +40,12 @@ class VotingSession:
 
     def __init__(self,
                  ctx: commands.Context,
+                 topic: str,
                  threshold: int, 
                  duration: float,
-                 loopinterval: int=10
+                 *,
+                 loopinterval: int=10,
+                 
                 ) -> None:
         """
         Parameters
@@ -66,7 +70,7 @@ class VotingSession:
         self.bot: commands.Bot = ctx.bot
         self.loop: asyncio.Task = None
         self.reset()
-        self.commandstr = ctx.message.content
+        self.topic = topic
         # TODO: Add superuser vote weighting
         #       Add superuser supervote (triggers action)
     
@@ -115,9 +119,10 @@ class VotingSession:
         while True:
             if self.elapsed > self.duration:
                 await self.ctx.send(
-                    f"Voting session for `{self.commandstr}` ended. Not enough votes."
+                    f"Voting session for `{self.topic}` ended. Not enough votes.",
+                    delete_after=10
                 )
-                return await purge_session(self.ctx)
+                return await purge_session(self.ctx, self.topic)
             await asyncio.sleep(self.loopinterval)
 
 
@@ -146,7 +151,7 @@ class VotingSession:
             await ctx.send(
                 f"Vote added! {self.votes_remaining} more vote{s} within the next " 
                 f"{self.time_remaining_str} {areis} required.\n"
-                f"Type `{self.commandstr}` to add votes."
+                f"Type `{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}` to add votes."
             )
 
     async def _add_vote(self, ctx: commands.Context) -> None:
@@ -165,7 +170,7 @@ class VotingSession:
                     time_msg += "s"
             await ctx.send(
                 "You have already voted for "
-                f"`{self.commandstr}` "
+                f"`{self.topic}` "
                 f"within the last {time_msg}."
             )
         return ctx.message.author.id in self.votes
@@ -177,23 +182,17 @@ def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) ->
             return True
 
         # Make sure an active session exists, otherwise create one
+        topicstr = await get_str_topic(ctx, topic)
         try:
-            await get_session(ctx)
+            await get_session(ctx, topicstr) # check if a voting session is active
         except KeyError:
-            if topic is TopicType.default:
-                await create_session(ctx, votes, duration)
-            elif topic is TopicType.member:
-                # This raises a BadArgument exception if the member argument is invalid
-                # The exception handler in BaseCog will catch this
-                name = get_voted_topic(ctx)
-                await NonCaseSensMemberConverter().convert(ctx, name)
-                await create_session(ctx, votes, duration)
+            await create_session(ctx, topicstr, votes, duration)
         
-        await add_vote(ctx)
+        await add_vote(ctx, topicstr)
 
-        session = await get_session(ctx)
+        session = await get_session(ctx, topicstr)
         if await session.check_votes():
-            await purge_session(ctx) # delete voting session after completion
+            await purge_session(ctx, topicstr) # delete voting session after completion
         else:
             raise NotEnoughVotes
         return True
@@ -201,29 +200,33 @@ def vote(votes: int=2, duration: int=300, topic: TopicType=TopicType.default) ->
     return commands.check(predicate)
 
 
-def get_voted_topic(ctx: commands.Context) -> str:
+async def get_str_topic(ctx: commands.Context, topic: TopicType) -> str:
     """This is NOT robust."""
     # "!tt start vjemmie" -> "vjemmie"
-    return ctx.message.content.rsplit(ctx.invoked_with)[-1].strip()
+    s = ctx.message.content.rsplit(ctx.invoked_with)[-1].strip().lower()
+    if topic is TopicType.member:
+        member = await NonCaseSensMemberConverter().convert(ctx, s)
+        return member.name
+    return s # fall back on s no matter what
+    
 
-
-async def create_session(ctx: commands.Context, *args, **kwargs) -> VotingSession:
-    session = VotingSession(ctx, *args, **kwargs)
-    SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)] = session
+async def create_session(ctx: commands.Context, topic: str, *args, **kwargs) -> VotingSession:
+    session = VotingSession(ctx, topic, *args, **kwargs)
+    SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic] = session
     return session
 
 
-async def get_session(ctx: commands.Context) -> VotingSession:
+async def get_session(ctx: commands.Context, topic: str) -> VotingSession:
     """Attempts to retrieve a voting session based on context."""
-    return SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
+    return SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic]
 
 
-async def purge_session(ctx: commands.Context) -> None:
+async def purge_session(ctx: commands.Context, topic: str) -> None:
     """Attempts to delete a voting session based on context."""
-    del SESSIONS[ctx.guild.id][ctx.command.qualified_name][get_voted_topic(ctx)]
+    del SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic]
 
 
-async def add_vote(ctx: commands.Context) -> None:
+async def add_vote(ctx: commands.Context, topic: str) -> None:
     """Attempts to add a vote to a voting session based on context."""
-    sess = await get_session(ctx)
+    sess = await get_session(ctx, topic)
     await sess.add_vote(ctx)
