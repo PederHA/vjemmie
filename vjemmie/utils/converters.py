@@ -110,7 +110,7 @@ class NonCaseSensMemberConverter(IDConverter):
 
 
         if result is None:
-            raise BadArgument(f"No member named '{argument}''")
+            raise BadArgument(f"No member named '{argument}'")
 
         return result
 
