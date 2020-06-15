@@ -71,6 +71,7 @@ class VotingSession:
         self.loop: asyncio.Task = None
         self.reset()
         self.topic = topic
+        self.commandstr = f"`{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}`"
         # TODO: Add superuser vote weighting
         #       Add superuser supervote (triggers action)
     
@@ -119,7 +120,7 @@ class VotingSession:
         while True:
             if self.elapsed > self.duration:
                 await self.ctx.send(
-                    f"Voting session for `{self.topic}` ended. Not enough votes.",
+                    f"Voting session for {self.commandstr} ended. Not enough votes.",
                     delete_after=10
                 )
                 return await purge_session(self.ctx, self.topic)
@@ -151,7 +152,7 @@ class VotingSession:
             await ctx.send(
                 f"Vote added! {self.votes_remaining} more vote{s} within the next " 
                 f"{self.time_remaining_str} {areis} required.\n"
-                f"Type `{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}` to add votes."
+                f"Type {self.commandstr} to add votes."
             )
 
     async def _add_vote(self, ctx: commands.Context) -> None:
@@ -163,15 +164,14 @@ class VotingSession:
         if ctx.message.author.id in self.votes:
             minutes = self.duration//60
             if not minutes:
-                time_msg = f"{int(self.duration)} seconds"
+                time_fmt = f"{int(self.duration)} seconds"
             else:
-                time_msg = f"{round(minutes)} minute"
+                time_fmt = f"{round(minutes)} minute"
                 if minutes > 1:
-                    time_msg += "s"
+                    time_fmt += "s"
             await ctx.send(
-                "You have already voted for "
-                f"`{self.topic}` "
-                f"within the last {time_msg}."
+                f"You have already voted for {self.commandstr} "
+                f"within the last {time_fmt}."
             )
         return ctx.message.author.id in self.votes
 
@@ -206,7 +206,7 @@ async def get_str_topic(ctx: commands.Context, topic: TopicType) -> str:
     s = ctx.message.content.rsplit(ctx.invoked_with)[-1].strip().lower()
     if topic is TopicType.member:
         member = await NonCaseSensMemberConverter().convert(ctx, s)
-        return member.name
+        return member.name # member.id instead? Could run into users with identical names
     return s # fall back on s no matter what
     
 
