@@ -36,4 +36,6 @@ def add_command(cog: commands.Cog,
     cmd.cog = cog
     cmd.hidden = hidden
     cmd.checks.extend(checks)
+    for param in kwargs: # Remove params from command after passing them in
+        cmd.params.pop(param)
     cog.bot.add_command(cmd)
