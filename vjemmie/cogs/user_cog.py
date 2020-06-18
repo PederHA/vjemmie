@@ -72,7 +72,7 @@ class UserCog(BaseCog):
             if not await cog.get_invokable_commands(ctx) or not cog.__doc__:
                 cogs.pop(idx)
         
-        description = "\n".join([f"{cog.EMOJI} **{cog.cog_name}**\n{cog.__doc__}\n" for cog in cogs])
+        description = "\n".join([f"{cog.EMOJI} **{cog.cog_name}**: {cog.__doc__}\n" for cog in cogs])
         await self.send_embed_message(ctx, title="Categories", description=description)
 
         # Send !help usage instructions
