@@ -21,7 +21,14 @@ class UserCog(BaseCog):
 
     @commands.command(name="help", aliases=["Help", "hlep", "?", "pls"], usage="<command/category>")
     async def help_(self, ctx: commands.Context, cmd_or_category: str=None, advanced: BoolConverter(["advanced"])=False) -> None:
-        """Get command/category usage info and statistics."""
+        """Alias for both `command` and `category`. Prioritizes commands.
+        
+        If a command and a category have the same name, distinguish between them by
+        typing the category's name with an upper case letter:
+
+        `!help reddit` -> The reddit command
+        `!help Reddit` -> The reddit category 
+        """
         if not cmd_or_category:
             return await ctx.send(
                 "Specify a command or category to get help for!\n"
@@ -32,7 +39,7 @@ class UserCog(BaseCog):
         
         # Check if cmd_or_category is a command
         try:
-            await ctx.invoke(self.help_command, cmd_or_category)
+            await ctx.invoke(self.help_command, cmd_or_category, advanced)
         except CommandError:
             pass
         else:
@@ -73,7 +80,7 @@ class UserCog(BaseCog):
                         f"Or type `{self.bot.command_prefix}commands` to show all available commands.")
 
     @commands.command(name="command", aliases=["cmd"])
-    async def help_command(self, ctx: commands.Context, command: str) -> None:
+    async def help_command(self, ctx: commands.Context, command: str, advanced: bool) -> None:
         cmd = self.bot.get_command(command)
 
         if not cmd:
@@ -84,11 +91,15 @@ class UserCog(BaseCog):
         # Embed title
         title = f"**`{_cmd_name}`**"
 
+        sig = (cmd.usage or cmd.signature or '') if advanced else ''
+        if advanced and sig: # really no elegant way to do this
+            sig = f" {sig}"
+
         # Embed description
         description = [
             f"_{cmd.help_doc}_\n",
             f"**Category:** {cmd.cog.EMOJI}{cmd.cog.cog_name}",
-            f"**Usage:** `{_cmd_name} {cmd.usage or ''}`"
+            f"**Usage:** `{_cmd_name}{sig}`"
         ]
 
         # Include subcommands if they exist
