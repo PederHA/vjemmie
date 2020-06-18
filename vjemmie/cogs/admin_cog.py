@@ -14,6 +14,7 @@ from contextlib import suppress
 import discord
 from discord.ext import commands, tasks
 import psutil
+import websockets
 
 from .base_cog import BaseCog, EmbedField
 from ..config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS, OWNER_ID
@@ -29,7 +30,7 @@ from ..utils.printing import eprint
 @dataclass
 class Activity:
     text: str
-    callable_: Callable[..., str] = None
+    callable_: Optional[Callable[..., str]] = None
     prepend_text: bool = True
 
     async def get_activity(self) -> str:
@@ -93,8 +94,15 @@ class AdminCog(BaseCog):
         await self.send_log(f"Left guild {guild.name}", channel_id=self.GUILD_HISTORY_CHANNEL)
 
     async def _change_activity(self, activity_name: str) -> None:
+        """Tries to change bot's "playing" status aka. Activity.
+        Does not raise an exception on failure to change activity."""
         activity = discord.Game(activity_name)
-        await self.bot.change_presence(activity=activity)
+        try:
+            await self.bot.change_presence(activity=activity)
+        except discord.InvalidArgument:
+            print(f"Invalid activity argument '{activity_name}'")
+        except websockets.exceptions.ConnectionClosedError as e:
+            print(f"Unable to change activity. {e}")
 
     @commands.command(name="restart")
     async def restart_bot(self, ctx: commands.Context) -> None:
