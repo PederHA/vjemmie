@@ -1081,7 +1081,7 @@ class BaseCog(commands.Cog):
         ctx = await self.bot.get_context(await channel.fetch_message(channel.last_message_id))
         return ctx
 
-    async def get_invokable_commands(self, ctx) -> None:
+    async def get_invokable_commands(self, ctx) -> List[commands.Command]:
         return [
             command for command in self.bot.commands
             if command.cog == self
