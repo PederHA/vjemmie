@@ -165,8 +165,7 @@ class ImageCog(BaseCog):
         await ctx.invoke(self.nuke, *args, passes=20)
 
     @commands.command(name="removebg")
-    @commands.cooldown(rate=1, per=300, type=commands.BucketType.user)
-    @owners_only()
+    @commands.cooldown(rate=2, per=300, type=commands.BucketType.user)
     async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
         """Removes background from an image."""
         if not image_url and not ctx.message.attachments:
