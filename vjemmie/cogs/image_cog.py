@@ -211,10 +211,6 @@ class ImageCog(BaseCog):
 
         width, height = image.size
 
-        # Do not scale down image size if image is smaller than 0.24 Megapixels
-        if width*height < MAX_SIZE:
-            return _img
-        
         try:
             new_w, new_h = await self.scale_to_target(width, height, MAX_SIZE)
         except:
@@ -227,14 +223,14 @@ class ImageCog(BaseCog):
                 else:
                     break
             else:
-                raise FileSizeError("Image is too large to be resized properly!")
-        
-        new_img = io.BytesIO()
-        image = image.resize((new_w, new_h), resample=Image.BICUBIC)
-        image = image.convert("RGB")
-        image.save(new_img, format="JPEG")
-        new_img.seek(0)
-        return new_img
+                raise FileSizeError("Image is too large to be resized properly!") # ????
+    
+        imgbuffer = io.BytesIO()
+        new_img = image.resize((new_w, new_h), resample=Image.BICUBIC)
+        new_img = new_img.convert("RGB")
+        new_img.save(imgbuffer, format="JPEG")
+        imgbuffer.seek(0)
+        return imgbuffer
 
     async def scale_to_target(self, width: int, height: int, target: int) -> Tuple[int, int]:
         """Gets image dimensions as close as possible to a target size"""
