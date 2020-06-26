@@ -23,6 +23,7 @@ class ImageCog(BaseCog):
     """Image manipulation commands."""
 
     EMOJI = ":camera:"
+    REMOVEBG_MAXSIZE = 240_000
     
     @commands.command(name="deepfry")
     async def deepfry(self, ctx: commands.Context, *args, rtn=False) -> None:
@@ -206,25 +207,12 @@ class ImageCog(BaseCog):
    
     async def _resize_img(self, _img: io.BytesIO) -> io.BytesIO:
         image = Image.open(_img)
-
-        MAX_SIZE = 240_000 # 0.24 Megapixels
-
         width, height = image.size
 
-        try:
-            new_w, new_h = await self.scale_to_target(width, height, MAX_SIZE)
-        except:
-            # Fall back on brute force resizing if algorithm fails
-            for i in range(1, 32, 1):
-                new_w, new_h = width//i, height//i
-                new_size = new_w * new_h
-                if new_size > MAX_SIZE:
-                    continue
-                else:
-                    break
-            else:
-                raise FileSizeError("Image is too large to be resized properly!") # ????
-    
+        # Get new image dimensions
+        new_w, new_h = await self.scale_to_target(width, height, self.REMOVEBG_MAXSIZE)
+
+        # Construct new bytes object from resized image
         imgbuffer = io.BytesIO()
         new_img = image.resize((new_w, new_h), resample=Image.BICUBIC)
         new_img = new_img.convert("RGB")
@@ -242,11 +230,11 @@ class ImageCog(BaseCog):
             STEP_SIZE = -STEP_SIZE
         
         for i in np.arange(0, STEP_SIZE*TRIES, STEP_SIZE):
-            new = width // i * height // i
+            new = (width // i) * (height // i)
             if new <= target:
                 break
         else:
-            raise BotException("Failed to resize image!")
+            raise BotException("Failed to resize image!") # This should NEVER happen
 
         return int(abs(width//i)), int(abs(height//i))
     
