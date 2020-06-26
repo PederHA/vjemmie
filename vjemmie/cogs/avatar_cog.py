@@ -38,6 +38,9 @@ class Text:
     color: Tuple[int, int, int, int] = (255, 255, 255, 255) # RGBA
     content: str = ""
     shadow: bool = False
+    stroke: bool = False
+    stroke_thickness: int = 1
+    stroke_color: Tuple[int, int, int, int] = (0, 0, 0, 255)
     upper: bool = False
 
     def __post_init__(self) -> None:
@@ -387,9 +390,19 @@ class AvatarCog(BaseCog):
             )
             _shadow = _shadow.filter(ImageFilter.BLUR)
             _txt = Image.alpha_composite(_txt, _shadow)
-
+        
         # Get a drawing context
         d = ImageDraw.Draw(_txt)
+        
+        # Add stroke FIRST
+        if text.stroke:
+            t = text.stroke_thickness
+            d.text((text.offset[0]-t, text.offset[1]-t), text.content, font=font, fill=text.stroke_color)
+            d.text((text.offset[0]+t, text.offset[1]-t), text.content, font=font, fill=text.stroke_color)
+            d.text((text.offset[0]-t, text.offset[1]+t), text.content, font=font, fill=text.stroke_color)
+            d.text((text.offset[0]+t, text.offset[1]+t), text.content, font=font, fill=text.stroke_color)
+
+
         d.text(text.offset, text.content, font=font, fill=text.color)
 
         # Return alpha composite of background and text
