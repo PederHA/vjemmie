@@ -201,6 +201,35 @@ avatar_commands = [
             )
         ]
     ),
+    AvatarCommand(
+        name="allmyhomies",
+        template="allmyhomies.jpg",
+        help="https://i.imgur.com/7jxk8Qd.jpg",
+        avatars=[Avatar(w=200, h=200, x=260, y=205)], 
+        #template_overlay=True, # hide avatar
+        text=[
+            Text(
+                size=70,
+                offset=(319, 15),
+                font="Cocogoose Pro-trial.ttf",
+                color=(237, 221, 208, 255),
+                shadow=True,
+                stroke=True,
+                stroke_thickness=3,
+                upper=True,
+            ),
+            Text(
+                size=80,
+                offset=(160, 560),
+                font="Cocogoose Pro-trial.ttf",
+                color=(237, 221, 208, 255),
+                shadow=True,
+                stroke=True,
+                stroke_thickness=3,
+                upper=True
+            )
+        ]
+    ),
 ]
 
 
