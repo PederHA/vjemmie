@@ -4,6 +4,7 @@ from typing import List, Tuple, Union, Optional
 from unidecode import unidecode
 from dataclasses import dataclass, field
 from pathlib import Path
+from copy import deepcopy
 
 import discord
 from discord.ext import commands
@@ -235,12 +236,13 @@ avatar_commands = [
 
 async def avatar_command(cog: commands.Cog, ctx: commands.Context, user: NonCaseSensMemberConverter=None, *, command: AvatarCommand) -> None:
     # NOTE: Handle this somewhere else?
-    for text in command.text:
+    cmd = deepcopy(command)
+    for text in cmd.text:
         if not text.content:
             text.content = unidecode(user.name if user else ctx.message.author.name)
     await cog.make_composite_image(
         ctx, 
-        command=command,
+        command=cmd,
         user=user,
     )    
 
