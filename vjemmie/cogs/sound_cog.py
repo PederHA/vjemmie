@@ -32,6 +32,7 @@ from ..utils.exceptions import (CommandError, InvalidVoiceChannel,
 from ..utils.filetypes import check_file_audio
 from ..utils.messaging import ask_user_yes_no
 from ..utils.parsing import split_text_numbers
+from ..utils.sound import convert, join_wavs
 from ..utils.spotify import get_spotify_song_info
 from ..utils.youtube import youtube_get_top_result
 from .base_cog import BaseCog
@@ -955,86 +956,43 @@ class SoundCog(BaseCog):
         """
 
         # NOTE: ugly
-        infile_1 = None
-        infile_2 = None
+        infile_1: Optional[Path] = None
+        infile_2: Optional[Path] = None
+        files: List[Path] = []
         
-        for directory in self.sub_dirs:
-            for sound in directory.sound_list:
-                if file_1 == sound:
-                    infile_1 = (directory.directory, sound)
-                elif file_2 == sound:
-                    infile_2 = (directory.directory, sound)
-                if infile_1 and infile_2:
+        for f in [file_1, file_2]:
+            for p in Path(f"{SOUND_DIR}").glob(f"*/*{f}*"):
+                if p.stem == f: # NOTE: necessary?
+                    files.append(p)
                     break
-        
-        if not infile_1 or not infile_2:
-            raise AttributeError("Could not find file ")
-
-        def convert(directory: str, filename: str, to_wav: bool) -> str:
-            """Attempts to convert a file from .mp3 to .wav or vice versa"""
-            directory = f"{directory}/" if directory else ""
-            in_ext = "mp3" if to_wav else "wav"
-            out_ext = "wav" if to_wav else "mp3"
-            temp = "_temp_" if to_wav else ""
-            f = f"{SOUND_DIR}/{directory}{filename}.{in_ext}"
-            new = f"{SOUND_DIR}/{directory}{temp}{filename}.{out_ext}"
-            if to_wav:
-                cmd = f'ffmpeg -i "{f}" -acodec pcm_u8 -ar 44100 "{new}"'
             else:
-                cmd = f'ffmpeg -i "{f}" -acodec libmp3lame -ab 128k "{new}"'
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
-            return new
+                raise FileNotFoundError(f"Unable to find soundfile '{f}'")
 
-        # Convert mp3 files to wav so the wave module can interact with them
-        infile_1_name = await self.bot.loop.run_in_executor(None, convert, *infile_1, True)
-        infile_2_name = await self.bot.loop.run_in_executor(None, convert, *infile_2, True)
+        # Make sure all files are .wav. Convert to .wav if necessary
+        tempfiles = [] # Files that are temporarily converted to .wav
+        for fp in list(files): # NOTE: use enumerate() instead?
+            if fp.suffix == ".mp3":
+                wavname = await self.bot.loop.run_in_executor(None, convert, fp, True) 
+                files[files.index(fp)] = wavname
+                tempfiles.append(wavname)
 
-        def join_wavs(file_1: str, file_1_orig: str, file_2:str, file_2_orig: str) -> Tuple[str, str]:
-            if not Path(file_1).exists() and not Path(file_2).exists():
-                raise FileNotFoundError("Some nice error text goes here")
-
-            # Get wave file data
-            wav_data = []
-            for f in [file_1, file_2]:
-                with wave.open(f, "rb") as w:
-                    wav_data.append([w.getparams(), w.readframes(w.getnframes())])
-
-            # Filenames. NOTE: This is ugly as hell
-            joined_filename = f"{file_1_orig}_{file_2_orig}"
-            filepath_base = f"{SOUND_DIR}/{file_1_orig}_{file_2_orig}"
-            filepath_wav = f"{filepath_base}.wav"
-            filepath_mp3 = f"{filepath_base}.mp3"
-
-            # Check if a file with the same name already exists
-            if Path(filepath_mp3).exists():
-                raise FileExistsError("File already exists")
-
-            # Join wave files
-            with wave.open(filepath_wav, "wb") as wavfile:
-                wavfile.setparams(wav_data[0][0])
-                wavfile.writeframes(wav_data[0][1])
-                wavfile.writeframes(wav_data[1][1])
-
-            # Return filename and relative filepath
-            return joined_filename, filepath_wav
-
-        # Combine wavs
+        # Combine .wavs
         try:
-            joined_filename_wav, joined_filepath_wav = join_wavs(infile_1_name, file_1, infile_2_name, file_2)
-        except FileExistsError:
-            raise
+            joined = join_wavs(*files)
+        except (FileNotFoundError, FileExistsError) as e:
+            raise CommandError(e)
         except Exception:
-            await ctx.send("Something went wrong.")
+            await ctx.send("ERROR: Something went wrong when attempting to join files.")
+            raise
         finally:
-            # Delete all temporary files afterwards
-            os.remove(infile_1_name)
-            os.remove(infile_2_name)
+            # Delete temporary files (if any)
+            for tf in tempfiles:
+                os.remove(tf)
 
-        # Convert
-        if joined_filename_wav:
-            await self.bot.loop.run_in_executor(None, convert, "", joined_filename_wav, False)
-            await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{joined_filename_wav}**")
+        # Convert joined file to mp3 (why?)
+        await self.bot.loop.run_in_executor(None, convert, joined, False)
+        await ctx.send(f"Combined **{file_1}** & **{file_2}**! New sound: **{joined.stem}**")
 
         # Delete wav version of joined file
-        if Path(joined_filepath_wav).exists():
-            os.remove(joined_filepath_wav)
+        if Path(joined).exists():
+            os.remove(joined)
