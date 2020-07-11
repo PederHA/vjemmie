@@ -37,20 +37,20 @@ from ..utils.youtube import youtube_get_top_result
 from .base_cog import BaseCog
 
 ytdlopts = {
-    'format': 'bestaudio',
-    'outtmpl': f'{YTDL_DIR}/%(title)s.%(ext)s',
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': True,
-    'quiet': False,
-    'no_warnings': False,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0'  # ipv6 addresses cause issues sometimes
+    "format": "bestaudio/best",
+    "outtmpl": f"{YTDL_DIR}/%(title)s.%(ext)s",
+    "noplaylist": True,
+    "nocheckcertificate": True,
+    "ignoreerrors": False,
+    "logtostderr": True,
+    "quiet": False,
+    "no_warnings": False,
+    "default_search": "auto",
+    "source_address": "0.0.0.0"  # ipv6 addresses cause issues sometimes
 }
 
 ffmpegopts = {
-    "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+    "before_options": "-nostdin -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -strict experimental",
     "options": f"-vn -loglevel {FFMPEG_LOGLEVEL}"
 }
 
@@ -86,7 +86,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return self.__getattribute__(item)
 
     @classmethod
-    async def create_source(cls, ctx, search: str, *, loop, download=False):
+    async def create_source(cls, ctx: commands.Context, search: str, *, loop: asyncio.AbstractEventLoop, download=False):
         loop = loop or asyncio.get_event_loop()
 
         to_run = partial(ytdl.extract_info, url=search, download=download)
@@ -106,7 +106,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author)
 
     @classmethod
-    async def create_local_source(cls, ctx, subdir: str, filename: str):
+    async def create_local_source(cls, ctx: commands.Context, subdir: str, filename: str):
         path = get_file_path(subdir, filename)
 
         # Send add-to-queue confirmation
@@ -120,12 +120,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         Since Youtube Streaming links expire."""
         loop = loop or asyncio.get_event_loop()
-        requester = data['requester']
+        requester = data["requester"]
 
-        to_run = partial(ytdl.extract_info, url=data['webpage_url'], download=False)
+        to_run = partial(ytdl.extract_info, url=data["webpage_url"], download=False)
         data = await loop.run_in_executor(None, to_run)
         
-        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpegopts), data=data, requester=requester)
+        return cls(discord.FFmpegPCMAudio(data["url"], **ffmpegopts), data=data, requester=requester)
 
 
 class AudioPlayer:
@@ -348,7 +348,7 @@ class SoundCog(BaseCog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
+                raise InvalidVoiceChannel("No channel to join. Please either specify a valid channel or join one.")
 
         vc = ctx.voice_client
 
@@ -366,12 +366,12 @@ class SoundCog(BaseCog):
             try:
                 await vc.move_to(channel)
             except asyncio.TimeoutError:
-                raise VoiceConnectionError(f'Moving to channel: <{channel}> timed out.')
+                raise VoiceConnectionError(f"Moving to channel: <{channel}> timed out.")
         else:
             try:
                 await channel.connect()
             except asyncio.TimeoutError:
-                raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
+                raise VoiceConnectionError(f"Connecting to channel: <{channel}> timed out.")
         
         # Keep ffmpeg hot (seems to fix delayed sound output on initial sound file)
         subprocess.call("ffmpeg", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -480,13 +480,13 @@ class SoundCog(BaseCog):
         else:
             await self.cleanup(ctx.guild)
 
-    @commands.command(name='skip')
+    @commands.command(name="skip")
     async def skip(self, ctx):
         """Skip the song."""
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=5)
+            return await ctx.send("I am not currently playing anything!", delete_after=5)
 
         if vc.is_paused():
             pass
@@ -494,7 +494,7 @@ class SoundCog(BaseCog):
             return
 
         vc.stop()
-        await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
+        await ctx.send(f"**`{ctx.author}`**: Skipped the song!")
 
     @commands.command(name="volume", aliases=["vol"])
     @admins_only()
@@ -503,10 +503,10 @@ class SoundCog(BaseCog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=5)
+            return await ctx.send("I am not currently connected to voice!", delete_after=5)
 
         if not 0 < vol < 101:
-            return await ctx.send('Please enter a value between 1 and 100.')
+            return await ctx.send("Please enter a value between 1 and 100.")
 
         player = self.get_player(ctx)
 
@@ -514,7 +514,7 @@ class SoundCog(BaseCog):
             vc.source.volume = vol / 100
 
         player.volume = vol / 100
-        await ctx.send(f'**`{ctx.author}`**: Set the volume to **{vol}%**')
+        await ctx.send(f"**`{ctx.author}`**: Set the volume to **{vol}%**")
 
     @commands.command(name="now_playing", aliases=["np"])
     async def now_playing(self, ctx) -> None:
@@ -532,8 +532,8 @@ class SoundCog(BaseCog):
         except discord.HTTPException:
             pass
 
-        player.np = await ctx.send(f'**Now Playing:** `{vc.source.title}` '
-                                   f'requested by `{vc.source.requester}`')
+        player.np = await ctx.send(f"**Now Playing:** `{vc.source.title}` "
+                                   f"requested by `{vc.source.requester}`")
 
     @commands.command(name="destroy", aliases=["quit"])
     @admins_only()
@@ -541,12 +541,12 @@ class SoundCog(BaseCog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            return await ctx.send("I am not currently playing anything!", delete_after=20)
 
         await self.cleanup(ctx.guild)
 
     @commands.command(name="soundlist",
-                      aliases=["sounds"], description='Prints a list of all sounds on the soundboard.')
+                      aliases=["sounds"], description="Prints a list of all sounds on the soundboard.")
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.user)
     async def soundlist(self, ctx: commands.Context, category: Optional[str]=None) -> None:
         """List soundboard files.
@@ -681,7 +681,7 @@ class SoundCog(BaseCog):
 
         upcoming = list(islice(player.queue._queue, 0, 5))
 
-        out_msg = "\n".join(f'{idx}. **`{up["title"]}`**' for idx, up in enumerate(upcoming, 1))
+        out_msg = "\n".join(f"{idx}. **`{up['title']}`**" for idx, up in enumerate(upcoming, 1))
 
         await self.send_embed_message(ctx, "Queue", out_msg, color="red")
 
@@ -740,12 +740,12 @@ class SoundCog(BaseCog):
 
         filename = await self._do_create_tts_file(text, language, filename)
 
-        await ctx.send(f'TTS audio file created: **`{filename}`**')
+        await ctx.send(f"TTS audio file created: **`{filename}`**")
 
-        # Try to play created sound file in author's voice channel afterwards
+        # Try to play created sound file in author"s voice channel afterwards
         #with suppress(AttributeError):
         if ctx.message.author.voice:
-            cmd  = self.bot.get_command('play')
+            cmd  = self.bot.get_command("play")
             await ctx.invoke(cmd, filename)
 
     async def _do_create_tts_file(self, text: str, language: str, filename: str, *, directory: str=TTS_DIR, overwrite: bool=False) -> None:
