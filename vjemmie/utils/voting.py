@@ -120,8 +120,7 @@ class VotingSession:
         while True:
             if self.elapsed > self.duration:
                 await self.ctx.send(
-                    f"Voting session for {self.commandstr} ended. Not enough votes.",
-                    delete_after=10
+                    f"Voting session for {self.commandstr} ended. Not enough votes."
                 )
                 return await purge_session(self.ctx, self.topic)
             await asyncio.sleep(self.loopinterval)
