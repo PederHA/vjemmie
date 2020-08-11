@@ -43,6 +43,7 @@ class Text:
     stroke_thickness: int = 1
     stroke_color: Tuple[int, int, int, int] = (0, 0, 0, 255)
     upper: bool = False
+    center: bool = False
 
     def __post_init__(self) -> None:
         # TODO: Check that font exists
@@ -211,7 +212,7 @@ avatar_commands = [
         text=[
             Text(
                 size=70,
-                offset=(319, 15),
+                offset=(319, 0),
                 font="Cocogoose Pro-trial.ttf",
                 color=(237, 221, 208, 255),
                 shadow=True,
@@ -227,7 +228,8 @@ avatar_commands = [
                 shadow=True,
                 stroke=True,
                 stroke_thickness=3,
-                upper=True
+                upper=True,
+                center=True
             )
         ]
     ),
@@ -236,7 +238,7 @@ avatar_commands = [
 
 async def avatar_command(cog: commands.Cog, ctx: commands.Context, user: NonCaseSensMemberConverter=None, *, command: AvatarCommand) -> None:
     # NOTE: Handle this somewhere else?
-    cmd = deepcopy(command)
+    cmd = deepcopy(command) # so we can modify command attributes locally
     for text in cmd.text:
         if not text.content:
             text.content = unidecode(user.name if user else ctx.message.author.name)
@@ -424,17 +426,26 @@ class AvatarCog(BaseCog):
         
         # Get a drawing context
         d = ImageDraw.Draw(_txt)
-        
+
+        # Centering determines the value of the offset variable
+        if text.center:
+            w, _ = d.textsize(text.content, font=font)
+            img_w, _ = background.size
+            offset = ((img_w-w)/2, text.offset[1]) # how ugly is this dude
+        else: 
+            offset = text.offset
+
         # Add stroke FIRST
         if text.stroke:
             t = text.stroke_thickness
-            d.text((text.offset[0]-t, text.offset[1]-t), text.content, font=font, fill=text.stroke_color)
-            d.text((text.offset[0]+t, text.offset[1]-t), text.content, font=font, fill=text.stroke_color)
-            d.text((text.offset[0]-t, text.offset[1]+t), text.content, font=font, fill=text.stroke_color)
-            d.text((text.offset[0]+t, text.offset[1]+t), text.content, font=font, fill=text.stroke_color)
+            d.text((offset[0]-t, offset[1]-t), text.content, font=font, fill=text.stroke_color)
+            d.text((offset[0]+t, offset[1]-t), text.content, font=font, fill=text.stroke_color)
+            d.text((offset[0]-t, offset[1]+t), text.content, font=font, fill=text.stroke_color)
+            d.text((offset[0]+t, offset[1]+t), text.content, font=font, fill=text.stroke_color)
 
 
-        d.text(text.offset, text.content, font=font, fill=text.color)
+        
+        d.text(offset, text.content, font=font, fill=text.color)
 
         # Return alpha composite of background and text
         return Image.alpha_composite(background, _txt)
