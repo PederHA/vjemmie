@@ -212,7 +212,7 @@ avatar_commands = [
         text=[
             Text(
                 size=70,
-                offset=(319, 0),
+                offset=(319, 15),
                 font="Cocogoose Pro-trial.ttf",
                 color=(237, 221, 208, 255),
                 shadow=True,
