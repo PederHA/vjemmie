@@ -30,15 +30,16 @@ class Avatar: # Should be a collections.namedtuple or typing.NamedTuple instead 
 @dataclass
 class Text:
     """Represents text to be added to an image. 
-    Attributes correspond with parameters of AvatarCog._add_text()`
     
     `content` always defaults to ctx.message.author.name or user.name if
     not given a value.
     """
+    
     size: int
     offset: Tuple[int, int] # x, y
+    content: str = ""
     font: str = "LiberationSans-Regular.ttf"
-    color: Tuple[int, int, int, int] = (255, 255, 255, 255) # RGBA
+    color: Tuple[int, int, int, int] = (255, 255, 255, 255) # RGBA 
     shadow: bool = False
     stroke: bool = False
     stroke_thickness: int = 1
@@ -221,6 +222,9 @@ avatar_commands = [
                 stroke=True,
                 stroke_thickness=3,
                 upper=True,
+                size_func=(
+                    lambda t: 630 // len(t.content)
+                ),
             ),
             Text(
                 size=80,
