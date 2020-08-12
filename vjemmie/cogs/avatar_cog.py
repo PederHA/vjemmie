@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import io
 from itertools import zip_longest
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Callable
 from unidecode import unidecode
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,13 +39,13 @@ class Text:
     offset: Tuple[int, int] # x, y
     font: str = "LiberationSans-Regular.ttf"
     color: Tuple[int, int, int, int] = (255, 255, 255, 255) # RGBA
-    content: str = ""
     shadow: bool = False
     stroke: bool = False
     stroke_thickness: int = 1
     stroke_color: Tuple[int, int, int, int] = (0, 0, 0, 255)
     upper: bool = False
-    center: bool = False
+    center: bool = False # Center text horizontally
+    size_func: Optional[Callable[[Text], int]] = None
 
     def __post_init__(self) -> None:
         # TODO: Check that font exists
@@ -401,6 +403,9 @@ class AvatarCog(BaseCog):
         """
         if text.upper:
             text.content = text.content.upper()
+        
+        if text.size_func:
+            text.size = text.size_func(text)
 
         # Get new image
         _txt = Image.new("RGBA", background.size)
@@ -414,6 +419,8 @@ class AvatarCog(BaseCog):
             s.text(
                 (
                     # Offset + 1% of width/height of image
+                    # TODO: If result of integer divison is 0,
+                    #       set value to 1.
                     text.offset[0]+(background.size[0]//100), 
                     text.offset[1]+(background.size[1]//100)
                 ), 
@@ -442,8 +449,6 @@ class AvatarCog(BaseCog):
             d.text((offset[0]+t, offset[1]-t), text.content, font=font, fill=text.stroke_color)
             d.text((offset[0]-t, offset[1]+t), text.content, font=font, fill=text.stroke_color)
             d.text((offset[0]+t, offset[1]+t), text.content, font=font, fill=text.stroke_color)
-
-
         
         d.text(offset, text.content, font=font, fill=text.color)
 
