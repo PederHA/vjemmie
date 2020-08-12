@@ -210,7 +210,7 @@ avatar_commands = [
         name="allmyhomies",
         template="allmyhomies.jpg",
         help="https://i.imgur.com/7jxk8Qd.jpg",
-        avatars=[Avatar(w=200, h=200, x=260, y=205)], 
+        avatars=[Avatar(w=200, h=200, x=275, y=240)], 
         #template_overlay=True, # hide avatar
         text=[
             Text(
