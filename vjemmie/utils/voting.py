@@ -80,9 +80,16 @@ class VotingSession:
         self.start = datetime.now()
         self.votes: Dict[int, Vote] = {}
         if self.loop:
-            self.bot.loop.create_task(self.stop_loop())
-            self.loop = None
+            self.stop_loop()
+    
+    def start_loop(self) -> None:
+        self.loop = self.bot.loop.create_task(self.sessionloop())
 
+    def stop_loop(self) -> None:
+        if self.loop:
+            self.loop.cancel()
+            self.loop = None
+   
     @property
     def votes_remaining(self) -> int:
         return self.threshold - len(self.votes)
@@ -106,21 +113,14 @@ class VotingSession:
     def __del__(self) -> None:
         """Ensures an active loop is cancelled when object is deleted."""
         with suppress(AttributeError, asyncio.CancelledError):
-            self.loop.cancel()
-        
-    async def start_loop(self) -> None:
-        self.loop = self.bot.loop.create_task(self.sessionloop())
-
-    async def stop_loop(self) -> None:
-        if self.loop:
-            self.loop.cancel()
+            self.stop_loop()
 
     async def sessionloop(self) -> None:
         """Periodically checks if voting session is still active."""
         while True:
             if self.elapsed > self.duration:
                 await self.ctx.send(
-                    f"Voting session for {self.commandstr} ended. Not enough votes."
+                    f"Voting session for {self.commandstr} ended. Insufficient votes."
                 )
                 return await purge_session(self.ctx, self.topic)
             await asyncio.sleep(self.loopinterval)
@@ -141,7 +141,7 @@ class VotingSession:
 
         # Start voting session loop
         if not self.loop:
-            await self.start_loop()
+            self.start_loop()
 
         if await self.check_votes():
             await ctx.send(f"Sufficient votes received!") # NOTE: remove?
@@ -222,6 +222,7 @@ async def get_session(ctx: commands.Context, topic: str) -> VotingSession:
 
 async def purge_session(ctx: commands.Context, topic: str) -> None:
     """Attempts to delete a voting session based on context."""
+    SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic].stop_loop()
     del SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic]
 
 
