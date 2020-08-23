@@ -5,7 +5,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from enum import Enum
-from typing import Dict
+from typing import Dict, DefaultDict, Optional
 
 import discord
 from discord.ext import commands
@@ -14,8 +14,6 @@ from discord.ext.commands.errors import BadArgument
 from .converters import NonCaseSensMemberConverter
 from .exceptions import CommandError
 
-# Nested dicts are trash, but really easy to use
-SESSIONS = defaultdict(lambda: defaultdict(dict)) # don't shoot me for this, please
 
 
 class TopicType(Enum):
@@ -68,7 +66,7 @@ class VotingSession:
             self.loopinterval = loopinterval
             
         self.bot: commands.Bot = ctx.bot
-        self.loop: asyncio.Task = None
+        self.loop: Optional[asyncio.Task] = None
         self.reset()
         self.topic = topic
         self.commandstr = f"`{ctx.bot.command_prefix}{ctx.command.qualified_name} {self.topic}`"
@@ -207,7 +205,14 @@ async def get_str_topic(ctx: commands.Context, topic: TopicType) -> str:
         member = await NonCaseSensMemberConverter().convert(ctx, s)
         return member.name # member.id instead? Could run into users with identical names
     return s # fall back on s no matter what
-    
+
+# Nested dicts are trash, but really easy to use
+# Key 1: Guild ID
+# Key 2: Qualified name of command
+# Key 3: Voting topic
+SessionsType = DefaultDict[int, DefaultDict[str, Dict[str, VotingSession]]]
+SESSIONS: SessionsType = defaultdict(lambda: defaultdict(dict)) # don't shoot me for this, please
+
 
 async def create_session(ctx: commands.Context, topic: str, *args, **kwargs) -> VotingSession:
     session = VotingSession(ctx, topic, *args, **kwargs)
@@ -216,17 +221,17 @@ async def create_session(ctx: commands.Context, topic: str, *args, **kwargs) -> 
 
 
 async def get_session(ctx: commands.Context, topic: str) -> VotingSession:
-    """Attempts to retrieve a voting session based on context."""
+    """Attempts to retrieve a voting session based on context and topic."""
     return SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic]
 
 
 async def purge_session(ctx: commands.Context, topic: str) -> None:
-    """Attempts to delete a voting session based on context."""
+    """Attempts to delete a voting session based on context and topic."""
     SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic].stop_loop()
     del SESSIONS[ctx.guild.id][ctx.command.qualified_name][topic]
 
 
 async def add_vote(ctx: commands.Context, topic: str) -> None:
-    """Attempts to add a vote to a voting session based on context."""
+    """Attempts to add a vote to a voting session based on context and topic."""
     sess = await get_session(ctx, topic)
     await sess.add_vote(ctx)
