@@ -127,6 +127,39 @@ class BaseCog(commands.Cog):
                 p.touch()
                 if p.suffix == ".json":
                     p.write_text(f"{default_factory()}")
+    
+    # Override default exception handler
+    async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
+        """Handles exceptions raised by commands defined in the cog.
+
+        Parameters
+        ----------
+        ctx : commands.Context
+            Discord Context object
+        error : Exception
+            Exception that was raised
+        """
+        # This might have been fixed in a recent version of Discord.py
+        if bugged_params:
+            ctx = error
+            error = bugged_params[0]
+
+        # Check if error stems from lack of privileges
+        if isinstance(error, commands.CheckFailure):
+            # only post this catch-all message for general check failures
+            # Subclassed check failures should be handled by their own coroutine
+            if issubclass(error.__class__, commands.CheckFailure):
+                return
+            return await ctx.send("Insufficient privileges to execute command!")
+
+        # Ignore cooldown exceptions
+        if isinstance(error, commands.CommandOnCooldown):
+            return await ctx.send(
+                f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
+                f"Try again in {error.retry_after:.2f}s")
+
+        # Default error handler
+        return await self._handle_error(ctx, error)
 
     @property
     def cog_name(self) -> str:
@@ -439,37 +472,7 @@ class BaseCog(commands.Cog):
         channel = self.bot.get_channel(LOG_CHANNEL_ID)
         await channel.send(f"{self.AUTHOR_MENTION} {message}")
 
-    async def cog_command_error(self, ctx: commands.Context, error: Exception, *bugged_params) -> None:
-        """Handles exceptions raised by commands defined in the cog.
 
-        Parameters
-        ----------
-        ctx : commands.Context
-            Discord Context object
-        error : Exception
-            Exception that was raised
-        """
-        # This might have been fixed in a recent version of Discord.py
-        if bugged_params:
-            ctx = error
-            error = bugged_params[0]
-
-        # Check if error stems from lack of privileges
-        if isinstance(error, commands.CheckFailure):
-            # only post this catch-all message for general check failures
-            # Subclassed check failures should be handled by their own coroutine
-            if issubclass(error.__class__, commands.CheckFailure):
-                return
-            return await ctx.send("Insufficient privileges to execute command!")
-
-        # Ignore cooldown exceptions
-        if isinstance(error, commands.CommandOnCooldown):
-            return await ctx.send(
-                f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
-                f"Try again in {error.retry_after:.2f}s")
-
-        # Default error handler
-        return await self._handle_error(ctx, error)
 
     # UNFINISHED
     async def parse_error(self, error: BaseException) -> None:
@@ -904,15 +907,15 @@ class BaseCog(commands.Cog):
             else:
                 await ctx.send(embed=embed)
 
-    async def read_send_file(self, ctx: commands.Context, path: str, *, encoding: str="utf-8") -> None:
+    async def read_send_file(self, ctx: commands.Context, path: Union[str, Path], *, encoding: str="utf-8") -> None:
         """Reads local text file and sends contents to `ctx.channel`"""
         with open(path, "r", encoding=encoding) as f:
             await self.send_text_message(f.read(), ctx)
 
     def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
         """Generates a 24 bit hex color code from a user-defined phrase."""
-        phrase = str(phrase).encode()
-        h = hashlib.blake2b(phrase, digest_size=3, key=b"vjemmie")
+        p = str(phrase).encode()
+        h = hashlib.blake2b(p, digest_size=3, key=b"vjemmie")
         if as_int:
             return int(h.hexdigest(), 16)
         return h.hexdigest()
@@ -938,8 +941,8 @@ class BaseCog(commands.Cog):
                 p.scheme in ["http", "https"] and
                 any(p.path.lower().endswith(ext)
                 for ext in self.IMAGE_EXTENSIONS) and
-                not url.endswith(p.hostname)
-                )
+                p.hostname is not None and not url.endswith(p.hostname)
+               )
 
     async def log_file_download(self,
                                 ctx: commands.Context,

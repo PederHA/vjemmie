@@ -128,3 +128,12 @@ class MemeCog(BaseCog):
         
         await ctx.send(model.make_sentence(tries=300))
         
+    @commands.command(name="ricardo")
+    async def ricardo(self, ctx: commands.Context, limit: int=4176) -> None:
+        """Get random submission from ricardodb.tk. 
+        
+        Limit is hard-coded right now because parsing the content on the site
+        is a bit of a pain, and additionally their SSL certificate is not recognized
+        by the `certifi` module."""
+        n = random.randint(1, limit)
+        await ctx.send(f"https://ricardodb.tk/post/{n}")

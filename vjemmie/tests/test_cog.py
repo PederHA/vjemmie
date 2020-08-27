@@ -59,6 +59,18 @@ def decorator_factory(attr_k: str, attr_v: Any=SENTINEL) -> Any: # Callable[[Any
     return outer
 
 
+
+def stop_after(f: Callable) -> Callable:
+    @wraps(f)
+    async def wrapper(*args, **kwargs) -> Optional[Any]:
+        r = await f(*args, **kwargs)
+        #stop here
+        return r
+    return wrapper
+
+
+
+
 # Up/Downloads data to/from internet
 network_io = decorator_factory("network_io")
 
@@ -148,7 +160,8 @@ class TestCog(BaseCog):
         await self._pre_tests_setup()
 
         # Temporarily patch ctx to disable message sending while invoking bot commands
-        with self.patch_ctx(ctx) as ctx_: 
+        with self.patch_ctx(ctx) as ctx_:
+
             for test in [k for k in dir(self) if k.startswith("test_")]:
                 # Get coroutine
                 coro = getattr(self, test)
@@ -297,7 +310,7 @@ class TestCog(BaseCog):
             return op
         else:
             return DEFAULT_OPERATOR
-
+            
     async def _format_assertion_error(self, result: Any, cmd_name: str, assertion: Any) -> None:
         await self.log_test_error(cmd_name)
         if assertion is not SENTINEL:
@@ -484,6 +497,11 @@ class TestCog(BaseCog):
         pass
 
     @voice
+    @stop_after
+    async def test_soundcog_yt(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "play", "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+    @voice
     async def test_soundcog_stop(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "stop")
 
@@ -572,7 +590,10 @@ class TestCog(BaseCog):
     
     async def test_usercog_help_command_deepfry(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "help", "deepfry")
-
+    
+    async def test_usercog_help_subcommand_reddit(self, ctx: commands.Context) -> None:
+        await self.do_test_command(ctx, "help", "reddit")
+    
     async def test_usercog_commands(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "commands")
 

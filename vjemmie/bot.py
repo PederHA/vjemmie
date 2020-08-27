@@ -1,6 +1,6 @@
 import sys
 from contextlib import suppress
-from typing import List
+from typing import List, Optional
 
 with suppress(ImportError):
     import uvloop # poetry run pip install (wheel) uvloop
@@ -16,15 +16,14 @@ from .utils.patching.commands import patch_command_signature
 patch_command_signature(Command)
 
 
-def run(
-    secrets,
-    cogs: List[Cog] = None,
-    test: bool = False,
-    command_prefix: str="!",
-    description: str="VJ Emmie",
-    pm_help: bool=False,
-    **kwargs
-) -> None:
+def run(secrets,
+        cogs: Optional[List[Cog]] = None,
+        test: bool = False,
+        command_prefix: str="!",
+        description: str="VJ Emmie",
+        pm_help: bool=False,
+        **kwargs
+       ) -> None:
     # Setup cogs
     if not cogs:
         cogs = []

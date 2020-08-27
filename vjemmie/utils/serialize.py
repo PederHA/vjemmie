@@ -1,8 +1,27 @@
 import json
 from typing import Any, Union
+from pathlib import Path
 
 
-def load_json(fp: str, default_factory=Union[list, dict]) -> Union[list, dict]:
+def create_json_file(filepath: Union[str, Path], default_factory: Union[list, dict]=dict, encoding="utf-8", **kwargs) -> None:
+    try:
+        filepath = Path(filepath)
+    except:
+        raise TypeError("file path must be a path-like object!")
+    
+    # Make sure file has correct suffix
+    if not filepath.suffix.lower() == ".json":
+        filepath = filepath.with_name(f"{filepath.name}.json")
+
+    # NOTE: Should this be included?
+    #if not filepath.exists():
+    #    filepath.touch()
+
+    with open(filepath, "w", encoding=encoding, **kwargs) as f:
+        f.write(default_factory)
+
+
+def load_json(fp: str, default_factory: Union[list, dict]) -> Union[list, dict]:
     """Not sure wtf this is. Use `utils.get_cached` instead"""
     f = open(fp, "r")
     try:
@@ -25,6 +44,7 @@ def load_json(fp: str, default_factory=Union[list, dict]) -> Union[list, dict]:
         f.write(f"{default_factory()}")
         f.close()
         return default_factory()
+
 
 def dump_json(fp: str, obj: Any, default: Any=None) -> None:
     d = json.dumps(obj, indent=4, default=default)

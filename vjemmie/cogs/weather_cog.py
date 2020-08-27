@@ -7,9 +7,7 @@ from .base_cog import BaseCog
 
 
 class WeatherCog(BaseCog):
-    """
-    Weather data commands.
-    """
+    """Weather data commands."""
     
     EMOJI = ":umbrella:"
     geolocator = Nominatim(user_agent="VJEMMIE")

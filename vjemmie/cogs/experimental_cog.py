@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from datetime import datetime
 from functools import partial
@@ -34,7 +36,7 @@ class User:
     reacts: Dict[int, Emoji] = field(default_factory=dict)
 
     @classmethod
-    def fromdict(cls, d: dict) -> object: # from __future__ import annotations in >=3.8
+    def fromdict(cls, d: dict) -> User:
         obj = cls.__new__(cls)
         obj.id = d["id"]
         obj.total_reacts = d["total_reacts"]

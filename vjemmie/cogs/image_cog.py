@@ -299,6 +299,6 @@ class ImageCog(BaseCog):
         try:
             image_text = await self.bot.loop.run_in_executor(None, self.read_image_text, img)
         except pytesseract.pytesseract.TesseractNotFoundError:
-            await self.warn_owner("Tesseract is not installed or not added to PATH!")
-            raise
+            await self.warn_owner("Tesseract is not installed or is not added to PATH!")
+            raise CommandError("This command has not been properly configured by the bot owner yet.")
         await self.send_text_message(image_text, ctx)

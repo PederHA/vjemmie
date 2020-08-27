@@ -202,16 +202,21 @@ class AdminCog(BaseCog):
         if not ctx.invoked_subcommand:
             raise CommandError("A subcommand is required!")
 
-    def _get_log_dir(self) -> None:
-        vjemmie_dir = Path(os.environ.get("VJEMMIE_DIR")) or Path.home() / "vjemmie"
+    def _get_log_dir(self) -> Path:
+        if os.environ.get("VJEMMIE_DIR"): # Use walrus operator? somewhat disgusting
+            vjemmie_dir = Path(os.environ.get("VJEMMIE_DIR", "")) # default value to please mypy
+        else:
+            vjemmie_dir = Path.home() / "vjemmie"
+        
         if not vjemmie_dir.exists():
             raise CommandError(
                 "Unable to locate vjemmie directory. "
-                "Environment variable 'VJEMMIE_DIR' should be set to the bot's directory."
+                "Either set environment variable 'VJEMMIE_DIR' to the path of the bot's directory. "
+                f"Or install vjemmie at {Path.home() / 'vjemmie'}"
             )
 
-        # Check if log dir exists
         log_dir = vjemmie_dir / "logs"
+        # Check if log dir exists
         if not log_dir.exists():
             raise CommandError("Unable to locate log directory!")
         
@@ -251,7 +256,9 @@ class AdminCog(BaseCog):
     @log.command(name="list")
     async def list_log_files(self, ctx: commands.Context) -> None:
         log_dir = self._get_log_dir()
-        files = "\n".join(list(log_dir.iterdir()))
+        files = "\n".join(
+            str(f) for f in log_dir.iterdir()
+        )
         await self.send_text_message(files, ctx)
 
     @commands.command(name="blacklist")
@@ -330,16 +337,16 @@ class AdminCog(BaseCog):
         after = datetime.now() - timedelta(hours=2)
 
         try:
-            member = await commands.MemberConverter().convert(ctx, member)
+            m = await commands.MemberConverter().convert(ctx, member)
         except:
-            member = None
+            m = None
 
         n = 0
         async for msg in ctx.message.channel.history(limit=250, after=after):
             if content and content in msg.content and msg.content != ctx.message.content:
                 await msg.delete()
                 n += 1
-            if member and member.name == msg.author.name:
+            if m and m.name == msg.author.name:
                 await msg.delete()
                 n += 1
         s = "s" if n>1 else ""
@@ -426,7 +433,7 @@ class AdminCog(BaseCog):
         await self._show_trusted(ctx, category="roles", content=self.fmt_trusted_roles)
 
     async def _show_trusted(self, ctx: commands.Context, category: str, content: Awaitable) -> None:
-        content = await content(ctx)
+        c = await content(ctx)
         
         if not content:
             return await ctx.send(f"No trusted {category} added.")
@@ -434,7 +441,7 @@ class AdminCog(BaseCog):
         await self.send_embed_message(
             ctx,
             title=f"{ctx.guild.name} Trusted {category.capitalize()}",
-            description=content,
+            description=c,
             color=self.get_bot_color(ctx))
 
     async def fmt_trusted_members(self, ctx: commands.Context) -> str:
@@ -442,17 +449,17 @@ class AdminCog(BaseCog):
 
         # drop users whose ID can't be identified
         users = list(filter(None.__ne__, [self.bot.get_user(member) for member in members]))
-        users = "\n".join([f"{u.name}`#{u.discriminator}`" for u in users])
+        u = "\n".join([f"{u.name}`#{u.discriminator}`" for u in users])
 
-        return users
+        return u
 
     async def fmt_trusted_roles(self, ctx: commands.Context) -> str:
         roles = get_trusted_roles(ctx.guild.id)
 
         roles = list(filter(None.__ne__, [await commands.RoleConverter().convert(ctx, str(role)) for role in roles]))
-        roles = "\n".join([role.name for role in roles])
+        r = "\n".join([role.name for role in roles])
 
-        return roles
+        return r
 
     @tasks.loop(seconds=86400.0)
     async def system_diagnostics_loop(self) -> None:

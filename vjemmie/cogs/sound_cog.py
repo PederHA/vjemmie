@@ -956,8 +956,6 @@ class SoundCog(BaseCog):
         """
 
         # NOTE: ugly
-        infile_1: Optional[Path] = None
-        infile_2: Optional[Path] = None
         files: List[Path] = []
         
         for f in [file_1, file_2]:

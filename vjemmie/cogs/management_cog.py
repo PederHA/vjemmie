@@ -40,7 +40,7 @@ class ManagementCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
 
-    @commands.command(name="reacts")
+    @commands.command(name="reacts2")
     @admins_only()
     @disabled_cmd()    
     async def react_messages(self, ctx) -> None:

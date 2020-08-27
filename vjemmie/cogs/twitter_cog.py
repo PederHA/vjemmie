@@ -101,8 +101,7 @@ class TwitterCog(BaseCog):
         else:
             self.create_commands(self.users[user])
             await ctx.send(f"Added {user}!")
-
-    
+  
     @twitter.command(name="update")
     async def update_tweets(self, ctx: commands.Context, user: str) -> None:
         """Update tweets for a specific user."""
@@ -131,7 +130,6 @@ class TwitterCog(BaseCog):
             )
 
         await self.send_embed_message(ctx, "Twitter users", users)
-
 
     async def get_tweets(self, ctx: commands.Context, user: str, aliases=None) -> List[Tuple[str, str]]:
         """Retrieves tweets for a specific user.
