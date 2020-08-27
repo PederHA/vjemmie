@@ -4,6 +4,8 @@
 # Python
 __pycache__/
 
+# MyPy
+.mypy*
 
 # Distribution files
 vjemmie.egg-info/
@@ -33,6 +35,16 @@ sounds/
 temp/
 SoundboardProxy/
 stats/
+scripts/
+tests/logs
+memes/images*
+logs/
+deepfryer/
+deploy/
+tests/
+vjemmie/ladder/restructure
+_gcp_vjemmie/
+_old_db/
 
 # Single files
 cogs/message_cog.py
@@ -51,3 +63,34 @@ pfmalexa.py
 
 # Tests
 *pytest*
+requirements_discordgit.txt
+pipenvgraph.txt
+Pipfile copy
+vjemmie/cogs/db_cog.py
+vjemmie/cogs/pfm_cog.py
+stevendtweets.json
+pfm.csv
+pfm2_dirty.csv
+pfm2.csv
+pfm3.csv
+notey.csv
+trvllfjvz.csv
+get_poetry.py
+im.py
+devfile.py
+base.Dockerfile
+checkdeps.py
+config.yaml
+config2.py
+vjemmie.Dockerfile
+TODO.md
+requirements.txt
+reacts.json
+scripts_from_gcp/sync_db.sh
+scripts_from_gcp/sync_sounds.sh
+install.sh
+install_pyenv.sh
+generate_requirements.ps1
+memes/pfm_memes.json
+img.png
+parse_config.py
