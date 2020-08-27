@@ -4,15 +4,18 @@
 # Python
 __pycache__/
 
-# mypy
+# MyPy
 .mypy*
+
+# Distribution files
+vjemmie.egg-info/
+dist/
 
 # Startup scripts
 botstartup*
 
 # Config and credentials files
 botsecrets.py
-config.py
 
 # Filetypes
 *.pkl
@@ -23,18 +26,25 @@ config.py
 docker*
 Docker*
 .docker*
-*.Dockerfile
 
 # Directories
 downloads/
 _dev/*
 db/*
-deepfryer/images/*
-memes/images*
 sounds/
 temp/
 SoundboardProxy/
+stats/
 scripts/
+tests/logs
+memes/images*
+logs/
+deepfryer/
+deploy/
+tests/
+vjemmie/ladder/restructure
+_gcp_vjemmie/
+_old_db/
 
 # Single files
 cogs/message_cog.py
@@ -50,22 +60,38 @@ alexa.json
 out/audioplayers.json
 utils/oldidk.py
 pfmalexa.py
-devfile.py
-config2.py
-
-# Dependencies
-generate_requirements.ps1
-requirements_discordgit.txt
-checkdeps.py
-pipenvgraph.txt
 
 # Tests
 *pytest*
-im.py
-cogs/test_cog2.py
-tests/logs/
-
-# Logs
-logs/
-
+requirements_discordgit.txt
+pipenvgraph.txt
 Pipfile copy
+vjemmie/cogs/db_cog.py
+vjemmie/cogs/pfm_cog.py
+stevendtweets.json
+pfm.csv
+pfm2_dirty.csv
+pfm2.csv
+pfm3.csv
+notey.csv
+trvllfjvz.csv
+get_poetry.py
+im.py
+devfile.py
+base.Dockerfile
+checkdeps.py
+config.yaml
+config2.py
+vjemmie.Dockerfile
+TODO.md
+requirements.txt
+reacts.json
+scripts_from_gcp/sync_db.sh
+scripts_from_gcp/sync_sounds.sh
+install.sh
+install_pyenv.sh
+generate_requirements.ps1
+memes/pfm_memes.json
+img.png
+parse_config.py
+memes/templates/allmyhomies.png
