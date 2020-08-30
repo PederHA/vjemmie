@@ -242,7 +242,7 @@ class FunCog(BaseCog):
         if not big_text:
             raise CommandError("None of the characters in the string could be bigified!")
         
-        await ctx.send(big_text)
+        await self.send_text_message(big_text, ctx)
 
     async def big_text(self, text: str) -> str:
         """Replaces characters in a string with regional indicator emojis."""
