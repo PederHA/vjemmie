@@ -46,7 +46,7 @@ class Text:
     stroke_color: Tuple[int, int, int, int] = (0, 0, 0, 255)
     upper: bool = False
     center: bool = False # Center text horizontally
-    helper: Optional[Callable[Text, None]] = None
+    helper: Optional[Callable[[Text], None]] = None
 
     def __post_init__(self) -> None:
         # TODO: Check that font exists
