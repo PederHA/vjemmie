@@ -140,15 +140,12 @@ class ImageCog(BaseCog):
         # Initial frying, returns an Image.Image object
         img = await ctx.invoke(self.deepfry, *args, rtn=True)
         
-        # Abort if !deepfry returns None
-        if not img:
-            return
-        
-        for i in range(passes):
-            img = await self._deepfry(ctx, img, rtn=True)
-        else:
-            # Finally send image on last pass of deepfrying
-            await self._deepfry(ctx, img)
+        async with ctx.typing():
+            for i in range(passes):
+                img = await self._deepfry(ctx, img, rtn=True)
+            else:
+                # Finally send image on last pass of deepfrying
+                await self._deepfry(ctx, img)
     
     @commands.command(name="blackhole")
     async def blackhole(self, ctx: commands.Context, *args) -> None:
