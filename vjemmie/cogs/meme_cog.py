@@ -41,7 +41,11 @@ class MemeCog(BaseCog):
         self.create_gpt_commands()
 
     def create_gpt_commands(self) -> None:
-        for file_ in Path("memes/txt/gpt").iterdir():
+        p = Path("memes/txt/gpt")
+        if not p.exists():
+            return
+        
+        for file_ in p.iterdir():
             if file_.suffix != ".txt":
                 continue
             
