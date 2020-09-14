@@ -473,7 +473,7 @@ avatar_commands = [
         name="threat",
         template="threat.jpg",
         help="https://i.imgur.com/7jxk8Qd.jpg",
-        avatars=[Avatar(w=195, h=177, x=0, y=157)],
+        avatars=[Avatar(w=195, h=177, x=0, y=153)],
         #template_overlay=True, # hide avatar
         text=[
             Text(
