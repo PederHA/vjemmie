@@ -290,8 +290,11 @@ def _allmyhomies_helper(text: Text) -> None:
             int(text.offset[1] - 20 + len(text.content)**1.5)
         )
     )
+    text.size = 580 // len(text.content) if len(text.content) > 5 else 70
 
-    text.size = 580 // len(text.content) if len(text.content) > 5 else 105
+
+def _threat_helper(text: Text) -> None:
+    text.size = round((30 / len(text.content)) * 8.5)
 
 
 avatar_commands = [
@@ -464,6 +467,23 @@ avatar_commands = [
                 upper=True,
                 center=True
             )
+        ]
+    ),
+    AvatarCommand(
+        name="threat",
+        template="threat.jpg",
+        help="https://i.imgur.com/7jxk8Qd.jpg",
+        avatars=[Avatar(w=195, h=177, x=0, y=157)],
+        #template_overlay=True, # hide avatar
+        text=[
+            Text(
+                size=30,
+                offset=(11, 340),
+                font="Cocogoose Pro-trial.ttf",
+                color=(0, 0, 0, 255),
+                upper=True,
+                helper=_threat_helper
+            ),
         ]
     ),
 ]
