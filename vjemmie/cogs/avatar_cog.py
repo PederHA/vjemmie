@@ -295,6 +295,12 @@ def _allmyhomies_helper(text: Text) -> None:
 
 def _threat_helper(text: Text) -> None:
     text.size = round((30 / len(text.content)) * 8.5)
+    if text.size > 40:
+        text.size = 40
+    text.offset = (
+        text.offset[0] + (text.size - (len(text.content)*5) if text.size > 30 else 0),
+        text.offset[1] - (round(text.size/20) if text.size > 30 else -4)
+    )
 
 
 avatar_commands = [
@@ -478,7 +484,7 @@ avatar_commands = [
         text=[
             Text(
                 size=30,
-                offset=(11, 336),
+                offset=(11, 333),
                 font="Cocogoose Pro-trial.ttf",
                 color=(0, 0, 0, 255),
                 upper=True,
