@@ -19,6 +19,7 @@ from ..utils.printing import eprint
 from . import reddit_cog, stats_cog, fun_cog
 from .base_cog import BaseCog, EmbedField
 
+QUIET = False # TODO: Make this a of persistent user-defined value
 
 class BotSetupCog(BaseCog):
     def __init__(self, bot) -> None:
@@ -28,6 +29,11 @@ class BotSetupCog(BaseCog):
         self.setup_github()
         self.setup_reddit()
         self.setup_mwthesaurus()
+        self.print = eprint
+        if QUIET:
+            def printer(*args, **kwargs):
+                pass
+            self.print = printer
             
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -35,7 +41,7 @@ class BotSetupCog(BaseCog):
             self.bot.secrets.SPOTIFY_CLIENT_ID
             ]
         ):
-            eprint(
+            self.print(
                 "Spotify Credentials are missing.\n"
                 "How to fix:\n"
                 "1. Create a Spotify User Account\n"
@@ -53,7 +59,7 @@ class BotSetupCog(BaseCog):
         )
     def setup_youtube(self) -> None:
         if not self.bot.secrets.YOUTUBE_API_KEY:
-            eprint(
+            self.print(
                 "YouTube API Key is missing.\n"
                 "How to fix:\n"
                 "1. Go to https://console.developers.google.com/apis/api/youtube.googleapis.com/credentials\n"
@@ -71,7 +77,7 @@ class BotSetupCog(BaseCog):
 
     def setup_github(self) -> None:
         if not self.bot.secrets.GITHUB_TOKEN:
-            eprint(
+            self.print(
                 "GitHub personal access token is missing.\n"
                 "How to fix:\n"
                 "1. Go to https://github.com/settings/tokens\n"
@@ -90,7 +96,7 @@ class BotSetupCog(BaseCog):
             self.bot.secrets.REDDIT_USER_AGENT,
             ]
         ):
-            eprint(
+            self.print(
                 "Reddit API credentials are missing.\n"
                 "How to fix:\n"
                 "1. Go to https://old.reddit.com/prefs/apps/\n"
@@ -106,7 +112,7 @@ class BotSetupCog(BaseCog):
 
     def setup_mwthesaurus(self) -> None:
         if not (self.bot.secrets.MERRIAM_WEBSTER_KEY):
-            eprint(
+            self.print(
                 "Merriam-Webster API credentials are missing.\n"
                 "How to fix:\n"
                 "1. Go to https://dictionaryapi.com/register/index\n"
@@ -117,15 +123,15 @@ class BotSetupCog(BaseCog):
 
     def remove_commands(self, commands: List[str]) -> None:
         for cmd in commands:
-            eprint(f"Disabling command '{self.bot.command_prefix}{cmd}'")
+            self.print(f"Disabling command '{self.bot.command_prefix}{cmd}'")
             self.bot.remove_command(cmd)
 
     def remove_cog(self, cog: str) -> None:
         if not self.bot.get_cog(cog):
-            eprint(
+            self.print(
                 f"BotSetupCog attempted to disable cog '{cog}', "
                 f"but no such cog exists."
             )
             return
-        eprint(f"Disabling cog '{cog}'")
+        self.print(f"Disabling cog '{cog}'")
         self.bot.remove_cog(cog)

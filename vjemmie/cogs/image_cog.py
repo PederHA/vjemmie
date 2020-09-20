@@ -113,29 +113,25 @@ class ImageCog(BaseCog):
         # Check if url or attachment is an image
         if not isinstance(url, io.BytesIO) and not await self.is_img_url(url):
             raise CommandError("URL or attachment must be an image file!")
-
-        try:
-            # Download image if url if not a file-like object
-            if not isinstance(url, io.BytesIO):
-                img = await self.download_from_url(ctx, url)
-            else:
-                img = url
-            # Deepfry
-            fryer = ImageFryer(img)
-            to_run = partial(fryer.fry, emoji, text, caption)
-            fried_img = await self.bot.loop.run_in_executor(None, to_run)
-        except Exception as e:
-            exc = traceback.format_exc()
-            await self.log_error(ctx, exc)
-            return await ctx.send("An unknown error occured.")
+        
+        # Download image if url if not a file-like object
+        if not isinstance(url, io.BytesIO):
+            img = await self.download_from_url(ctx, url)
         else:
-            # Return Image.Image object if nuking
-            if rtn:
-                return fried_img
+            img = url
             
-            # Upload fried image and get embed
-            embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
-            await ctx.send(embed=embed)
+        # Deepfry
+        fryer = ImageFryer(img)
+        to_run = partial(fryer.fry, emoji, text, caption)
+        fried_img = await self.bot.loop.run_in_executor(None, to_run)
+
+        # Return Image.Image object if nuking
+        if rtn:
+            return fried_img
+        
+        # Upload fried image and get embed
+        embed = await self.get_embed_from_img_upload(ctx, fried_img, "deepfried.jpg")
+        await ctx.send(embed=embed)
 
     @commands.command(name="nuke")
     async def nuke(self, ctx: commands.Context, *args, passes: int=3) -> None:
@@ -144,15 +140,12 @@ class ImageCog(BaseCog):
         # Initial frying, returns an Image.Image object
         img = await ctx.invoke(self.deepfry, *args, rtn=True)
         
-        # Abort if !deepfry returns None
-        if not img:
-            return
-        
-        for i in range(passes):
-            img = await self._deepfry(ctx, img, rtn=True)
-        else:
-            # Finally send image on last pass of deepfrying
-            await self._deepfry(ctx, img)
+        async with ctx.typing():
+            for i in range(passes):
+                img = await self._deepfry(ctx, img, rtn=True)
+            else:
+                # Finally send image on last pass of deepfrying
+                await self._deepfry(ctx, img)
     
     @commands.command(name="blackhole")
     async def blackhole(self, ctx: commands.Context, *args) -> None:
