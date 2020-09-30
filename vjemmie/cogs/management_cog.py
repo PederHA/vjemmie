@@ -69,8 +69,7 @@ class ManagementCog(BaseCog):
         await self.send_text_message(out, ctx)
 
         # Log cog help status to drive
-        await self.dump_cogs(enabled, disabled)
-        await self.bot.loop.run_in_executor(None, to_run)
+        await self._dump_cogs(enabled, disabled)
 
     async def _get_cogs_by_help_status(self) -> Tuple[list, list]:   
         enabled = []
