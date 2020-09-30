@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 import discord
 import gtts
 import youtube_dl
+from aiofile import AIOFile
 from async_timeout import timeout
 from discord.ext import commands
 from discord.opus import load_opus
@@ -846,8 +847,8 @@ class SoundCog(BaseCog):
         filename = self.get_unique_filename(filename)
         filepath = f"{DOWNLOADS_DIR}/{filename}{ext}"             
         
-        with open(filepath, "wb") as f:
-            f.write(sound_file.getvalue())
+        async with AIOFile(filepath, "wb") as f:
+            await f.write(sound_file.getvalue())
 
         await self.log_file_download(ctx, url=url, filename=f"{filename}{ext}")        
         

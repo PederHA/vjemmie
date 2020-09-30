@@ -1,23 +1,23 @@
 import asyncio
-from functools import partial
-from datetime import datetime, timezone
-from typing import Union, Tuple, Dict
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from functools import partial
+from typing import Dict, Tuple, Union
 
-import discord
 import ciso8601
+import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
-from .base_cog import BaseCog
 from ..config import ALL_ARGS, YES_ARGS
 from ..utils.caching import get_cached
-from ..utils.converters import SteamID64Converter, UserOrMeConverter
-from ..utils.exceptions import CommandError
-from ..utils.serialize import dump_json
 from ..utils.checks import admins_only
+from ..utils.converters import SteamID64Converter, UserOrMeConverter
 from ..utils.datetimeutils import format_time_difference
+from ..utils.exceptions import CommandError
 from ..utils.http import get, post
+from ..utils.json import dump_json
+from .base_cog import BaseCog
 
 USERS_FILE = "db/autochess/users.json"
 RANKS = {
@@ -184,8 +184,8 @@ class AutoChessCog(BaseCog):
             users[k] = AutochessProfile(**v)
         return users
 
-    def dump_users(self, users: dict) -> None:
-        dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
+    async def dump_users(self, users: dict) -> None:
+        await dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
 
     @commands.group(name="autochess", aliases=["ac", "dac"])
     async def autochess(self, ctx: commands.Context) -> None:
@@ -215,7 +215,7 @@ class AutoChessCog(BaseCog):
         profile = await self.scrape_op_gg_stats(steamid, user.id)
         users = self.users
         users[str(user.id)] = profile
-        self.dump_users(users)
+        await self.dump_users(users)
 
     async def scrape_op_gg_stats(self, steamid, userid) -> AutochessProfile:
         r = await get(url = f"https://autochess.op.gg/user/{steamid}")

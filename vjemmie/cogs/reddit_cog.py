@@ -2,32 +2,31 @@ import asyncio
 import datetime
 import json
 import math
+import os
 import pickle
 import random
 import re
 import traceback
-import os
-from pathlib import Path
-from recordclass import recordclass
-from collections import namedtuple, defaultdict
+from collections import defaultdict, namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
+from pathlib import Path
 from typing import Iterable, Optional, Tuple, Union
 
 import discord
 import praw
-from prawcore.exceptions import Forbidden, NotFound
 from discord.ext import commands, tasks
+from prawcore.exceptions import Forbidden, NotFound
+from recordclass import recordclass
 
-from .base_cog import BaseCog, EmbedField
+from ..utils.caching import get_cached
 from ..utils.checks import admins_only
 from ..utils.commands import add_command
-from ..utils.caching import get_cached
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CommandError
+from ..utils.json import dump_json
 from ..utils.parsing import is_valid_command_name
-from ..utils.serialize import dump_json
-
+from .base_cog import BaseCog, EmbedField
 
 reddit: praw.Reddit = None # Initialized by RedditCog
 
@@ -105,9 +104,10 @@ class RedditCog(BaseCog):
         subs = get_cached("db/reddit/subs.json")
         return {subreddit: RedditCommand(sub[0], sub[1], sub[2]) for subreddit, sub in subs.items()} if subs else {}
 
-    def dump_subs(self) -> None:
-        if self.subs:
-            dump_json("db/reddit/subs.json", self.subs)
+    async def dump_subs(self) -> None:
+        if not self.subs:
+            return
+        await dump_json("db/reddit/subs.json", self.subs)
     
     def _add_sub(self, subreddit_command: RedditCommand) -> None:
         """Creates a bot command from a `RedditCommand` object and adds it
@@ -180,7 +180,7 @@ class RedditCog(BaseCog):
             raise CommandError(f"Subreddit **r/{subreddit}** already exists with command{s} **{commands_}**")
         else:
             self.subs[subreddit] = new_command
-            self.dump_subs() # After adding sub, save list of subs to disk
+            await self.dump_subs() # After adding sub, save list of subs to disk
             commands_ = self._get_commands(new_command)
             s = "s" if "," in commands_ else "" # Duplicate code yikes
             await ctx.send(f"Added subreddit **r/{subreddit}** with command{s} **{commands_}**")
@@ -208,7 +208,7 @@ class RedditCog(BaseCog):
         # Remove associated command
         self.bot.remove_command(cmd.subreddit)
         # Save changes
-        self.dump_subs()
+        await self.dump_subs()
         # Get commands associated with removed subreddit
         commands_ = self._get_commands(cmd)
         await ctx.send(f"Removed subreddit **r/{subreddit}** with command(s) **{commands_}**")
@@ -361,7 +361,7 @@ class RedditCog(BaseCog):
         # Add new alias
         self.subs[subreddit].aliases.append(alias)
         # Save changes & reload subreddit commands
-        self.dump_subs()
+        await self.dump_subs()
         await self._reload_sub_commands()
         await ctx.send(f"Added alias **!{alias}** for subreddit **r/{subreddit}**")
     
@@ -406,7 +406,7 @@ class RedditCog(BaseCog):
             raise CommandError(f"No such alias **!{alias}** for subreddit **r/{subreddit}**")
         
         self.subs[subreddit].aliases.remove(alias)
-        self.dump_subs()
+        await self.dump_subs()
         await self._reload_sub_commands()
         await ctx.send(f"Removed alias **!{alias}** for subreddit **r/{subreddit}**")
 

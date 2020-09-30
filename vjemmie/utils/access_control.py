@@ -1,12 +1,11 @@
 from collections import defaultdict
-from typing import DefaultDict, Optional, Union
 from enum import Enum
 from functools import partial
+from typing import DefaultDict, Optional, Union
 
 from ..config import TRUSTED_PATH
 from .caching import get_cached
-from .serialize import dump_json
-
+from .json import dump_json
 
 DEFAULT = list
 

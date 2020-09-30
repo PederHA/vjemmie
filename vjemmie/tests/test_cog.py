@@ -9,17 +9,19 @@ It's pretty fucking bad, let's be real, but it gets the job done.
 import asyncio
 import copy
 import inspect
-import traceback
 import operator
 import time
-from itertools import cycle
+import traceback
 from contextlib import contextmanager
-from unittest.mock import Mock
-from functools import wraps, partial
+from functools import partial, wraps
+from itertools import cycle
 from pathlib import Path
-from typing import Coroutine, Awaitable, ContextManager, Any, TypeVar, Callable, Optional
+from typing import (Any, Awaitable, Callable, ContextManager, Coroutine,
+                    Optional, TypeVar)
+from unittest.mock import Mock
 
 import discord
+from aiofile import AIOFile
 from discord.ext import commands
 
 from ..cogs.base_cog import BaseCog
@@ -340,9 +342,9 @@ class TestCog(BaseCog):
         if not p.exists():
             p.touch()
         
-        with open(p, "a") as f:
-            f.write(exc_info)
-            f.write("\n\n")
+        async with AIOFile(p, "a") as f:
+            await f.write(exc_info)
+            await f.write("\n\n")
 
         if self.verbose:
             print(exc_info)

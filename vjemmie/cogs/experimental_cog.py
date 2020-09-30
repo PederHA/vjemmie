@@ -1,25 +1,26 @@
 from __future__ import annotations
 
+import csv
+import json
+import re
 import time
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from functools import partial
-import csv
-import re
-from typing import Iterator, Optional, Dict, AsyncIterator, Union
-from dataclasses import dataclass, field, asdict
-import json
+from typing import AsyncIterator, Dict, Iterator, Optional, Union
 
 import discord
 import websockets
+from aiofile import AIOFile
 from discord.ext import commands
-from websockets.server import WebSocketServerProtocol
 from pathvalidate import sanitize_filename
+from websockets.server import WebSocketServerProtocol
 
-from .base_cog import BaseCog, EmbedField
 from ..utils.checks import owners_only
 from ..utils.exceptions import CommandError
 from ..utils.experimental import get_ctx
-
+from ..utils.json import dump_json
+from .base_cog import BaseCog, EmbedField
 
 
 @dataclass
@@ -92,6 +93,7 @@ class ExperimentalCog(BaseCog):
                      user: Optional[discord.User], 
                      limit: Optional[int]=None) -> None:
         """
+        NOTE: BLOCKING!
         Fetches all messages sent in a text channel by all users 
         or by a specific user.
         """  
@@ -199,19 +201,15 @@ class ExperimentalCog(BaseCog):
         
         try:
             users = {_id: asdict(user) for _id, user in users.items()}
-            to_dump = json.dumps(users, indent=4)
+            await dump_json("db/reacts.json", users)
         except:
             raise CommandError("Failed to save message reaction statistics!")
-        else:
-            with open("db/reacts.json", "w", encoding="utf-8") as f:
-                f.write(to_dump)
-
-
+            
     @commands.command(name="topreacters")
     async def top_reacters(self, ctx: commands.Context) -> None:
         try:
-            with open("db/reacts.json", "r", encoding="utf-8") as f:
-                r = json.load(f)
+            async with AIOFile("db/reacts.json", "r", encoding="utf-8") as f:
+                r = json.loads(await f.read())
         except FileNotFoundError:
             raise CommandError(
                 "Bot has no message reaction statistics!\n"

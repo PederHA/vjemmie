@@ -9,13 +9,15 @@ from typing import Dict, Iterable, List, Tuple
 import discord
 import lxml
 import markovify
+from aiofile import AIOFile
 from discord.ext import commands
 from requests_html import HTML, HTMLSession
 
-from .base_cog import BaseCog
+from ..utils.caching import get_cached
 from ..utils.exceptions import CommandError
 from ..utils.experimental import get_ctx
-from ..utils.caching import get_cached
+from ..utils.json import dump_json
+from .base_cog import BaseCog
 
 session = HTMLSession()
 USERS_FILE = "db/twitter/users.json"
@@ -48,11 +50,9 @@ class TwitterCog(BaseCog):
         users = get_cached(USERS_FILE, category="twitter")
         return {user: TwitterUser(*values) for user, values in users.items()}
 
-    def update_user(self, user: TwitterUser) -> None:
-        users = self.users
-        users[user.user] = user
-        with open(USERS_FILE, "w") as f:
-            json.dump(users, f, indent=4)
+    async def update_user(self, user: TwitterUser) -> None:
+        self.users[user.user] = user
+        await dump_json(USERS_FILE, self.users)
 
     def create_commands(self, user: TwitterUser) -> None:
         username = user.user.lower()
@@ -168,7 +168,7 @@ class TwitterCog(BaseCog):
             tu = TwitterUser(user, time.time(), tweets, aliases)
             
             # Save updated user
-            self.update_user(tu)     
+            await self.update_user(tu)     
         finally:
             await msg.delete()
 
