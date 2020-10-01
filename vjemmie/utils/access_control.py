@@ -5,7 +5,7 @@ from typing import DefaultDict, Optional, Union
 
 from ..config import TRUSTED_PATH
 from .caching import get_cached
-from .json import dump_json
+from .json import dump_json_blocking
 
 DEFAULT = list
 
@@ -19,8 +19,7 @@ def _get_trusted() -> dict:
 
 
 def _dump_trusted(trusted: dict) -> None:
-    dump_json(TRUSTED_PATH, trusted)
-
+    dump_json_blocking(TRUSTED_PATH, trusted)
 
 def _get_trusted_guild_category(guild_id: int, category: Categories) -> list:
     try:
