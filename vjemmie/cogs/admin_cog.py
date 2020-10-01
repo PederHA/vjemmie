@@ -1,30 +1,31 @@
 import asyncio
 import inspect
 import os
-import sys
 import subprocess
-from pathlib import Path
+import sys
 from collections import namedtuple
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Optional, Union, Awaitable, Callable
-from contextlib import suppress
+from pathlib import Path
+from typing import Awaitable, Callable, Optional, Union
 
 import discord
-from discord.ext import commands, tasks
 import psutil
 import websockets
+from aiofile import AIOFile
+from discord.ext import commands, tasks
 
-from .base_cog import BaseCog, EmbedField
-from ..config import TRUSTED_DIR, TRUSTED_PATH, YES_ARGS, OWNER_ID
+from ..config import OWNER_ID, TRUSTED_DIR, TRUSTED_PATH, YES_ARGS
 from ..utils.access_control import (Categories, add_trusted_member,
-                                  add_trusted_role, get_trusted_members,
-                                  get_trusted_roles, remove_trusted_member,
-                                  remove_trusted_role)
+                                    add_trusted_role, get_trusted_members,
+                                    get_trusted_roles, remove_trusted_member,
+                                    remove_trusted_role)
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
 from ..utils.exceptions import CommandError
 from ..utils.printing import eprint
+from .base_cog import BaseCog, EmbedField
 
 
 @dataclass
@@ -67,7 +68,7 @@ class AdminCog(BaseCog):
         with suppress(RuntimeError):
             self.activity_rotation.start()
 
-    @tasks.loop()
+    @tasks.loop(seconds=1)
     async def activity_rotation(self) -> None:
         p = self.bot.command_prefix
 
@@ -246,8 +247,8 @@ class AdminCog(BaseCog):
         """Print last N lines of a log file."""
         log = self.get_log_file(log_name)
         
-        with open(log, "r", encoding=encoding) as f:
-            _contents = f.read().splitlines()[-lines:]
+        async with AIOFile(log, "r", encoding=encoding) as f:
+            _contents = (await f.read()).splitlines()[-lines:]
         contents = "\n".join(_contents)
         
         await self.send_text_message(contents, ctx)
@@ -374,7 +375,7 @@ class AdminCog(BaseCog):
                 f"No message with id {message_id} in the most recent 500 messages sent."
                 )
 
-    @commands.group(name="trusted")
+    @commands.group(name="trusted", enabled=False)
     async def trusted(self, ctx: commands.Context) -> None:
         if not ctx.guild:
             raise CommandError("This action cannot be performed in a DM channel.")
@@ -525,7 +526,9 @@ class AdminCog(BaseCog):
         
     async def check_cpu_usage(self) -> Optional[EmbedField]:
         if sys.platform == "windows":
-            from psutil._pswindows import _loadavg_inititialized # yes, spelling error in psutil LOL
+            from psutil._pswindows import \
+                _loadavg_inititialized  # yes, spelling error in psutil LOL
+
             # psutil.getloadavg() needs to be "primed" on Windows for minimum 5 seconds
             # https://psutil.readthedocs.io/en/latest/#psutil.getloadavg
             #

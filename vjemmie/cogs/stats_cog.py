@@ -1,26 +1,26 @@
 import asyncio
 import pickle
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field
-from functools import partial
 from collections import Counter
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from functools import partial
 from itertools import islice
 from pathlib import Path
 from time import perf_counter, time, time_ns
-from typing import List, Union, Dict, Tuple, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import discord
+from aiofile import AIOFile
 from discord.ext import commands, tasks
 from github import Commit, Github, GithubObject
 
-from .base_cog import BaseCog
 from ..config import STATS_DIR
 from ..utils.caching import get_cached
 from ..utils.checks import owners_only
 from ..utils.converters import UserOrMeConverter
-from ..utils.exceptions import CommandError
 from ..utils.datetimeutils import format_time_difference
-
+from ..utils.exceptions import CommandError
+from .base_cog import BaseCog
 
 GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
  
@@ -117,17 +117,17 @@ class StatsCog(BaseCog):
     def cog_unload(self):
         self.dump_command_stats.cancel()
     
-    def dump_guilds(self) -> None:
-        """Save guild usage statistics."""
+    def _do_dump(self) -> None:
+        """Save guild usage statistics. NOTE: Blocking. Run with _do_dump()"""
         with open(GUILD_STATS_PATH, "wb") as f:
             pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    async def _do_dump(self) -> None:
-        await self.bot.loop.run_in_executor(None, self.dump_guilds)
+    async def dump_guilds(self) -> None:
+        await self.bot.loop.run_in_executor(None, self._do_dump)
 
     @tasks.loop(seconds=300.0)
     async def dump_command_stats(self) -> None:
-        await self._do_dump()
+        await self.dump_guilds()
 
     @dump_command_stats.after_loop
     async def on_dump_command_stats_cancel(self) -> None:
@@ -146,7 +146,7 @@ class StatsCog(BaseCog):
         self.guilds[gid].log_command(ctx)
 
     def load_guilds(self) -> Dict[int, DiscordGuild]:
-        """Load guild statistics. Only performed on bot startup."""
+        """NOTE: Blocking! Load guild statistics. Only performed on bot startup. """
         with open(GUILD_STATS_PATH, "rb") as f:
             try:
                 return pickle.load(f)

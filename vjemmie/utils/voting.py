@@ -103,10 +103,12 @@ class VotingSession:
     @property
     def time_remaining_str(self) -> str:
         remaining = self.duration - self.elapsed
-        if remaining >= 60:
-            return f"{round(remaining/60)} minutes"
+        if remaining > 60:
+            r = round(remaining/60)
+            return f"{r} minute{'s' if r > 1 else ''}"
         else:
-            return f"{int(remaining)} seconds"
+            r = round(remaining)
+            return f"{r} second{'s' if r > 1 else ''}"
 
     def __del__(self) -> None:
         """Ensures an active loop is cancelled when object is deleted."""

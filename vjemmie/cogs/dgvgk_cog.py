@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 import discord
 import trueskill
+from aiofile import AIOFile
 from discord.ext import commands
 
 from ..ladder import (ENV_FILE, PLAYERS_FILE, Match, Player, dump_players,
@@ -14,7 +15,7 @@ from ..utils.caching import get_cached
 from ..utils.checks import admins_only, dgvgk_cmd
 from ..utils.converters import NonCaseSensMemberConverter
 from ..utils.exceptions import CommandError
-from ..utils.serialize import dump_json
+from ..utils.json import dump_json
 from ..utils.voting import SESSIONS, TopicType, vote
 from .base_cog import BaseCog
 
@@ -33,18 +34,16 @@ class DGVGKCog(BaseCog):
         self.tidstyver: Dict[str, float] = {}
         self.game: Optional[Match] = None
 
-    def save_tidstyveri(self, tidstyveri: dict) -> None:
+    async def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
-            t = json.dumps(tidstyveri)
-            with open(TIDSTYVERI_FILE, "w") as f:
-                f.write(t)
+            await dump_json(TIDSTYVERI_FILE, tidstyveri)
         except:
             raise CommandError("Kan ikke lagre tidstyveri. Oops.")
 
-    def load_tidstyveri(self) -> dict:
-        with open(TIDSTYVERI_FILE, "r") as f:
+    async def load_tidstyveri(self) -> dict:
+        async with AIOFile(TIDSTYVERI_FILE, "r") as f:
             try:
-                return json.load(f)
+                return json.loads(await f.read())
             except:
                 return {}
     
@@ -95,12 +94,12 @@ class DGVGKCog(BaseCog):
         if not start_time:
             raise CommandError("Det er ikke registrert et påbegynt tidstyveri for denne personen!")
         
-        time_thiefs = self.load_tidstyveri()
+        time_thiefs = await self.load_tidstyveri()
         
         time_stolen = time.time() - start_time
         time_thiefs[str(member.id)] = time_thiefs.get(str(member.id), 0) + time_stolen
         
-        self.save_tidstyveri(time_thiefs)
+        await self.save_tidstyveri(time_thiefs)
 
         await ctx.send(
             f"Registrert fullført tidstyveri.\n"
@@ -111,7 +110,7 @@ class DGVGKCog(BaseCog):
     @tidstyveri.command(name="stats")
     async def tidstyveri_stats(self, ctx: commands.Context) -> None:
         """Tyv-leaderboard"""
-        time_thiefs = self.load_tidstyveri()
+        time_thiefs = await self.load_tidstyveri()
         if not time_thiefs:
             raise CommandError("Ingen tidstyver er registrert!")
         

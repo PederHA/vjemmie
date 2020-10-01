@@ -1,15 +1,17 @@
 import random
 from asyncio import coroutine
 from functools import partial
-from typing import Optional, List, Union, Dict
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import discord
-from discord.ext import commands
 import markovify
+from aiofile import AIOFile
+from discord.ext import commands
 from markovify import NewlineText
-from .base_cog import BaseCog
+
 from ..utils.commands import add_command
+from .base_cog import BaseCog
 
 
 async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
@@ -58,6 +60,7 @@ class MemeCog(BaseCog):
                         )
 
     def load_daddy_verbs(self) -> List[str]:
+        """NOTE: Blocking!"""
         try:
             with open("memes/txt/verbs.txt", "r", encoding="utf-8") as f:
                 return f.read().splitlines()
@@ -69,8 +72,8 @@ class MemeCog(BaseCog):
     async def random_line_from_gptfile(self, path: str, encoding: str="utf-8", **kwargs) -> str:
         """Kinda primitive rn. Needs some sort of caching for bigger files."""
         if path not in self.files:
-            with open(path, "r", encoding=encoding, **kwargs) as f:
-                self.files[path] = f.read().split("====================")
+            async with AIOFile(path, "r", encoding=encoding, **kwargs) as f:
+                self.files[path] = (await f.read()).split("====================")
         return random.choice(self.files[path])
     
     @commands.group(name="gpt")
@@ -103,8 +106,8 @@ class MemeCog(BaseCog):
                 fp = "memes/txt/nationalities.txt"
                 self.experimental = False
 
-            with open(fp, "r") as f:
-                self.wordlist = f.read().splitlines()
+            async with AIOFile(fp, "r") as f:
+                self.wordlist = (await f.read()).splitlines()
             
         word = random.choice(self.wordlist)
         

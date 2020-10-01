@@ -228,16 +228,16 @@ class FunCog(BaseCog):
     @commands.command(name="big", aliases=["regional_indicator"])
     async def regional_indicator_text(self, ctx: commands.Context, *text) -> None:
         """BIG TEXT."""
-        text = " ".join(text)
+        t = " ".join(text)
         if not text:
             raise CommandError("Can't bigify an empty string!")
-        elif all(not c.isalpha() for c in text):
+        elif all(not c.isalpha() for c in t):
             raise CommandError("Can't bigify a string of non-alphabetic characters!")   
         
         try:
-            big_text = await self.big_text(text)
+            big_text = await self.big_text(t)
         except:
-            raise CommandError("Unable to bigify string!")
+            raise CommandError("Unable to bigify string!")       
         
         if not big_text:
             raise CommandError("None of the characters in the string could be bigified!")

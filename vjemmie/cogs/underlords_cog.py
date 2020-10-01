@@ -5,26 +5,25 @@ It's more or less AutoChessCog with a few tweaks rn.
 """
 
 import asyncio
-from functools import partial
-from datetime import datetime, timezone
-from typing import Union, Tuple, Dict, List
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from functools import partial
+from typing import Dict, List, Tuple, Union
 
-import discord
 import ciso8601
+import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
-from .base_cog import BaseCog
-from .db_cog import DatabaseHandler
-from ..config import GENERAL_DB_PATH, ALL_ARGS, YES_ARGS
+from ..config import ALL_ARGS, YES_ARGS
 from ..utils.caching import get_cached
-from ..utils.converters import SteamID64Converter, UserOrMeConverter
-from ..utils.exceptions import CommandError
-from ..utils.serialize import dump_json
 from ..utils.checks import admins_only
+from ..utils.converters import SteamID64Converter, UserOrMeConverter
 from ..utils.datetimeutils import format_time_difference
+from ..utils.exceptions import CommandError
 from ..utils.http import get, post
+from ..utils.json import dump_json
+from .base_cog import BaseCog
 
 USERS_FILE = "db/underlords/users.json"
 
@@ -202,7 +201,7 @@ class UnderlordsCog(BaseCog):
     FILES = [USERS_FILE]
     DIRS = ["db/underlords"]
 
-    DB = DatabaseHandler(GENERAL_DB_PATH)
+    
 
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
@@ -215,8 +214,8 @@ class UnderlordsCog(BaseCog):
             users[k] = UnderlordsProfile(**v)
         return users
 
-    def dump_users(self, users: dict) -> None:
-        dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
+    async def dump_users(self, users: dict) -> None:
+        await dump_json(USERS_FILE, users, default=lambda o: o.__dict__)
 
     @commands.group(name="underlords", aliases=["ac", "dac"])
     async def underlords(self, ctx: commands.Context) -> None:
@@ -246,7 +245,7 @@ class UnderlordsCog(BaseCog):
         profile = await self.scrape_op_gg_stats(steamid, user.id)
         users = self.users
         users[str(user.id)] = profile
-        self.dump_users(users)
+        await self.dump_users(users)
 
     async def scrape_op_gg_stats(self, steamid, userid) -> UnderlordsProfile:
         r = await get(f"https://autochess.op.gg/user/{steamid}")

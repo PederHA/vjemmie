@@ -2,22 +2,22 @@ import asyncio
 import json
 from collections import defaultdict
 from datetime import datetime, timedelta
-from time import perf_counter, time
-from typing import Tuple, List
 from functools import partial
+from itertools import chain
 from pathlib import Path
+from time import perf_counter, time
+from typing import List, Tuple
 
 import discord
 from discord.ext import commands
 
-
-from .base_cog import BaseCog, EmbedField
-from .sound_cog import AudioPlayer
 from ..utils.checks import admins_only, disabled_cmd, owners_only
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CommandError
-from ..utils.serialize import dump_json
-from itertools import chain
+from ..utils.json import dump_json
+from .base_cog import BaseCog, EmbedField
+from .sound_cog import AudioPlayer
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -69,8 +69,7 @@ class ManagementCog(BaseCog):
         await self.send_text_message(out, ctx)
 
         # Log cog help status to drive
-        to_run = partial(self._dump_cogs, enabled, disabled)
-        await self.bot.loop.run_in_executor(None, to_run)
+        await self._dump_cogs(enabled, disabled)
 
     async def _get_cogs_by_help_status(self) -> Tuple[list, list]:   
         enabled = []
@@ -82,12 +81,12 @@ class ManagementCog(BaseCog):
         
         return enabled, disabled
 
-    def _dump_cogs(self, enabled, disabled) -> None:
+    async def _dump_cogs(self, enabled, disabled) -> None:
         out_dict = {
                 "enabled": enabled,
                 "disabled": disabled
                 }
-        dump_json("db/cogs.json", out_dict)
+        await dump_json("db/cogs.json", out_dict)
 
     @commands.command(name="fs")
     async def get_dirs_files(self, ctx: commands.Context) -> None:

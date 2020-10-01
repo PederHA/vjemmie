@@ -7,23 +7,24 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import (
-    Any, Callable, Iterable, Iterator, List, Mapping, Optional, Tuple, Union)
+from typing import (Any, Callable, Iterable, Iterator, List, Mapping, Optional,
+                    Tuple, Union)
 from urllib.parse import urlparse, urlsplit
 
 import aiohttp
 import discord
 import psutil
+from aiofile import AIOFile
 from discord import Embed
 from discord.ext import commands
 from httpcore._exceptions import ConnectError, ConnectTimeout
 from prawcore.exceptions import Forbidden as PrawForbidden
 from youtube_dl import DownloadError
 
-from ..config import (
-    AUTHOR_MENTION, COMMAND_INVOCATION_CHANNEL, DOWNLOAD_CHANNEL_ID,
-    DOWNLOADS_ALLOWED, ERROR_CHANNEL_ID, GUILD_HISTORY_CHANNEL,
-    IMAGE_CHANNEL_ID, LOG_CHANNEL_ID, MAX_DL_SIZE)
+from ..config import (AUTHOR_MENTION, COMMAND_INVOCATION_CHANNEL,
+                      DOWNLOAD_CHANNEL_ID, DOWNLOADS_ALLOWED, ERROR_CHANNEL_ID,
+                      GUILD_HISTORY_CHANNEL, IMAGE_CHANNEL_ID, LOG_CHANNEL_ID,
+                      MAX_DL_SIZE)
 from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                                 CategoryError, CommandError, FileSizeError,
                                 FileTypeError, InvalidVoiceChannel,
@@ -909,8 +910,8 @@ class BaseCog(commands.Cog):
 
     async def read_send_file(self, ctx: commands.Context, path: Union[str, Path], *, encoding: str="utf-8") -> None:
         """Reads local text file and sends contents to `ctx.channel`"""
-        with open(path, "r", encoding=encoding) as f:
-            await self.send_text_message(f.read(), ctx)
+        async with AIOFile(path, "r", encoding=encoding) as f:
+            await self.send_text_message(await f.read(), ctx)
 
     def generate_hex_color_code(self, phrase: str, *, as_int: bool=True) -> Union[str, int]:
         """Generates a 24 bit hex color code from a user-defined phrase."""
