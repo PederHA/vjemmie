@@ -1,5 +1,6 @@
 import asyncio
 import io
+import json
 import math
 import random
 import traceback
@@ -7,11 +8,12 @@ import unicodedata
 from functools import partial
 from itertools import chain
 from pprint import pprint
-from typing import Union
+from typing import List, Union
 
 import discord
 import numpy as np
 import unidecode
+from aiofile import AIOFile
 from discord.ext import commands
 from mwthesaurus import MWClient
 
@@ -78,6 +80,11 @@ class FunCog(BaseCog):
     """Commands that don't fit into any other categories."""
 
     EMOJI = ":game_die:"
+    FILES = ["db/skribbl.json"]
+
+    def __init__(self, bot: commands.Bot) -> None:
+        self.setup(default_factory=list)
+        super().__init__(bot)
 
     @commands.command(name='roll',
                       aliases=['dice'],
@@ -318,4 +325,37 @@ class FunCog(BaseCog):
     async def _timer(self, ctx: commands.Context, minutes: int) -> None:
         await ctx.send(f"Timer started for {minutes} minute{'s' if minutes > 1 else ''}")
         await asyncio.sleep(minutes*60)
-        await ctx.send(f"Timer ended after {minutes} minutes {ctx.message.author.mention}")
+        await ctx.send(f"Time's up, {ctx.message.author.mention}.")
+
+    @commands.command(name="skribbl")
+    async def skribbl(self, ctx: commands.Context, *words) -> None:
+        words = [w.lower() for w in words]
+        if not words:
+            return
+        
+        existing = await self._load_skribbl_words()
+        # Inefficient but who cares
+        for word in words:
+            if word in existing:
+                words.remove(word)
+        
+        if not words:
+            return await ctx.send("All of the words you entered are already added!")
+        
+        existing.extend(words)
+        await self._save_skribbl_words(existing)
+        
+        await ctx.send(f"Added {', '.join(words)}.")
+
+    async def _load_skribbl_words(self) -> List[str]:
+        async with AIOFile("db/skribbl.json", "r") as f:
+            return json.loads(await f.read())
+
+    async def _save_skribbl_words(self, words: List[str]) -> None:
+        async with AIOFile("db/skribbl.json", "w") as f:
+            w = json.dumps(words)
+            await f.write(w)
+
+    
+
+        

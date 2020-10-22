@@ -9,6 +9,7 @@ import trueskill
 from aiofile import AIOFile
 from discord.ext import commands
 
+from ..db import get_db
 from ..ladder import (ENV_FILE, PLAYERS_FILE, Match, Player, dump_players,
                       get_new_player, load_players, make_teams, rate)
 from ..utils.caching import get_cached
@@ -33,6 +34,7 @@ class DGVGKCog(BaseCog):
         super().__init__(bot)
         self.tidstyver: Dict[str, float] = {}
         self.game: Optional[Match] = None
+        self.db = get_db()
 
     async def save_tidstyveri(self, tidstyveri: dict) -> None:
         try:
@@ -47,19 +49,19 @@ class DGVGKCog(BaseCog):
             except:
                 return {}
     
-    def formater_tidstyveri(self, tid: float) -> str:
-        td = timedelta(seconds=tid)
+    def formater_tidstyveri(self, seconds: float) -> str:
         s = ""
-        
-        hours = td.seconds // 3600
+        seconds = round(seconds)
+
+        hours = seconds // 3600
         if hours:
             s += f"{str(hours).rjust(2, '0')}t " # only show hours if necessary
 
-        minutes = (td.seconds // 60) % 60
+        minutes = (seconds // 60) % 60
         if minutes or hours: # show minutes if hours are shown
             s += f"{str(minutes).rjust(2, '0')}m " 
 
-        s += f"{str(td.seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
+        s += f"{str(seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
         return s
         
     @commands.group(name="tidstyveri", aliases=["tidstyv", "tt"], usage="<subcommand>")
@@ -69,15 +71,15 @@ class DGVGKCog(BaseCog):
             await ctx.invoke(self.bot.get_command("help"), "tidstyveri")
 
     @tidstyveri.command(name="start")
-    @vote(votes=2, topic=TopicType.member)
+    @vote(votes=1, topic=TopicType.member)
     async def tidstyveri_start(self, ctx: commands.Context, member: NonCaseSensMemberConverter=None) -> None:
         """Registrer påbegynt tyveri"""
         if not member:
             raise CommandError("Et discord-brukernavn er påkrevd!")
         elif str(member.id) in self.tidstyver:
             raise CommandError("Denne brukeren stjeler allerede tid!")
-        elif member.id == self.bot.user.id:
-            raise CommandError("Kan ikke starte tidstyveri for botten selv!")
+        #elif member.id == self.bot.user.id:
+        #    raise CommandError("Kan ikke starte tidstyveri for botten selv!")
         
         self.tidstyver[str(member.id)] = time.time()
         
@@ -94,34 +96,28 @@ class DGVGKCog(BaseCog):
         if not start_time:
             raise CommandError("Det er ikke registrert et påbegynt tidstyveri for denne personen!")
         
-        time_thiefs = await self.load_tidstyveri()
-        
+        # Store time stolen
         time_stolen = time.time() - start_time
-        time_thiefs[str(member.id)] = time_thiefs.get(str(member.id), 0) + time_stolen
-        
-        await self.save_tidstyveri(time_thiefs)
+        await self.db.add_tidstyveri(member, time_stolen)
 
+        # Get total time stolen
+        stolen = await self.db.get_tidstyveri_by_id(member.id)
+        
         await ctx.send(
             f"Registrert fullført tidstyveri.\n"
             f"{member.name} stjal {self.formater_tidstyveri(time_stolen)}\n"
-            f"{member.name} har totalt stjålet {self.formater_tidstyveri(time_thiefs[str(member.id)])}!"
+            f"{member.name} har totalt stjålet {self.formater_tidstyveri(stolen)}!"
         )
         
     @tidstyveri.command(name="stats")
     async def tidstyveri_stats(self, ctx: commands.Context) -> None:
         """Tyv-leaderboard"""
-        time_thiefs = await self.load_tidstyveri()
+        time_thiefs = await self.db.get_tidstyveri()
         if not time_thiefs:
             raise CommandError("Ingen tidstyver er registrert!")
         
-        # Sort users by amount of time stolen
-        tidstyver = sorted(
-                [(self.bot.get_user(int(k)), v) for k, v in time_thiefs.items()],
-                key=lambda i: i[1],
-                reverse=True
-        )   
-        tidstyver = {k: self.formater_tidstyveri(v) for k, v in tidstyver}
-        
+        tidstyver = {k: self.formater_tidstyveri(v) for k, v in time_thiefs}
+    
         await self.send_key_value_message(ctx, tidstyver, title="Tidstyveri", sort=False)
 
         

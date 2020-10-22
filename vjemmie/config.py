@@ -13,6 +13,7 @@ BLACKLIST_PATH = "db/blacklist.json"
 
 # Keep
 DB_DIR = "db"
+MAIN_DB = f"{DB_DIR}/vjemmie.db"
 TRUSTED_DIR = f"{DB_DIR}/access"
 TRUSTED_PATH = f"{TRUSTED_DIR}/trusted.json"
 TEMP_DIR = "temp"

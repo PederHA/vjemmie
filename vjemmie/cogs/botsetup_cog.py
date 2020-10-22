@@ -12,7 +12,8 @@ from googleapiclient.discovery import build
 from spotipy.oauth2 import SpotifyClientCredentials
 from mwthesaurus import MWClient
 
-from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
+from ..db import add_db
+from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, MAIN_DB
 from ..utils import spotify, youtube
 from ..utils.checks import admins_only, load_blacklist, save_blacklist
 from ..utils.printing import eprint
@@ -24,17 +25,20 @@ QUIET = False # TODO: Make this a of persistent user-defined value
 class BotSetupCog(BaseCog):
     def __init__(self, bot) -> None:
         self.bot = bot
+
+        # APIs
         self.setup_youtube()
         self.setup_spotify()
         self.setup_github()
         self.setup_reddit()
         self.setup_mwthesaurus()
         self.print = eprint
+
         if QUIET:
             def printer(*args, **kwargs):
                 pass
             self.print = printer
-            
+        
     def setup_spotify(self) -> None:
         if not all(c for c in [
             self.bot.secrets.SPOTIFY_CLIENT_SECRET,
