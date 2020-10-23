@@ -19,6 +19,7 @@ from mwthesaurus import MWClient
 
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
+from ..utils.json import dump_json
 from .base_cog import BaseCog
 
 mw: MWClient = None
@@ -352,10 +353,4 @@ class FunCog(BaseCog):
             return json.loads(await f.read())
 
     async def _save_skribbl_words(self, words: List[str]) -> None:
-        async with AIOFile("db/skribbl.json", "w") as f:
-            w = json.dumps(words)
-            await f.write(w)
-
-    
-
-        
+        await dump_json("db/skribbl.json", words)
