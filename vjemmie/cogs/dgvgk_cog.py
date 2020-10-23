@@ -71,7 +71,7 @@ class DGVGKCog(BaseCog):
             await ctx.invoke(self.bot.get_command("help"), "tidstyveri")
 
     @tidstyveri.command(name="start")
-    @vote(votes=1, topic=TopicType.member)
+    @vote(votes=2, topic=TopicType.member)
     async def tidstyveri_start(self, ctx: commands.Context, member: NonCaseSensMemberConverter=None) -> None:
         """Registrer påbegynt tyveri"""
         if not member:
