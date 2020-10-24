@@ -6,7 +6,7 @@ from ..config import (BLACKLIST_PATH, DGVGK_SERVER_ID, DOWNLOADS_ALLOWED,
                       OWNER_ID, PFM_SERVER_ID, TEST_SERVER_ID)
 from .access_control import get_trusted_members
 from .caching import get_cached
-from .json import dump_json
+from .json import dump_json_blocking
 
 
 # Blacklist serialization functions
@@ -15,7 +15,7 @@ def load_blacklist() -> list:
 
 
 def save_blacklist(blacklist: list) -> None:
-    dump_json(BLACKLIST_PATH, blacklist)
+    dump_json_blocking(BLACKLIST_PATH, blacklist)
 
 
 # Decorator check
