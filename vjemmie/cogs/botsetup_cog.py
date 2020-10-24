@@ -24,6 +24,12 @@ QUIET = False # TODO: Make this a of persistent user-defined value
 
 class BotSetupCog(BaseCog):
     def __init__(self, bot) -> None:
+        self.print = eprint
+        if QUIET:
+            def printer(*args, **kwargs):
+                pass
+            self.print = printer
+        
         self.bot = bot
 
         # APIs
@@ -32,12 +38,6 @@ class BotSetupCog(BaseCog):
         self.setup_github()
         self.setup_reddit()
         self.setup_mwthesaurus()
-        self.print = eprint
-
-        if QUIET:
-            def printer(*args, **kwargs):
-                pass
-            self.print = printer
         
     def setup_spotify(self) -> None:
         if not all(c for c in [
