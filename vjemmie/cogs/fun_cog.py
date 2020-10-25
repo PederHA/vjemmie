@@ -329,7 +329,27 @@ class FunCog(BaseCog):
         await ctx.send(f"Time's up, {ctx.message.author.mention}.")
 
     @commands.command(name="skribbl")
-    async def skribbl(self, ctx: commands.Context, *words) -> None:
+    async def skribbl(self, ctx: commands.Context, *args) -> None:
+        if not args:
+            raise CommandError("No arguments passed in.")
+
+        # Manually handle subcommands since we apparently can't
+        # have an *args parameter on a commands.group(),
+        # since ctx.invoked_subcommand will always be None.
+        if args[0] == "get":
+            if len(args) < 2 or not args[1].isnumeric():
+                return await ctx.send("Usage: `!skribbl get <Number of words>`")
+            return await self._skribbl_get(ctx, int(args[1]))
+        elif args[0] == "add":
+            # Make sure words are passed in
+            if len(args) < 2:
+                return await ctx.send("Usage: `!skribbl add word1 word2 ... wordLast`")
+            # Remove "add" from args
+            args = args[1:]
+
+        await self._skribbl_add(ctx, *args)
+
+    async def _skribbl_add(self, ctx: commands.Context, *words) -> None:
         words = [w.lower() for w in words]
         if not words:
             return
@@ -347,7 +367,14 @@ class FunCog(BaseCog):
         await self._save_skribbl_words(existing)
         
         await ctx.send(f"Added {', '.join(words)}.")
-
+    
+    async def _skribbl_get(self, ctx: commands.Context, amount: int) -> None:
+        words = await self._load_skribbl_words()
+        random.shuffle(words) # Could this block for an extended amount of time?
+        end = len(words) if amount > len(words) else amount
+        selected = words[:end]
+        await ctx.send(",".join(selected))
+    
     async def _load_skribbl_words(self) -> List[str]:
         async with AIOFile("db/skribbl.json", "r") as f:
             return json.loads(await f.read())
