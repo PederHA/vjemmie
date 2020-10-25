@@ -9,6 +9,7 @@ from praw import Reddit
 from discord.ext import commands
 from github import Github
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from spotipy.oauth2 import SpotifyClientCredentials
 from mwthesaurus import MWClient
 
@@ -72,12 +73,18 @@ class BotSetupCog(BaseCog):
                 "4. Create an API Key"
             )
             return self.remove_commands(["yt"])
-         
-        youtube.youtube = build(
-            YOUTUBE_API_SERVICE_NAME,
-            YOUTUBE_API_VERSION,
-            developerKey=self.bot.secrets.YOUTUBE_API_KEY
-        )
+        try:  
+            youtube.youtube = build(
+                YOUTUBE_API_SERVICE_NAME,
+                YOUTUBE_API_VERSION,
+                developerKey=self.bot.secrets.YOUTUBE_API_KEY
+            )
+        except HttpError as e:
+            if b"400" in e.content:
+                self.print(e)
+                return self.remove_commands(["yt"])
+            else:
+                raise
 
     def setup_github(self) -> None:
         if not self.bot.secrets.GITHUB_TOKEN:
