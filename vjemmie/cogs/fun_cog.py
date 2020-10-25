@@ -338,8 +338,13 @@ class FunCog(BaseCog):
         # since ctx.invoked_subcommand will always be None.
         if args[0] == "get":
             if len(args) < 2 or not args[1].isnumeric():
+                # NOTE: Add default amount? Ex: if len(args) < 2: amount=30
                 return await ctx.send("Usage: `!skribbl get <Number of words>`")
             return await self._skribbl_get(ctx, int(args[1]))
+        elif args[0] == "remove":
+            if len(args) < 2:
+                return await ctx.send("Usage: `!skribbl remove word1 word2 ... wordLast`")
+            return await self._skribbl_remove(ctx, *args[1:])
         elif args[0] == "add":
             # Make sure words are passed in
             if len(args) < 2:
@@ -374,10 +379,29 @@ class FunCog(BaseCog):
         end = len(words) if amount > len(words) else amount
         selected = words[:end]
         await ctx.send(",".join(selected))
-    
+
+    async def _skribbl_remove(self, ctx: commands.Context, *to_remove) -> None:
+        words = await self._load_skribbl_words()
+        removed = []
+        for word in to_remove:
+            try:
+                words.remove(word)
+            except ValueError:
+                # Word does not exist
+                pass # Ignore exception for now
+            else:
+                removed.append(word)
+
+        if not removed:
+            raise CommandError("None of the words you entered exist.")
+
+        await self._save_skribbl_words(words)
+        await ctx.send(f"Removed {', '.join(removed)}.")
+
     async def _load_skribbl_words(self) -> List[str]:
         async with AIOFile("db/skribbl.json", "r") as f:
             return json.loads(await f.read())
 
     async def _save_skribbl_words(self, words: List[str]) -> None:
         await dump_json("db/skribbl.json", words)
+
