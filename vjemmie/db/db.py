@@ -162,6 +162,13 @@ class DatabaseConnection:
     def _get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
         self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", user_id)
         return list(self.cursor.fetchall())
+    
+    async def get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
+        return await self.read(self._get_skribbl_word_author, word)
+
+    def _get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
+        self.cursor.execute("SELECT submitterID, submittedAt FROM skribbl WHERE word==?", (word,))
+        return self.cursor.fetchone()
 
     async def delete_skribbl_words(self, words: Iterable[str]) -> None:
         await self.write(self._delete_skribbl_words, words)

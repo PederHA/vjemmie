@@ -9,6 +9,7 @@ from functools import partial
 from itertools import chain
 from pprint import pprint
 from typing import List, Union
+from datetime import datetime
 
 import discord
 import numpy as np
@@ -346,12 +347,16 @@ class FunCog(BaseCog):
             return await self._skribbl_get(ctx, int(args[1]))
         elif args[0] == "remove":
             if len(args) < 2:
-                return await ctx.send("Usage: `!skribbl remove word1 word2 ... wordLast`")
+                return await ctx.send("Usage: `!skribbl remove <word1> [word2] ... [wordLast]`")
             return await self._skribbl_remove(ctx, *args[1:])
+        elif args[0] == "author":
+            if len(args) < 2:
+                return await ctx.send("Usage: `!skribbl author <word>`")
+            return await self._skribbl_get_author(ctx, args[1])
         elif args[0] == "add":
             # Make sure words are passed in
             if len(args) < 2:
-                return await ctx.send("Usage: `!skribbl add word1 word2 ... wordLast`")
+                return await ctx.send("Usage: `!skribbl add <word1> [word2] ... [wordLast]`")
             # Remove "add" from args
             args = args[1:]
 
@@ -368,9 +373,24 @@ class FunCog(BaseCog):
         random.shuffle(words) # Could this block for an extended amount of time?
         end = len(words) if amount > len(words) else amount
         selected = words[:end]
-        await ctx.send(",".join(word[0] for word in selected))
+        out = ",".join(word[0] for word in selected)
+        await self.send_text_message(out, ctx)
 
     async def _skribbl_remove(self, ctx: commands.Context, *words) -> None:
         """Removes one or more skribbl words."""
         await self.db.delete_skribbl_words(words)
         await ctx.send(f"Removed {', '.join(words)}.")
+
+    async def _skribbl_get_author(self, ctx: commands.Context, word: str) -> None:
+        author = await self.db.get_skribbl_word_author(word)
+        if not author:
+            return await ctx.send("Unable to find `word` in the database!")
+        
+        author_id, timestamp = author
+        user = self.bot.get_user(author_id)
+        if not user:
+            return await ctx.send("Unable to find user profile of author. They might have left the server.")
+        
+        ts = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+        await ctx.send(f"`{word}` was added by {user.name} @ {ts}.")
+        
