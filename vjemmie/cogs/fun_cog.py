@@ -17,6 +17,8 @@ from aiofile import AIOFile
 from discord.ext import commands
 from mwthesaurus import MWClient
 
+from ..db import get_db
+from ..config import MAIN_DB
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
 from ..utils.json import dump_json
@@ -85,6 +87,7 @@ class FunCog(BaseCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.setup(default_factory=list)
+        self.db = get_db(MAIN_DB)
         super().__init__(bot)
 
     @commands.command(name='roll',
@@ -298,7 +301,7 @@ class FunCog(BaseCog):
             f"Team {i}\n```{n.join([f'* {user}' for user in team])}```" 
             for i, team in list(enumerate(teams_, start=1))
             ]
-        )
+        )   
         await self.send_embed_message(ctx, title="Teams", description=teams)        
 
     @commands.command(name="synonyms", aliases=["syn"])
@@ -356,52 +359,18 @@ class FunCog(BaseCog):
 
     async def _skribbl_add(self, ctx: commands.Context, *words) -> None:
         words = [w.lower() for w in words]
-        if not words:
-            return
-        
-        existing = await self._load_skribbl_words()
-        # Inefficient but who cares
-        for word in words:
-            if word in existing:
-                words.remove(word)
-        
-        if not words:
-            return await ctx.send("All of the words you entered are already added!")
-        
-        existing.extend(words)
-        await self._save_skribbl_words(existing)
-        
+        await self.db.add_skribbl_words(ctx.message.author, words)    
         await ctx.send(f"Added {', '.join(words)}.")
     
     async def _skribbl_get(self, ctx: commands.Context, amount: int) -> None:
-        words = await self._load_skribbl_words()
+        """Retrieves N random Skribbl words."""
+        words = await self.db.get_skribbl_words()
         random.shuffle(words) # Could this block for an extended amount of time?
         end = len(words) if amount > len(words) else amount
         selected = words[:end]
-        await ctx.send(",".join(selected))
+        await ctx.send(",".join(word[0] for word in selected))
 
-    async def _skribbl_remove(self, ctx: commands.Context, *to_remove) -> None:
-        words = await self._load_skribbl_words()
-        removed = []
-        for word in to_remove:
-            try:
-                words.remove(word)
-            except ValueError:
-                # Word does not exist
-                pass # Ignore exception for now
-            else:
-                removed.append(word)
-
-        if not removed:
-            raise CommandError("None of the words you entered exist.")
-
-        await self._save_skribbl_words(words)
-        await ctx.send(f"Removed {', '.join(removed)}.")
-
-    async def _load_skribbl_words(self) -> List[str]:
-        async with AIOFile("db/skribbl.json", "r") as f:
-            return json.loads(await f.read())
-
-    async def _save_skribbl_words(self, words: List[str]) -> None:
-        await dump_json("db/skribbl.json", words)
-
+    async def _skribbl_remove(self, ctx: commands.Context, *words) -> None:
+        """Removes one or more skribbl words."""
+        await self.db.delete_skribbl_words(words)
+        await ctx.send(f"Removed {', '.join(words)}.")

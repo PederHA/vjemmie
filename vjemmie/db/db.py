@@ -11,7 +11,7 @@ import sqlite3
 import time
 import traceback
 from collections import namedtuple
-from typing import Tuple, List, Dict, Callable, Any, Optional
+from typing import Tuple, List, Dict, Callable, Any, Optional, Iterable
 
 import discord
 from discord.ext import commands
@@ -42,6 +42,10 @@ class DatabaseConnection:
                 meth(*args)
                 self.conn.commit()
             return await self.bot.loop.run_in_executor(None, to_run)
+
+    ##################
+    # TIDSTYVERI
+    ##################
 
     async def get_tidstyveri(self) -> List[Tuple[discord.User, float]]:
         return await self.read(self._get_tidstyveri)
@@ -81,12 +85,20 @@ class DatabaseConnection:
             (member.id, time, time)
         )
 
+    #########
+    # PFM
+    #########
+
     async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> None:
         return await self.read(self._get_pfm_memes)
 
     def _get_pfm_memes(self) -> None:
         self.cursor.execute("SELECT topic, title, description, content, media_type FROM pfm_memes")
         return list(self.cursor.fetchall())
+
+    #########
+    # GAMING
+    #########
 
     async def get_gmoments(self) -> None:
         r = await self.read(self._get_gmoments)
@@ -125,3 +137,34 @@ class DatabaseConnection:
 
     def _purge_gaming_moments(self, member: discord.Member) -> None:
         self.cursor.execute(f"DELETE FROM `gmoments` WHERE `id`=={member.id}")
+
+    #########
+    # SKRIBBL
+    #########
+
+    async def add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
+        await self.write(self._add_skribbl_words, member, words)
+
+    def _add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
+        to_add = [(word, member.id, time.time()) for word in words]
+        self.cursor.executemany("INSERT OR IGNORE INTO skribbl (word, submitterID, submittedAt) VALUES (?, ?, ?)", to_add)
+
+    async def get_skribbl_words(self) -> List[Tuple[str]]:
+        return await self.read(self._get_skribbl_words)
+
+    def _get_skribbl_words(self) -> List[Tuple[str]]:
+        self.cursor.execute("SELECT word FROM skribbl")
+        return list(self.cursor.fetchall())
+
+    async def get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
+        return await self.read(self._get_skribbl_words)
+
+    def _get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
+        self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", user_id)
+        return list(self.cursor.fetchall())
+
+    async def delete_skribbl_words(self, words: Iterable[str]) -> None:
+        await self.write(self._delete_skribbl_words, words)
+
+    def _delete_skribbl_words(self, words: Iterable[str]) -> None:
+        self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [(word,) for word in words])
