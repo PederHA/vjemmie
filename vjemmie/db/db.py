@@ -175,3 +175,11 @@ class DatabaseConnection:
 
     def _delete_skribbl_words(self, words: Iterable[str]) -> None:
         self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [(word,) for word in words])
+
+    async def skribbl_get_stats(self) -> int:
+        """Fetches number of unique authors and words in the skribbl table."""
+        return await self.read(self._skribbl_get_stats)
+
+    def _skribbl_get_stats(self) -> int:
+        self.cursor.execute("SELECT COUNT(DISTINCT submitterID), COUNT(word) FROM skribbl")
+        return self.cursor.fetchone()

@@ -353,6 +353,8 @@ class FunCog(BaseCog):
             if len(args) < 2:
                 return await ctx.send("Usage: `!skribbl author <word>`")
             return await self._skribbl_get_author(ctx, args[1])
+        elif args[0] == "stats":
+            return await self._skribbl_stats(ctx)
         elif args[0] == "add":
             # Make sure words are passed in
             if len(args) < 2:
@@ -384,7 +386,7 @@ class FunCog(BaseCog):
     async def _skribbl_get_author(self, ctx: commands.Context, word: str) -> None:
         author = await self.db.get_skribbl_word_author(word)
         if not author:
-            return await ctx.send("Unable to find `word` in the database!")
+            return await ctx.send(f"Unable to find `{word}` in the database!")
         
         author_id, timestamp = author
         user = self.bot.get_user(author_id)
@@ -394,3 +396,6 @@ class FunCog(BaseCog):
         ts = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
         await ctx.send(f"`{word}` was added by {user.name} @ {ts}.")
         
+    async def _skribbl_stats(self, ctx: commands.Context) -> None:
+        authors, words = await self.db.skribbl_get_stats()
+        return await ctx.send(f"There are {words} words made by {authors} different authors.")
