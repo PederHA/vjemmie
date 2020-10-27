@@ -365,7 +365,9 @@ class FunCog(BaseCog):
         await self._skribbl_add(ctx, *args)
 
     async def _skribbl_add(self, ctx: commands.Context, *words) -> None:
-        words = [w.lower() for w in words]
+        words = [w.lower() for w in words if len(w) <= 30]
+        if not words:
+            raise CommandError("Words must be 30 characters or less!")
         await self.db.add_skribbl_words(ctx.message.author, words)    
         await ctx.send(f"Added {', '.join(words)}.")
     
