@@ -183,3 +183,17 @@ class DatabaseConnection:
     def _skribbl_get_stats(self) -> int:
         self.cursor.execute("SELECT COUNT(DISTINCT submitterID), COUNT(word) FROM skribbl")
         return self.cursor.fetchone()
+
+    async def groups_get_groups(self) -> List[str]:
+        return await self.read(self._groups_get_groups)
+
+    def _groups_get_groups(self) -> List[str]:
+        self.cursor.execute("SELECT * FROM groups")
+        return list(self.cursor.fetchall())
+
+    async def groups_add_group(self, group: str) -> bool:
+        return await self.write(self._groups_add_group, group)
+
+    def _groups_add_group(self, group: str) -> bool:
+        r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?)", [group])
+        return bool(r.rowcount)

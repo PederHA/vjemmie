@@ -10,6 +10,8 @@ from aiofile import AIOFile
 from discord.ext import commands
 from markovify import NewlineText
 
+from ..db import get_db
+from ..config import MAIN_DB
 from ..utils.commands import add_command
 from .base_cog import BaseCog
 
@@ -41,6 +43,7 @@ class MemeCog(BaseCog):
         self.daddy_verbs = self.load_daddy_verbs()
         self.files: Dict[str, List[str]] = {}
         self.create_gpt_commands()
+        self.db = get_db(MAIN_DB)
 
     def create_gpt_commands(self) -> None:
         p = Path("memes/txt/gpt")
@@ -96,22 +99,25 @@ class MemeCog(BaseCog):
         """Is there a character..."""
         await self.read_send_file(ctx, "memes/txt/madara.txt")
 
-    @commands.command(name="goodmorning")
-    async def goodmorning(self, ctx: commands.Context, experimental: bool=False) -> None:
-        if not self.wordlist or experimental != self.experimental:
-            if experimental:
-                fp = "memes/txt/6of12.txt"
-                self.experimental = True
-            else:
-                fp = "memes/txt/nationalities.txt"
-                self.experimental = False
+    @commands.group(name="goodmorning", aliases=["goodnight"])
+    async def goodmorning(self, ctx: commands.Context) -> None:
+        if not ctx.invoked_subcommand:
+            tod = "morning" if ctx.invoked_with == "goodmorning" else "night"
+            await self._do_post_goodmorning(ctx, tod)
 
-            async with AIOFile(fp, "r") as f:
-                self.wordlist = (await f.read()).splitlines()
-            
-        word = random.choice(self.wordlist)
-        
-        await ctx.send(f"Good morning to everyone apart from the {word}")
+    @goodmorning.command(name="add")
+    async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
+        word = " ".join(args).title()
+        added = await self.db.groups_add_group(word)
+        if added:
+            await ctx.send(f"Added `{word}`.")
+        else:
+            await ctx.send(f"`{word}` has already been added!")
+
+    async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
+        groups = await self.db.groups_get_groups()
+        word = random.choice(groups)[0]
+        await ctx.send(f"Good {time_of_day} to everyone apart from the {word}")        
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:
