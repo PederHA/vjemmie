@@ -108,11 +108,8 @@ class MemeCog(BaseCog):
     @goodmorning.command(name="add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
         word = " ".join(args).title()
-        added = await self.db.groups_add_group(word)
-        if added:
-            await ctx.send(f"Added `{word}`.")
-        else:
-            await ctx.send(f"`{word}` has already been added!")
+        await self.db.groups_add_group(word)
+        await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
         groups = await self.db.groups_get_groups()
