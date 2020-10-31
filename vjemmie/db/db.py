@@ -191,9 +191,9 @@ class DatabaseConnection:
         self.cursor.execute("SELECT * FROM groups")
         return list(self.cursor.fetchall())
 
-    async def groups_add_group(self, group: str) -> bool:
-        return await self.write(self._groups_add_group, group)
+    async def groups_add_group(self, submitter: discord.User, group: str) -> bool:
+        return await self.write(self._groups_add_group, submitter, group)
 
-    def _groups_add_group(self, group: str) -> bool:
-        r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?)", [group])
+    def _groups_add_group(self, submitter: discord.User, group: str) -> bool:
+        r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?, ?, (SELECT strftime('%s', 'now')))", [group, submitter.id])
         return bool(r.rowcount)

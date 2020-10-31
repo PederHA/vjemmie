@@ -108,7 +108,7 @@ class MemeCog(BaseCog):
     @goodmorning.command(name="add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
         word = " ".join(args).title()
-        await self.db.groups_add_group(word)
+        await self.db.groups_add_group(ctx.message.author, word)
         await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
