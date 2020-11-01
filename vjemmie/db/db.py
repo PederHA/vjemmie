@@ -102,12 +102,11 @@ class DatabaseConnection:
 
     async def get_gmoments(self) -> None:
         r = await self.read(self._get_gmoments)
-        moments = filter(lambda i: i[1] > 0, r) #  ignore users with 0 occurences
-        moments = sorted(moments, key=lambda user: user[1], reverse=True)
+        moments = filter(lambda user: user[1] > 0, r) #  ignore users with 0 occurrences
         return moments
     
     def _get_gmoments(self) -> List[Tuple[int, int]]:
-        self.cursor.execute("SELECT * FROM gm")
+        self.cursor.execute("SELECT occurrences, id FROM gm ORDER BY occurrences DESC")
         return list(self.cursor.fetchall())
 
     async def add_gmoment(self, member: discord.Member) -> None:
@@ -115,10 +114,10 @@ class DatabaseConnection:
 
     def _add_gmoment(self, member: discord.Member) -> None:
         self.cursor.execute(
-            """INSERT INTO gm (id, occurences)
+            """INSERT INTO gm (id, occurrences)
 	        VALUES (?, 1)
 	        ON CONFLICT(id)
-	        DO UPDATE SET occurences=occurences+1""",
+	        DO UPDATE SET occurrences=occurrences+1""",
             (member.id,)
         )
 
@@ -126,11 +125,11 @@ class DatabaseConnection:
         await self.write(self._decrement_gmoments, member)
 
     def _decrement_gmoments(self, member: discord.Member) -> None:
-        self.cursor.execute(f"SELECT occurences FROM gm WHERE id==?", member.id)
+        self.cursor.execute(f"SELECT occurrences FROM gm WHERE id==?", member.id)
         gmoments = self.cursor.fetchone()
         if gmoments is None or gmoments[0] <= 0: # FIXME: is this a tuple or just an int?
             raise CommandError(f"`{member.name}` has no gaming moments on record!")
-        self.cursor.execute(f"UPDATE gmoments SET occurences=occurences-1 WHERE id=={member.id}")
+        self.cursor.execute(f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}")
 
     async def purge_gaming_moments(self, member: discord.Member) -> None:
         await self.write(self._purge_gaming_moments, member)
