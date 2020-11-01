@@ -31,6 +31,7 @@ from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                                 NoContextException)
 from ..utils.experimental import get_ctx
 from ..utils.http import get
+from ..utils.users import get_user
 from ..utils.voting import NotEnoughVotes
 
 md_formats = ['asciidoc', 'autohotkey', 'bash',
@@ -1117,8 +1118,12 @@ class BaseCog(commands.Cog):
             raise TypeError("Mapping keys must be either type 'int' or 'discord.User'")
         
         # Get discord.User objects if keys are int or str
-        if any(isinstance(first_key, t) for t in [int, str]): 
-            mapping = [(self.bot.get_user(int(k)), v) for k, v in mapping] 
+        if any(isinstance(first_key, t) for t in [int, str]):
+            mapping = [
+                # Try to retrieve users from bot's cache, otherwise fetch from API
+                (await get_user(self.bot, int(k)), v) 
+                for k, v in mapping
+            ] 
         # Filter users who cannot be found
         l = list(filter(lambda m: None.__ne__(m[0]), mapping))
         
