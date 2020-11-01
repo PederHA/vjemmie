@@ -63,16 +63,18 @@ class BotSetupCog(BaseCog):
             )
         )
     def setup_youtube(self) -> None:
-        if not self.bot.secrets.YOUTUBE_API_KEY:
-            self.print(
-                "YouTube API Key is missing.\n"
+        err_msg = (
+                "YouTube API Key is missing or invalid.\n"
                 "How to fix:\n"
                 "1. Go to https://console.developers.google.com/apis/api/youtube.googleapis.com/credentials\n"
                 "2. Create a project\n"
                 "3. Enable YouTube Data API v3\n"
                 "4. Create an API Key"
             )
+        if not self.bot.secrets.YOUTUBE_API_KEY:
+            self.print(err_msg)
             return self.remove_commands(["yt"])
+        
         try:  
             youtube.youtube = build(
                 YOUTUBE_API_SERVICE_NAME,
@@ -81,7 +83,7 @@ class BotSetupCog(BaseCog):
             )
         except HttpError as e:
             if b"400" in e.content:
-                self.print(e)
+                self.print(err_msg)
                 return self.remove_commands(["yt"])
             else:
                 raise
@@ -133,8 +135,12 @@ class BotSetupCog(BaseCog):
         fun_cog.mw = MWClient(key=self.bot.secrets.MERRIAM_WEBSTER_KEY)
 
     def remove_commands(self, commands: List[str]) -> None:
+        if not commands:
+            return # Just silently ignore empty list. NOTE: bad?
+        s = 's' if len(commands)>1 else ''
+        cmds = ", ".join([f"'{self.bot.command_prefix}{cmd}'" for cmd in commands])
+        print(f"Disabling command{s} {cmds}", end="\n\n")
         for cmd in commands:
-            self.print(f"Disabling command '{self.bot.command_prefix}{cmd}'")
             self.bot.remove_command(cmd)
 
     def remove_cog(self, cog: str) -> None:
