@@ -31,6 +31,7 @@ from ..utils.exceptions import (VJEMMIE_EXCEPTIONS, BotPermissionError,
                                 NoContextException)
 from ..utils.experimental import get_ctx
 from ..utils.http import get
+from ..utils.time import format_time
 from ..utils.users import get_user
 from ..utils.voting import NotEnoughVotes
 
@@ -158,7 +159,7 @@ class BaseCog(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(
                 f"You are on cooldown for **`{ctx.prefix}{ctx.invoked_with}`**. "
-                f"Try again in {error.retry_after:.2f}s")
+                f"Try again in {format_time(error.retry_after)}")
 
         # Default error handler
         return await self._handle_error(ctx, error)
