@@ -95,3 +95,6 @@ memes/pfm_memes.json
 img.png
 parse_config.py
 memes/templates/allmyhomies.png
+
+# Whitelisted
+!db/vjemmie.db.sql

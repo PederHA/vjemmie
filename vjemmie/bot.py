@@ -8,7 +8,7 @@ with suppress(ImportError):
 
 from discord.ext.commands import Bot, Command, Cog
 
-from .db import MAIN_DB, add_db
+from .db import MAIN_DB, init_db
 from .cogs import COGS, BotSetupCog
 from .tests.test_cog import TestCog
 from .utils.patching.commands import patch_command_signature
@@ -42,9 +42,7 @@ def run(secrets,
     setattr(bot, "secrets", secrets)  # add secrets module as bot attribute
     
     # Connect to DB
-    add_db(MAIN_DB, bot)
-    # TODO: 1. If no db, remove db commands
-    #       2. Add an initDB script for required tables
+    init_db(MAIN_DB, bot)
 
     # Add cogs
     for cog in cogs:
