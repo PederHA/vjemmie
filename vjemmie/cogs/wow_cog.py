@@ -1,18 +1,18 @@
-from datetime import datetime, timedelta
-from collections import defaultdict
-from typing import DefaultDict, Dict, List, Optional, Tuple
 import asyncio
+from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import DefaultDict, Dict, List, Optional, Tuple
 
 import discord
-from discord.ext import commands
-from discord.ext import tasks
+from discord.ext import commands, tasks
 from discord.utils import get
 
-from .base_cog import BaseCog
-from ..utils.exceptions import CommandError
-from ..db import get_db, DatabaseConnection
 from ..config import MAIN_DB
+from ..db import DatabaseConnection, get_db
+from ..utils.exceptions import CommandError
+from ..utils.time import format_time
+from .base_cog import BaseCog
 
 BRONJAM_INTERVAL = 24000 # seconds
 BRONJAM_ALERT_ADVANCE = 10 * 60
@@ -185,3 +185,16 @@ class WowCog(BaseCog):
         guild = await self.bag_guilds.get_guild(ctx)
         await guild.remove_member(ctx.message.author)
         await ctx.send(f"Removed the `{guild.role.name}` role!")
+
+    @bag.command(name="next")
+    async def bag_next(self, ctx: commands.Context) -> None:
+        now = datetime.now()
+        for day, spawns in SCHEDULE.items():
+            if now.day > day:
+                continue
+            for spawn in spawns:
+                if now > spawn:
+                    continue
+                spawn += timedelta(seconds=BRONJAM_ALERT_ADVANCE)
+                diff = (spawn - now).total_seconds()
+                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn})")
