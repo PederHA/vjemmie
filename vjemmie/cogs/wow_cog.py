@@ -22,7 +22,7 @@ SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : 
 
 
 def create_schedule():
-    d = datetime(year=2020, month=11, day=13, hour=15, minute=00)
+    d = datetime(year=2020, month=11, day=13, hour=14, minute=00)
     while d.month == 11:
         if d.month != 11:
             break
@@ -143,7 +143,7 @@ class WowCog(BaseCog):
     async def _bag_alert_synchronize(self) -> None:
         """terrible method for syncing bronjam spawn timer with loop"""
         if not self.bag_synced:
-            now = datetime.now()
+            now = datetime.utcnow()
             spawns = SCHEDULE[now.day]
             for spawn in spawns:
                 if now > spawn:
@@ -188,7 +188,7 @@ class WowCog(BaseCog):
 
     @bag.command(name="next")
     async def bag_next(self, ctx: commands.Context) -> None:
-        now = datetime.now()
+        now = datetime.utcnow()
         for day, spawns in SCHEDULE.items():
             if now.day > day:
                 continue
@@ -197,4 +197,4 @@ class WowCog(BaseCog):
                     continue
                 spawn += timedelta(seconds=BRONJAM_ALERT_ADVANCE)
                 diff = (spawn - now).total_seconds()
-                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn})")
+                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn} UTC)")
