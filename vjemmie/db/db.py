@@ -207,7 +207,7 @@ class DatabaseConnection:
         )
 
     async def bag_get_guilds(self) -> List[Tuple[int, int, int]]:
-        await self.read(self._bag_get_guilds)
+        return await self.read(self._bag_get_guilds)
 
     def _bag_get_guilds(self) -> List[Tuple[int, int, int]]:
         self.cursor.execute("SELECT * FROM bag")

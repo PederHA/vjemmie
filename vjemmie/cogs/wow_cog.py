@@ -38,7 +38,7 @@ class BagGuild:
     role: discord.Role
 
     async def alert(self) -> None:
-        await self.channel.send(f"B A G in {BRONJAM_ALERT_ADVANCE//3600} minutes!")
+        await self.channel.send(f"B A G in {BRONJAM_ALERT_ADVANCE//60} minutes! {self.role.mention}")
 
     async def add_member(self, member: discord.Member) -> None:
         if self.role in member.roles:
@@ -170,8 +170,8 @@ class WowCog(BaseCog):
         await self.bag_guilds.add_guild(ctx, channel, role)   
         await ctx.send(
             "Guild has been configured for bag alerts. "
-            f"Members can now type `{self.bot.command_prefix}bag add` & `{self.bot.command_prefix}bag remove`"
-            "To enable bag alerts."
+            f"Members can now type `{self.bot.command_prefix}bag add` & `{self.bot.command_prefix}bag remove` "
+            "to enable bag alerts."
         ) 
 
     @bag.command(name="add", aliases=["me"])
