@@ -46,7 +46,7 @@ class BagGuild:
         await member.add_roles(self.role)
 
     async def remove_member(self, member: discord.Member) -> None:
-        if self.role in member.roles:
+        if self.role not in member.roles:
             raise CommandError(f"You do not have the {self.role.name} role!")
         await member.remove_roles(self.role)
 
@@ -98,12 +98,13 @@ class Bags:
     async def get_guild(self, ctx: commands.Context) -> BagGuild:
         if not ctx.guild:
             raise CommandError("This command is not supported in DMs!")
-        g = self._guilds.get(ctx.guild.id)
-        if not g:
+        guild = self._guilds.get(ctx.guild.id)
+        if not guild:
             raise CommandError(
         "This server has not been configured for bag alerts yet. "
         f"Run `{self.bot.command_prefix}bag setup` to get started."
         )
+        return guild
 
     async def _restore_from_db(self) -> None:
         guilds = await self.db.bag_get_guilds()
