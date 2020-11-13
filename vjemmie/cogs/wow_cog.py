@@ -15,7 +15,7 @@ from ..db import get_db, DatabaseConnection
 from ..config import MAIN_DB
 
 BRONJAM_INTERVAL = 24000 # seconds
-bag_alert_PRIOR = 10 * 60
+BRONJAM_ALERT_ADVANCE = 10 * 60
 BRONJAM_SCHEDULE = {}
 SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : list of bronjam spawns that day
 
@@ -26,7 +26,7 @@ def create_schedule():
     while d.month == 11:
         if d.month != 11:
             break
-        SCHEDULE[d.day].append(d - timedelta(seconds=bag_alert_PRIOR))
+        SCHEDULE[d.day].append(d - timedelta(seconds=BRONJAM_ALERT_ADVANCE))
         d += timedelta(seconds=BRONJAM_INTERVAL)
 
 
@@ -36,6 +36,9 @@ class BagGuild:
     guild: discord.Guild
     channel: discord.TextChannel
     role: discord.Role
+
+    async def alert(self) -> None:
+        await self.channel.send(f"B A G in {BRONJAM_ALERT_ADVANCE//3600} minutes!")
 
     async def add_member(self, member: discord.Member) -> None:
         if self.role in member.roles:
@@ -76,12 +79,16 @@ class Bags:
     db: DatabaseConnection
     _guilds: Dict[int, BagGuild] = field(default_factory=dict)
 
+    async def alert_guilds(self) -> None:
+        for guild in self._guilds.values():
+            await guild.alert()
+
     async def add_guild(self, ctx: commands.Context, channel: discord.TextChannel, role: discord.Role) -> None:
         if ctx.guild.id in self._guilds:
             raise CommandError("This Discord server has already been configured for bag alerts!")
         guild = BagGuild(
             bot=self.bot,
-            guild=ctx.guild.id,
+            guild=ctx.guild,
             channel=channel,
             role=role
         )
@@ -111,37 +118,43 @@ class WowCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         create_schedule()
-        self.bag_synced = False
         self.bag_guilds = Bags(self.bot, get_db(MAIN_DB))
-        self.bag_alert.start()
+
+        # Timer synchronization variables
+        self.bag_synced = False
         self.syncing = None
 
+        # Start alert loop     
+        self.bag_alert.start()
+        
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await self.bag_guilds._restore_from_db()
 
     @tasks.loop(seconds=BRONJAM_INTERVAL)
     async def bag_alert(self) -> None:
-        if not self.bag_synced and not self.syncing:
-            self.syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
-        # get bronjam group
-        # send alert in a channel
+        while not self.bag_synced:
+            if not self.syncing:
+                self.syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
+            await asyncio.sleep(1) # this is super primitive
+        await self.bag_guilds.alert_guilds()
 
     async def _bag_alert_synchronize(self) -> None:
         """terrible method for syncing bronjam spawn timer with loop"""
-        while not self.bag_synced:
+        if not self.bag_synced:
             now = datetime.now()
-            times = SCHEDULE[now.day]
-            for time in times:
-                if now.hour == time.hour and now.minute == time.minute:
-                    self.bag_synced = True
-                    break
-            # TODO: sleep until next alert
-            await asyncio.sleep(15)           
+            spawns = SCHEDULE[now.day]
+            for spawn in spawns:
+                if now > spawn:
+                    continue       
+                wait = (spawn - now).total_seconds()
+                await asyncio.sleep(wait)
+                self.bag_synced = True
                     
     @commands.group(name="bag")
     async def bag(self, ctx: commands.Context) -> None:
-        pass
+        if not ctx.invoked_subcommand:
+            await ctx.invoke(self.bot.get_command("help"), "bag")
 
     @bag.command(name="setup")
     async def bag_setup(
