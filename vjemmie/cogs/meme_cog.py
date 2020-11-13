@@ -99,13 +99,17 @@ class MemeCog(BaseCog):
         """Is there a character..."""
         await self.read_send_file(ctx, "memes/txt/madara.txt")
 
-    @commands.group(name="goodmorning", aliases=["goodnight"])
+    @commands.command(name="goodmorning")
+    @commands.cooldown(rate=1, per=86400.0, type=commands.BucketType.member)
     async def goodmorning(self, ctx: commands.Context) -> None:
-        if not ctx.invoked_subcommand:
-            tod = "morning" if ctx.invoked_with == "goodmorning" else "night"
-            await self._do_post_goodmorning(ctx, tod)
+        await self._do_post_goodmorning(ctx, "morning")
 
-    @goodmorning.command(name="add")
+    @commands.command(name="goodnight")
+    @commands.cooldown(rate=1, per=86400.0, type=commands.BucketType.member)
+    async def goodnight(self, ctx: commands.Context) -> None:
+        await self._do_post_goodmorning(ctx, "night")
+
+    @commands.command(name="goodmorning_add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
         word = " ".join(args).title()
         await self.db.groups_add_group(ctx.message.author, word)
