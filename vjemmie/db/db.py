@@ -24,7 +24,7 @@ class DatabaseConnection:
     def __init__(self, db_path: str, bot: commands.Bot) -> None:
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor: sqlite3.Cursor = self.conn.cursor()
-        self.bot = bot # To run synchronous methods in thread pool
+        self.bot = bot # To run blocking methods in thread pool
         
         # I was planning to add separate read and write locks,
         # but I'm not actually sure if that's safe. 
@@ -196,3 +196,19 @@ class DatabaseConnection:
     def _groups_add_group(self, submitter: discord.User, group: str) -> bool:
         r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?, ?, (SELECT strftime('%s', 'now')))", [group, submitter.id])
         return bool(r.rowcount)
+
+    async def bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
+        await self.write(self._bag_add_guild, guild_id, channel_id, role_id)
+
+    def _bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
+        self.cursor.execute(
+            "INSERT OR IGNORE INTO bag VALUES (?, ?, ?)", 
+            [guild_id, channel_id, role_id]
+        )
+
+    async def bag_get_guilds(self) -> List[Tuple[int, int, int]]:
+        await self.read(self._bag_get_guilds)
+
+    def _bag_get_guilds(self) -> List[Tuple[int, int, int]]:
+        self.cursor.execute("SELECT * FROM bag")
+        return self.cursor.fetchall()

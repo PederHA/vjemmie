@@ -46,4 +46,10 @@ CREATE TABLE IF NOT EXISTS "tweets" (
 	PRIMARY KEY("tweetID"),
 	FOREIGN KEY("username") REFERENCES "twitter"("username")
 );
+CREATE TABLE IF NOT EXISTS "bag" (
+	"guild_id"	INTEGER NOT NULL UNIQUE,
+	"channel_id"	INTEGER,
+	"role_id"	INTEGER,
+	PRIMARY KEY("guild_id")
+);
 COMMIT;
