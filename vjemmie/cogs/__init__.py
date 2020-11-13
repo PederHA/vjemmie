@@ -21,6 +21,7 @@ from .twitter_cog import TwitterCog
 from .user_cog import UserCog
 from .weather_cog import WeatherCog
 from .wowprogress_cog import WoWProgressCog
+from .wow_cog import WowCog
 
 with suppress(ImportError):
     from .pfm_cog import PFMCog
