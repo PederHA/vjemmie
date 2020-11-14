@@ -133,6 +133,7 @@ class WowCog(BaseCog):
 
     @tasks.loop(seconds=BRONJAM_INTERVAL)
     async def bag_alert(self) -> None:
+        self.bag_synced = False
         while not self.bag_synced:
             if not self.syncing:
                 self.syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
