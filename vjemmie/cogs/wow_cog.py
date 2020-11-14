@@ -125,11 +125,10 @@ class WowCog(BaseCog):
         self.bag_synced = False
         self.syncing = None
 
-        # Start alert loop     
-        self.bag_alert.start()
-        
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        # Start alert loop
+        self.bag_alert.start()
         await self.bag_guilds._restore_from_db()
 
     @tasks.loop(seconds=BRONJAM_INTERVAL)
@@ -143,12 +142,17 @@ class WowCog(BaseCog):
     async def _bag_alert_synchronize(self) -> None:
         """terrible method for syncing bronjam spawn timer with loop"""
         if not self.bag_synced:
+            # Excuse these prints for now :)
+            # I need to verify that the loop actually starts
+            # on Linux machines
+            print("syncing...")
             now = datetime.utcnow()
             spawns = SCHEDULE[now.day]
             for spawn in spawns:
                 if now > spawn:
                     continue       
                 wait = (spawn - now).total_seconds()
+                print(wait)
                 await asyncio.sleep(wait)
                 self.bag_synced = True
                     
