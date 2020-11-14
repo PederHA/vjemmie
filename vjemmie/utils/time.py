@@ -1,3 +1,8 @@
+from datetime import datetime
+
+from pytz import timezone
+
+
 def format_time(seconds: float) -> str:
     s = ""
     seconds = round(seconds)
@@ -12,3 +17,7 @@ def format_time(seconds: float) -> str:
 
     s += f"{str(seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
     return s
+
+
+def get_now_time():
+    return datetime.now(timezone("Europe/Oslo"))

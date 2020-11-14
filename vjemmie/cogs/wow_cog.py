@@ -7,26 +7,29 @@ from typing import DefaultDict, Dict, List, Optional, Tuple
 import discord
 from discord.ext import commands, tasks
 from discord.utils import get
+from pytz import timezone
 
 from ..config import MAIN_DB
 from ..db import DatabaseConnection, get_db
 from ..utils.exceptions import CommandError
-from ..utils.time import format_time
+from ..utils.time import format_time, get_now_time
 from .base_cog import BaseCog
 
 BRONJAM_INTERVAL = 24000 # seconds
 BRONJAM_ALERT_ADVANCE = 10 * 60
-BRONJAM_SCHEDULE = {}
 SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : list of bronjam spawns that day
 
 
 def create_schedule():
-    d = datetime(year=2020, month=11, day=13, hour=14, minute=00)
+    d = datetime(year=2020, month=11, day=13, hour=15, minute=00, tzinfo=timezone("Europe/Oslo"))
     while d.month == 11:
         if d.month != 11:
             break
         SCHEDULE[d.day].append(d - timedelta(seconds=BRONJAM_ALERT_ADVANCE))
         d += timedelta(seconds=BRONJAM_INTERVAL)
+
+
+
 
 
 @dataclass
@@ -146,15 +149,17 @@ class WowCog(BaseCog):
             # I need to verify that the loop actually starts
             # on Linux machines
             print("syncing...")
-            now = datetime.utcnow()
+            now = get_now_time()
             spawns = SCHEDULE[now.day]
-            for spawn in spawns:
-                if now > spawn:
-                    continue       
-                wait = (spawn - now).total_seconds()
-                print(wait)
-                await asyncio.sleep(wait)
-                self.bag_synced = True
+            for spawns in SCHEDULE.values():
+                for spawn in spawns:
+                    if now > spawn:
+                        continue       
+                    wait = (spawn - now).total_seconds()
+                    print(wait)
+                    await asyncio.sleep(wait)
+                    self.bag_synced = True
+                    return
                     
     @commands.group(name="bag")
     async def bag(self, ctx: commands.Context) -> None:
@@ -192,7 +197,7 @@ class WowCog(BaseCog):
 
     @bag.command(name="next")
     async def bag_next(self, ctx: commands.Context) -> None:
-        now = datetime.utcnow()
+        now = get_now_time()
         for day, spawns in SCHEDULE.items():
             if now.day > day:
                 continue
@@ -208,11 +213,13 @@ class WowCog(BaseCog):
         LIMIT = 5 # move this somewhere sensible
         out_spawns = []
         i = 0
-        now = datetime.utcnow()
+        now = get_now_time()
         for spawns in SCHEDULE.values():
             if i >= LIMIT:
                 break
             for spawn in spawns:
+                if i >= LIMIT:
+                    break # wtb labeled break from Golang
                 if now > spawn:
                     continue
                 out_spawns.append(spawn)
