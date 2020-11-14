@@ -28,8 +28,12 @@ def run(secrets,
     # Setup cogs
     if not cogs:
         cogs = []
+    
     if test:
+        import ptvsd
+        ptvsd.enable_attach(address=("0.0.0.0", 3000))
         cogs.append(TestCog)
+    
     cogs.extend(COGS)  # add default cogs
 
     # Bot setup
