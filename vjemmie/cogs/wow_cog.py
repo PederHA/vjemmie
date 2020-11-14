@@ -20,7 +20,6 @@ BRONJAM_SCHEDULE = {}
 SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : list of bronjam spawns that day
 
 
-
 def create_schedule():
     d = datetime(year=2020, month=11, day=13, hour=14, minute=00)
     while d.month == 11:
@@ -75,6 +74,7 @@ class BagGuild:
 
 @dataclass
 class Bags:
+    """A collection of guilds to ping before Bag spawns."""
     bot: commands.Bot
     db: DatabaseConnection
     _guilds: Dict[int, BagGuild] = field(default_factory=dict)
@@ -198,3 +198,29 @@ class WowCog(BaseCog):
                 spawn += timedelta(seconds=BRONJAM_ALERT_ADVANCE)
                 diff = (spawn - now).total_seconds()
                 return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn} UTC)")
+
+    @bag.command(name="schedule")
+    async def bag_schedule(self, ctx: commands.Context) -> None:
+        LIMIT = 5 # move this somewhere sensible
+        out_spawns = []
+        i = 0
+        now = datetime.utcnow()
+        for spawns in SCHEDULE.values():
+            if i >= LIMIT:
+                break
+            for spawn in spawns:
+                if now > spawn:
+                    continue
+                out_spawns.append(spawn)
+                i += 1
+
+        if not out_spawns:
+            return await ctx.send("No more spawns scheduled!")
+        
+        out = [f"`{spawn}`" for spawn in out_spawns]
+
+        await self.send_embed_message(
+            ctx, 
+            title=f"Next {len(out_spawns)} bag spawn times\n",
+            description="\n".join(out)
+        )
