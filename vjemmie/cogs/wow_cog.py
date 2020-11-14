@@ -126,7 +126,6 @@ class WowCog(BaseCog):
 
         # Timer synchronization variables
         self.bag_synced = False
-        self.syncing = None
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -136,10 +135,10 @@ class WowCog(BaseCog):
 
     @tasks.loop(seconds=BRONJAM_INTERVAL)
     async def bag_alert(self) -> None:
+        self.bag_synced = False
         while not self.bag_synced:
-            if not self.syncing:
-                self.syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
-            await asyncio.sleep(1) # this is super primitive
+            self.bot.loop.create_task(self._bag_alert_synchronize())
+            await asyncio.sleep(1) # wait for syncing to complete. this is super primitive
         await self.bag_guilds.alert_guilds()
 
     async def _bag_alert_synchronize(self) -> None:
