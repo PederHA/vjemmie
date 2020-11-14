@@ -217,7 +217,7 @@ class WowCog(BaseCog):
         if not out_spawns:
             return await ctx.send("No more spawns scheduled!")
         
-        out = [f"`{spawn}`" for spawn in out_spawns]
+        out = [f"`{spawn + timedelta(seconds=BRONJAM_ALERT_ADVANCE)}`" for spawn in out_spawns]
 
         await self.send_embed_message(
             ctx, 
