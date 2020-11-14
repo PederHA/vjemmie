@@ -31,7 +31,7 @@ def run(secrets,
     
     if test:
         import ptvsd
-        ptvsd.enable_attach("vjemmie-secret", address=("0.0.0.0", 3000))
+        ptvsd.enable_attach(address=("0.0.0.0", 3000))
         cogs.append(TestCog)
     
     cogs.extend(COGS)  # add default cogs
