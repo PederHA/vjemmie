@@ -21,15 +21,14 @@ SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : 
 
 
 def create_schedule():
-    d = datetime(year=2020, month=11, day=13, hour=15, minute=00, tzinfo=timezone("Europe/Oslo"))
+    d = datetime(year=2020, month=11, day=13, hour=15, minute=00)
+    tz = timezone("Europe/Oslo")
+    d = tz.localize(d)
     while d.month == 11:
         if d.month != 11:
             break
         SCHEDULE[d.day].append(d - timedelta(seconds=BRONJAM_ALERT_ADVANCE))
         d += timedelta(seconds=BRONJAM_INTERVAL)
-
-
-
 
 
 @dataclass
@@ -136,8 +135,10 @@ class WowCog(BaseCog):
     @tasks.loop(seconds=BRONJAM_INTERVAL)
     async def bag_alert(self) -> None:
         self.bag_synced = False
+        syncing = None
         while not self.bag_synced:
-            self.bot.loop.create_task(self._bag_alert_synchronize())
+            if not syncing:
+                syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
             await asyncio.sleep(1) # wait for syncing to complete. this is super primitive
         await self.bag_guilds.alert_guilds()
 
@@ -205,7 +206,7 @@ class WowCog(BaseCog):
                     continue
                 spawn += timedelta(seconds=BRONJAM_ALERT_ADVANCE)
                 diff = (spawn - now).total_seconds()
-                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn} UTC)")
+                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn})")
 
     @bag.command(name="schedule")
     async def bag_schedule(self, ctx: commands.Context) -> None:
