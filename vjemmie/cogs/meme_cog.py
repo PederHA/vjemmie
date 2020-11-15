@@ -100,12 +100,12 @@ class MemeCog(BaseCog):
         await self.read_send_file(ctx, "memes/txt/madara.txt")
 
     @commands.command(name="goodmorning")
-    @commands.cooldown(rate=1, per=86400.0, type=commands.BucketType.member)
+    @commands.cooldown(rate=1, per=72000.0, type=commands.BucketType.member)
     async def goodmorning(self, ctx: commands.Context) -> None:
         await self._do_post_goodmorning(ctx, "morning")
 
     @commands.command(name="goodnight")
-    @commands.cooldown(rate=1, per=86400.0, type=commands.BucketType.member)
+    @commands.cooldown(rate=1, per=72000.0, type=commands.BucketType.member)
     async def goodnight(self, ctx: commands.Context) -> None:
         await self._do_post_goodmorning(ctx, "night")
 
