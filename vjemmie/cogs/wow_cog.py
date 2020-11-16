@@ -15,13 +15,13 @@ from ..utils.exceptions import CommandError
 from ..utils.time import format_time, get_now_time
 from .base_cog import BaseCog
 
-BRONJAM_INTERVAL = 24000 # seconds
+BRONJAM_INTERVAL = 12000 # seconds
 BRONJAM_ALERT_ADVANCE = 10 * 60
 SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : list of bronjam spawns that day
 
 
 def create_schedule():
-    d = datetime(year=2020, month=11, day=13, hour=15, minute=00)
+    d = datetime(year=2020, month=11, day=16, hour=21, minute=31)
     tz = timezone("Europe/Oslo")
     d = tz.localize(d)
     while d.month == 11:
