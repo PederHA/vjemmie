@@ -21,7 +21,7 @@ SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : 
 
 
 def create_schedule():
-    d = datetime(year=2020, month=11, day=16, hour=21, minute=31)
+    d = datetime(year=2020, month=11, day=16, hour=21, minute=30)
     tz = timezone("Europe/Oslo")
     d = tz.localize(d)
     while d.month == 11:
