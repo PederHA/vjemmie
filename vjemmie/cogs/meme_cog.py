@@ -116,9 +116,8 @@ class MemeCog(BaseCog):
         await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
-        groups = await self.db.groups_get_groups()
-        word = random.choice(groups)[0]
-        await ctx.send(f"Good {time_of_day} to everyone apart from the {word}")        
+        group = await self.db.groups_get_random_group()
+        await ctx.send(f"Good {time_of_day} to everyone apart from the {group}")        
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:

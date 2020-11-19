@@ -190,6 +190,13 @@ class DatabaseConnection:
         self.cursor.execute("SELECT * FROM groups")
         return list(self.cursor.fetchall())
 
+    async def groups_get_random_group(self) -> str:
+        return await self.read(self._groups_get_random_group)
+
+    def _groups_get_random_group(self) -> str:
+        self.cursor.execute("SELECT `group` FROM groups ORDER BY RANDOM() LIMIT 1")
+        return self.cursor.fetchone()[0]
+
     async def groups_add_group(self, submitter: discord.User, group: str) -> bool:
         return await self.write(self._groups_add_group, submitter, group)
 
