@@ -1,16 +1,21 @@
 import sys
+from collections import namedtuple
 from contextlib import suppress
 from random import randint
+from typing import List
 
 import discord
 import psutil
 from discord.ext import commands
 
-from .base_cog import BaseCog, EmbedField
 from ..config import AUTHOR_MENTION, YES_ARGS
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CategoryError, CogError, CommandError
+from ..utils.time import format_time
+from .base_cog import BaseCog, EmbedField
 
+
+CommandCooldown = namedtuple("CommandCooldown", ["command", "cooldown"])
 
 class UserCog(BaseCog):
     """Help commands."""
@@ -219,3 +224,40 @@ class UserCog(BaseCog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(name="cooldowns", aliases=["coolies"])
+    async def get_cooldowns(self, ctx: commands.Context) -> None:
+        """Displays commands you are on cooldown for."""
+        # Iterating through command cooldowns blocks, so we run it in a thread
+        # (the overhead incurred from this probably isn't worth it for a small bot like VJ Emmie)
+        cooldowns = await self.bot.loop.run_in_executor(None, self._get_command_cooldowns, ctx)
+
+        if not cooldowns:
+            return await ctx.send("You are not on cooldown for any commands!")
+
+        # Format output message
+        longest_name = max([len(cmd.name) for cmd, _ in cooldowns])
+        fchar = self.EMBED_FILL_CHAR # to make expression more readable
+        desc = "\n".join([
+            f"`{cmd.name.ljust(longest_name, fchar)}:`{fchar*3}{format_time(cd)}" 
+            for cmd, cd in cooldowns
+        ])
+
+        await self.send_embed_message(
+            ctx, 
+            title=f"Cooldowns for {ctx.message.author.name}",
+            description=desc, 
+            thumbnail_url=ctx.message.author.avatar_url,
+        )
+
+    def _get_command_cooldowns(self, ctx: commands.Context) -> List[CommandCooldown]:
+        cooldowns: List[CommandCooldown] = []
+        for command in self.bot.commands:
+            cd = command.get_cooldown_retry_after(ctx)
+            if cd:
+                cooldowns.append(
+                    CommandCooldown(
+                        command=command,
+                        cooldown=cd,
+                    )
+                )
+        return cooldowns
