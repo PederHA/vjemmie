@@ -574,7 +574,7 @@ class SoundCog(BaseCog):
         
         # Raise exception if all sound directories are empty
         if not categories:
-            raise AttributeError("Soundboard has no sound files!")
+            raise CommandError("Soundboard has no sound files!")
         
         # Prompt user to specify category if message lacks category argument
         if not category:
