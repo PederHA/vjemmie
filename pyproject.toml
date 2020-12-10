@@ -37,7 +37,6 @@ mwthesaurus = "^0.1.2"
 httpx = "^0.13.3"
 aiofile = "^3.1.0"
 pytz = "^2020.4"
-google-cloud-translate = "^3.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
