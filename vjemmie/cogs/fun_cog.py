@@ -8,9 +8,8 @@ import unicodedata
 from functools import partial
 from itertools import chain
 from pprint import pprint
-from typing import List, Union, Optional, Tuple
+from typing import List, Union
 from datetime import datetime
-import html
 
 import discord
 import numpy as np
@@ -18,7 +17,6 @@ import unidecode
 from aiofile import AIOFile
 from discord.ext import commands
 from mwthesaurus import MWClient
-from google.cloud import translate_v2 as translate
 
 from ..db import get_db
 from ..config import MAIN_DB
@@ -27,8 +25,7 @@ from ..utils.messaging import fetch_message
 from ..utils.json import dump_json
 from .base_cog import BaseCog
 
-mw: Optional[MWClient] = None
-translate_client: Optional[translate.Client] = None
+mw: MWClient = None
 
 # Translations are defined strictly in lower-case
 UWU_MAPPING = {
@@ -404,19 +401,3 @@ class FunCog(BaseCog):
     async def _skribbl_stats(self, ctx: commands.Context) -> None:
         authors, words = await self.db.skribbl_get_stats()
         return await ctx.send(f"There are {words} words made by {authors} different authors.")
-
-    @commands.command(name="shittytranslate")
-    async def shittytranslate(self, ctx: commands.Context, *args) -> None:
-        t = await self.bot.loop.run_in_executor(None, self._shitty_translate, args)
-        await self.send_text_message(t, ctx)
-
-    def _shitty_translate(self, text: Tuple[str], language: str="zh", passes: int=2) -> str:
-        t = " ".join(text)
-        for _ in range(passes):
-            # Translate to other language
-            trans = translate_client.translate(t, target_language=language, source_language="en")
-            # Back to english
-            orig = translate_client.translate(trans["translatedText"], target_language="en", source_language=language)
-            t = html.unescape(orig["translatedText"]) # why the google translate API returns HTML entities in the text is beyond me
-        return t
-            

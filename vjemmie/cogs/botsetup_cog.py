@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import os
 from datetime import datetime, timedelta
 from typing import Optional, Union, List
 
@@ -13,7 +12,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from spotipy.oauth2 import SpotifyClientCredentials
 from mwthesaurus import MWClient
-from google.cloud import translate_v2 as translate
 
 from ..db import add_db
 from ..config import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, MAIN_DB
@@ -41,7 +39,6 @@ class BotSetupCog(BaseCog):
         self.setup_github()
         self.setup_reddit()
         self.setup_mwthesaurus()
-        self.setup_google_translate()
         
     def setup_spotify(self) -> None:
         if not all(c for c in [
@@ -125,37 +122,6 @@ class BotSetupCog(BaseCog):
             client_secret=self.bot.secrets.REDDIT_SECRET,
             user_agent=self.bot.secrets.REDDIT_USER_AGENT,
         )
-
-    def setup_google_translate(self) -> None:
-        if_fail = lambda: self.remove_commands(["shittytranslate"])
-        no_credentials_msg = (
-            "Google Cloud Service Account credentials are missing.\n"
-            "How to fix:\n"
-            "1. Go to https://console.cloud.google.com/apis/credentials/serviceaccountkey\n"
-            "2. Create a new service account\n"
-            "3. Set its role to Project->Owner\n"
-            "4. Download the key and place it in a directory the bot has access to\n"
-            "5. Add the path to the key to your environment variables.\n"
-            "\tEx: echo 'export GOOGLE_APPLICATION_CREDENTIALS=\"<path_to_key>\"' >> .bashrc"
-        )
-
-        # Should we also support just a key in addition to the .json credentials file?
-        if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-            self.print(no_credentials_msg)
-            return if_fail()
-        
-        try:
-            fun_cog.translate_client = translate.Client()
-        except:
-            self.print(
-                "Failed to instantiate Google Translate API client. "
-                "Make sure your credentials are valid and are contained within the .json encoded file "
-                "you downloaded from Google Cloud Platform.\n"
-            )
-            answer = input("Do you wish to display the instructions on how to configure Google Translate API credentials? (Y/N):")
-            if answer.lower() == "y":
-                self.print(no_credentials_msg)
-            return if_fail()
 
     def setup_mwthesaurus(self) -> None:
         if not (self.bot.secrets.MERRIAM_WEBSTER_KEY):
