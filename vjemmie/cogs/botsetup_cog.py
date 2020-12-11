@@ -146,15 +146,17 @@ class BotSetupCog(BaseCog):
         
         try:
             fun_cog.translate_client = translate.Client()
-        except:
+        except Exception as e:
             self.print(
                 "Failed to instantiate Google Translate API client. "
                 "Make sure your credentials are valid and are contained within the .json encoded file "
-                "you downloaded from Google Cloud Platform.\n"
+                "you downloaded from Google Cloud Platform."
+                "\nException message:", e
             )
+            sys.stdin.flush()
             answer = input("Do you wish to display the instructions on how to configure Google Translate API credentials? (Y/N):")
             if answer.lower() == "y":
-                self.print(no_credentials_msg)
+                self.print("\n", no_credentials_msg)
             return if_fail()
 
     def setup_mwthesaurus(self) -> None:
