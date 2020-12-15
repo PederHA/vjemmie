@@ -3,6 +3,7 @@ from asyncio import coroutine
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+from dataclasses import dataclass
 
 import discord
 import markovify
@@ -13,7 +14,14 @@ from markovify import NewlineText
 from ..db import get_db
 from ..config import MAIN_DB
 from ..utils.commands import add_command
+from ..utils.checks import admins_only
+from ..utils.exceptions import CommandError
 from .base_cog import BaseCog
+
+
+@dataclass
+class GoodmorningSettings:
+    member_chance: int = 5 # Percentage chance to pick a member instead of a group
 
 
 async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
@@ -42,8 +50,20 @@ class MemeCog(BaseCog):
         self.models: Dict[str, NewlineText] = {}
         self.daddy_verbs = self.load_daddy_verbs()
         self.files: Dict[str, List[str]] = {}
+
+        # Per-guild goodmorning command settings (TODO: make persistent)
+        self.goodmorning_settings: Dict[int, GoodmorningSettings] = {}
+
         self.create_gpt_commands()
         self.db = get_db(MAIN_DB)
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        await self._setup_goodmorning()
+    
+    async def _setup_goodmorning(self) -> None:
+        for guild in self.bot.guilds:
+            self.goodmorning_settings[guild.id] = GoodmorningSettings()
 
     def create_gpt_commands(self) -> None:
         p = Path("memes/txt/gpt")
@@ -111,13 +131,39 @@ class MemeCog(BaseCog):
 
     @commands.command(name="goodmorning_add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
-        word = " ".join([arg.capitalize() for arg in args])
+        if not args:
+            raise CommandError("One or more words are required")
+        
+        # Make sure first letter is uppercase, but don't touch the rest
+        words = list(args)
+        if not words[0][0].isupper():
+            words[0] = words[0].capitalize()
+        word = " ".join(words)    
+
         await self.db.groups_add_group(ctx.message.author, word)
         await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
-        group = await self.db.groups_get_random_group()
-        await ctx.send(f"Good {time_of_day} to everyone apart from the {group}")        
+        # n% chance to pick a member instead of a group
+        chance = (self.goodmorning_settings[ctx.guild.id].member_chance) / 100
+        if random.random() < chance:
+            member = random.choice(ctx.guild.members)
+            subject = member.mention
+        else:
+            subject = f"the {await self.db.groups_get_random_group()}"
+        
+        await ctx.send(f"Good {time_of_day} to everyone apart from {subject}")        
+
+    # TODO: rename this awful command
+    @commands.command(name="goodmorning_chance")
+    @admins_only()
+    async def goodmorning_chance(self, ctx: commands.Context, chance: int) -> None:
+        """Change the % chance of picking a member."""
+        if not ctx.guild:
+            return await ctx.send("This command is not supported in DMs.")   
+        if chance < 1 or chance > 100:
+            raise CommandError("Percent chance must be between 1 and 100.")
+        self.goodmorning_settings[ctx.guild.id] = chance
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:
