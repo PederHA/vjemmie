@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from enum import Enum, auto
-from typing import Dict, Iterable, List, Tuple, NamedTuple
+from typing import Dict, Iterable, List, NamedTuple, Tuple, Union
 
 from pytz import timezone
+
 
 # I originally had a good reason to make this an Enum, but now it's kinda weird
 class TimeUnit(Enum):
@@ -19,7 +20,7 @@ TIME_UNITS: Dict[str, TimeUnit] = {
     "months": TimeUnit.MONTHS,
     "month": TimeUnit.MONTHS,
     "mon": TimeUnit.MONTHS, # NOTE: could clash with a future day of week option? (monday)
-    "m": TimeUnit.MONTHS,
+    "M": TimeUnit.MONTHS,
     "weeks": TimeUnit.WEEKS,
     "week": TimeUnit.WEEKS,
     "wk": TimeUnit.WEEKS,
@@ -117,7 +118,7 @@ async def _process_timedelta_kwargs(kwargs: Dict[str, int]) -> Dict[str, int]:
     return kwargs
 
 
-def format_time(seconds: float) -> str:
+def format_time(seconds: Union[int, float]) -> str:
     s = ""
     seconds = round(seconds)
 
