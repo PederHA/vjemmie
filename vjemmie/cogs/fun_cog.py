@@ -23,7 +23,7 @@ from ..config import MAIN_DB
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
 from ..utils.json import dump_json
-from ..utils.time import parse_time_option, format_time
+from ..utils.time import parse_time_option, format_time, get_valid_time_units
 from .base_cog import BaseCog
 
 mw: MWClient = None
@@ -336,7 +336,17 @@ class FunCog(BaseCog):
 
     @commands.command(name="remindme")
     async def remindme(self, ctx: commands.Context, *args) -> None:
-        td, message = parse_time_option(args)
+        try:
+            td, message = await parse_time_option(args)
+        except ValueError as e:
+            msg = str(e)
+            time_units = ", ".join(f"`{u}`" for u in get_valid_time_units())
+            msg += f"\nValid time units: {time_units}."
+            raise CommandError(msg)
+
+        if td.total_seconds() == 0:
+            raise CommandError("Cannot set a reminder for 0 seconds!")    
+
         self.bot.loop.create_task(self._remindme(ctx, td, message))
         # TODO: Keep track of active reminders
 

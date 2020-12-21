@@ -1,17 +1,32 @@
 from datetime import datetime, timedelta
 from enum import Enum, auto
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, NamedTuple
 
 from pytz import timezone
 
-
 # I originally had a good reason to make this an Enum, but now it's kinda weird
 class TimeUnit(Enum):
+    MONTHS = "months" # this is not an actual datetime.timedelta param, so we need to treat it differently
+    WEEKS = "weeks"
+    DAYS = "days"
     HOURS = "hours"
     MINUTES = "minutes"
     SECONDS = "seconds"
 
+# TODO: Might just be easier to have a defaultdict[str, int] for each timedelta arg?
+
 TIME_UNITS: Dict[str, TimeUnit] = {
+    "months": TimeUnit.MONTHS,
+    "month": TimeUnit.MONTHS,
+    "mon": TimeUnit.MONTHS, # NOTE: could clash with a future day of week option? (monday)
+    "m": TimeUnit.MONTHS,
+    "weeks": TimeUnit.WEEKS,
+    "week": TimeUnit.WEEKS,
+    "wk": TimeUnit.WEEKS,
+    "w": TimeUnit.WEEKS,
+    "days": TimeUnit.DAYS,
+    "day": TimeUnit.DAYS,
+    "d": TimeUnit.DAYS,
     "hours": TimeUnit.HOURS,
     "hour": TimeUnit.HOURS,
     "hr": TimeUnit.HOURS,
@@ -26,7 +41,13 @@ TIME_UNITS: Dict[str, TimeUnit] = {
     "s": TimeUnit.SECONDS,
 }
 
-def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
+
+def get_valid_time_units() -> List[str]:
+    """Returns a list of valid time units."""
+    return [e.value for e in TimeUnit]
+
+
+async def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
     """Parses a message prefixed by a time option.
 
     Parameters
@@ -70,18 +91,31 @@ def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
             continue         # check if next word is a recognized time unit
 
     if not kwargs:
-        raise ValueError("No valid options found")
-        
+        raise ValueError("No valid time options found")      
+
     message = " ".join(message) # the joys of Iterable[str] :-)
     
     # Remove time options from message 
     # (very inefficient)
     for word in parsed:
         message = message.replace(word, "")
-    message = message.rstrip().lstrip() # Remove leading or trailing whitespace. Could this be problematic?
+    message = message.rstrip().lstrip() # Remove leading or trailing whitespace. NOTE: Could this be problematic?
     
+    kwargs = _process_timedelta_kwargs(kwargs)
     td = timedelta(**kwargs)
     return (td, message)
+
+
+async def _process_timedelta_kwargs(kwargs: Dict[str, int]) -> Dict[str, int]:
+    """Turns non-timedelta kwargs into timedelta kwargs"""
+    # Months need to be converted to weeks
+    months = kwargs.pop(TimeUnit.MONTHS.value, 0)
+    if months > 0:
+        weeks = kwargs.pop(TimeUnit.WEEKS.value, 0)
+        kwargs[TimeUnit.WEEKS.value] = weeks + (months * 4)
+    # NOTE: can expand this function to add more non-td arguments
+    return kwargs
+
 
 def format_time(seconds: float) -> str:
     s = ""
