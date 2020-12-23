@@ -39,8 +39,9 @@ class DatabaseConnection:
     async def write(self, meth: Callable[[Any], Any], *args) -> Optional[Any]:
         async with self.wlock:
             def to_run():
-                meth(*args)
+                r = meth(*args)
                 self.conn.commit()
+                return r
             return await self.bot.loop.run_in_executor(None, to_run)
 
     ##################
