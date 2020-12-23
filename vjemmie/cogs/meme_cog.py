@@ -140,7 +140,9 @@ class MemeCog(BaseCog):
             words[0] = words[0].capitalize()
         word = " ".join(words)    
 
-        await self.db.groups_add_group(ctx.message.author, word)
+        ok = await self.db.groups_add_group(ctx.message.author, word)
+        if not ok:
+            raise CommandError(f"`{word}` has already been added!")
         await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
