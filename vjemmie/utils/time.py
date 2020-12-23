@@ -48,7 +48,7 @@ def get_valid_time_units() -> List[str]:
     return [e.value for e in TimeUnit]
 
 
-async def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
+async def parse_time_option(message: Iterable[str]) -> Tuple[timedelta, str]:
     """Parses a message prefixed by a time option.
 
     Parameters
@@ -77,9 +77,11 @@ async def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
     
     for word in message:
         if parse_val:
+            # Try to look for a time unit after a number is found
             td_attr = TIME_UNITS.get(word)
             if not td_attr:
-                raise ValueError(f"Unrecognized token '{word}' following '{val}''")
+                parse_val = False
+                continue
             # Set timedelta attribute with parsed value
             kwargs[td_attr.value] = val
             parsed.append(f"{val} {word}")
@@ -90,19 +92,20 @@ async def parse_time_option(*message: Iterable[str]) -> Tuple[timedelta, str]:
             val = int(word)
             parse_val = True # got a number, 
             continue         # check if next word is a recognized time unit
-
+        # elif is_special_time_unit(word):
+        # # e.g "tomorrow"
     if not kwargs:
         raise ValueError("No valid time options found")      
 
     message = " ".join(message) # the joys of Iterable[str] :-)
     
     # Remove time options from message 
-    # (very inefficient)
+    # (very inefficient, and no, we can't do message.remove(word) while it's still a list.)
     for word in parsed:
         message = message.replace(word, "")
     message = message.rstrip().lstrip() # Remove leading or trailing whitespace. NOTE: Could this be problematic?
     
-    kwargs = _process_timedelta_kwargs(kwargs)
+    kwargs = await _process_timedelta_kwargs(kwargs)
     td = timedelta(**kwargs)
     return (td, message)
 
