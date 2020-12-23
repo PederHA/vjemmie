@@ -345,7 +345,7 @@ class FunCog(BaseCog):
             raise CommandError(msg)
 
         if td.total_seconds() == 0:
-            raise CommandError("Cannot set a reminder for 0 seconds!")    
+            raise CommandError("Cannot set a reminder for 0 seconds!")  
 
         self.bot.loop.create_task(self._remindme(ctx, td, message))
         # TODO: Keep track of active reminders
@@ -353,7 +353,7 @@ class FunCog(BaseCog):
     async def _remindme(self, ctx: commands.Context, td: timedelta, message: str) -> None:
         time_str = format_time(td.total_seconds())
         await ctx.send(f"Reminding you in {time_str}")
-        await asyncio.sleep(td.total.seconds())
+        await asyncio.sleep(td.total_seconds())
         await ctx.send(f"{message} {ctx.message.author.mention}.")
 
     @commands.command(name="skribbl")
