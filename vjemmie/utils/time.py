@@ -122,19 +122,28 @@ async def _process_timedelta_kwargs(kwargs: Dict[str, int]) -> Dict[str, int]:
 
 
 def format_time(seconds: Union[int, float]) -> str:
-    s = ""
+    s = []
     seconds = round(seconds)
+
+    days = seconds // 86400
+    if days:
+        seconds -= days * 86400
+        s.append(f"{str(days).rjust(2, '0')}d")
 
     hours = seconds // 3600
     if hours:
-        s += f"{str(hours).rjust(2, '0')}h " # only show hours if necessary
+        seconds -= hours * 3600
+        s.append(f"{str(hours).rjust(2, '0')}h")
 
-    minutes = (seconds // 60) % 60
+    minutes = seconds // 60
     if minutes or hours: # show minutes if hours are shown
-        s += f"{str(minutes).rjust(2, '0')}m " 
+        seconds -= minutes * 60
+        s.append(f"{str(minutes).rjust(2, '0')}m")
 
-    s += f"{str(seconds - (hours * 3600) - (minutes * 60)).rjust(2, '0')}s"
-    return s
+    if seconds:
+        s.append(f"{str(seconds).rjust(2, '0')}s")
+    
+    return " ".join(s)
 
 
 def get_now_time():
