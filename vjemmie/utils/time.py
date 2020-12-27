@@ -128,7 +128,7 @@ def format_time(seconds: Union[int, float]) -> str:
     days = seconds // 86400
     if days:
         seconds -= days * 86400
-        s.append(f"{str(days).rjust(2, '0')}d")
+        s.append(f"{days}d")
 
     hours = seconds // 3600
     if hours:
