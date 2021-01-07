@@ -10,6 +10,7 @@ import markovify
 from aiofile import AIOFile
 from discord.ext import commands
 from markovify import NewlineText
+from praw.models import Submission
 
 from ..db import get_db
 from ..config import MAIN_DB
@@ -174,21 +175,34 @@ class MemeCog(BaseCog):
 
     @commands.command(name="emojipastam")
     async def emojipasta_markovchain(self, ctx: commands.Context) -> None:
-        subreddit = "emojipasta"
+        await ctx.invoke(self.markovchain_subreddit, "emojipasta")
         
+    @commands.command(name="markovreddit", aliases=["mr"])
+    async def markovchain_subreddit(self, ctx: commands.Context, subreddit: str) -> None:
         if subreddit not in self.models:
-            reddit_cog = self.bot.get_cog("RedditCog")
-            
-            posts = await reddit_cog.get_from_reddit(ctx, subreddit, is_text=True, rtn_posts=True)
-            text = "\n".join([post.selftext for post in posts if post.selftext])
-            model = markovify.NewlineText(text)
-            
-            self.models[subreddit] = model
-        else:
-            model = self.models.get(subreddit)
+            async with ctx.typing():
+                reddit_cog = self.bot.get_cog("RedditCog")
+                posts = await reddit_cog._fetch_subreddit_posts(subreddit, sorting="top", time="all", post_limit=1000)
+                await self._generate_markovchain_subreddit_model(subreddit, posts)
         
-        await ctx.send(model.make_sentence(tries=300))
-        
+        model = self.models[subreddit]
+
+        sentence = model.make_sentence(tries=300)
+        if not sentence:
+            raise CommandError(f"Unable to generate a sentence for `r/{subreddit}`")
+        await self.send_text_message(sentence, ctx)
+
+    async def _generate_markovchain_subreddit_model(self, subreddit: str, posts: List[Submission]) -> NewlineText:
+        reddit_cog = self.bot.get_cog("RedditCog")
+        # TODO: Check if RedditCog is disabled
+        text = "\n".join([post.selftext for post in posts if post.selftext])
+        if not text:
+            raise ValueError("Unable to find text submissions")
+
+        model = markovify.NewlineText(text)
+        self.models[subreddit] = model
+        return model
+
     @commands.command(name="ricardo")
     async def ricardo(self, ctx: commands.Context, limit: int=4176) -> None:
         """Get random submission from ricardodb.tk. 
