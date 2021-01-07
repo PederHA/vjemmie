@@ -11,12 +11,13 @@ from collections import defaultdict, namedtuple
 from functools import partial, partialmethod
 from itertools import cycle
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union, Dict, List
 
 import discord
 import praw
 from discord.ext import commands, tasks
-from prawcore.exceptions import Forbidden, NotFound
+from prawcore.exceptions import Forbidden, NotFound, Redirect
+from praw.models import Submission
 from recordclass import recordclass
 
 from ..utils.caching import get_cached
@@ -36,6 +37,28 @@ RedditCommand = namedtuple("RedditCommand", ["subreddit", "aliases", "is_text"],
 async def _reddit_command_base(obj: commands.Cog, ctx: commands.Context, sorting: str=None, time: str=None, *, subreddit: str=None, is_text: bool=False) -> None:
     """Method used as a base for adding custom subreddit commands."""
     await obj.get_from_reddit(ctx, subreddit, sorting, time, is_text=is_text)
+
+
+class RedditSubmissions:
+    """Caches Reddit submissions for all guilds."""
+
+    _submissions: Dict[str, List[Submission]] = {}
+
+    def get(self, guild_id: int, subreddit: str, sorting: str, time: str) -> List[Submission]:
+        """Retrieves a list of Reddit Submissions."""
+        k = self._get_key(guild_id, subreddit, sorting, time)
+        return self._submissions.get(k, [])
+
+    def add(self, submissions: List[Submission], guild_id: int, subreddit: str, sorting: str, time: str) -> None:
+        k = self._get_key(guild_id, subreddit, sorting, time)
+        self._submissions[k] = submissions
+
+    def clear(self) -> None:
+        """Clears all submissions for all guilds."""
+        self._submissions.clear()
+
+    def _get_key(self, guild_id: int, subreddit: str, sorting: str, time: str) -> str:
+        return f"{guild_id}{subreddit}{sorting}{time}"
 
 
 class RedditCog(BaseCog):
@@ -70,6 +93,8 @@ class RedditCog(BaseCog):
         "day": 25,
     }
 
+    submissions = RedditSubmissions()
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
 
@@ -89,13 +114,10 @@ class RedditCog(BaseCog):
     def NSFW_WHITELIST(self):
         return get_cached("db/reddit/nsfw_whitelist.json", category="reddit")
     
-    def init_submissions_cache(self) -> None:
-        self.submissions = defaultdict(partial(defaultdict, partial(defaultdict, partial(defaultdict, dict))))
-    
     @tasks.loop(seconds=86400.0)
     async def submission_refresh_loop(self) -> None:
         """Wipes reddit submission cache once daily"""
-        self.init_submissions_cache()    
+        self.submissions.clear()    
     
     def cog_unload(self) -> None:
         self.submission_refresh_loop.cancel()        
@@ -166,8 +188,8 @@ class RedditCog(BaseCog):
         """
 
         try:
-            aliases = aliases.split(" ") if aliases else []
-            if not all(is_valid_command_name(alias) for alias in aliases) or not is_valid_command_name(subreddit):
+            al = aliases.split(" ") if aliases else []
+            if not is_valid_command_name(subreddit) or not all(is_valid_command_name(a) for a in al):
                 raise CommandError("Command name can only include letters a-z and numbers 0-9.")
             new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
             self._add_sub(new_command)
@@ -200,8 +222,7 @@ class RedditCog(BaseCog):
         cmd = self.subs.get(subreddit)
         # Check if subreddit command exists
         if not cmd:
-            return await self.send_error_msg(ctx, 
-                f"Could not find command for subreddit with name **{subreddit}**")
+            raise CommandError(f"Could not find command for subreddit with name **{subreddit}**")
         
         # Remove sub from instance subreddit dict
         self.subs.pop(subreddit)
@@ -223,7 +244,7 @@ class RedditCog(BaseCog):
             Discord Context object
         """
         if not self.subs:
-            return await ctx.send("No subreddits are added!")
+            raise CommandError("No subreddits are added!")
         
         _out = []
         longest_subreddit = max([len(cmd.subreddit) for cmd in self.subs.values()]) + 1
@@ -253,9 +274,9 @@ class RedditCog(BaseCog):
                 out_msg = f"Reddit time filtering is currently set to **{self.DEFAULT_TIME}**"
             else:
                 try:
-                    time = await self.check_time(ctx,opt)
+                    time = await self.check_time(ctx, opt)
                 except:
-                    return await self.send_error_msg(ctx, f"Invalid argument `{opt}`")
+                    raise CommandError(f"Invalid argument `{opt}`")
                 else:
                     # Match up time filter cycle and current time
                     _next_time = next(self.time_cycle)
@@ -421,12 +442,12 @@ class RedditCog(BaseCog):
 
         category = category.casefold()
 
-        if category in ["help", "categories", "?"]:            
-            # Post an embed with a field for each category and their respective subreddits.
-            subreddits = []
+        # Post an embed with a field for each category and their respective subreddits.
+        if category in ["help", "categories", "?"]:
+            s = []
             for category, _subs in subs.items():
-                subreddits.append(EmbedField(f"`{category}`", "r/"+"\nr/".join(_subs)))
-            embed = await self.get_embed(ctx, title="Memes", fields=subreddits, color=self.COG_COLOR)
+                s.append(EmbedField(f"`{category}`", "r/"+"\nr/".join(_subs)))
+            embed = await self.get_embed(ctx, title="Memes", fields=s, color=self.COG_COLOR)
             return await ctx.send(embed=embed)
 
         # Get list of subreddits for given category
@@ -446,7 +467,7 @@ class RedditCog(BaseCog):
         self.init_submissions_cache()
         await ctx.send("Wiped Reddit submissions cache successfully!")
 
-    async def _check_filtering(self, ctx: commands.Context, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
+    async def _check_filtering(self, filtering_type: str, filter_: Optional[str], default_filter: str, valid_filters: Iterable) -> str:
         """Small helper method for getting a valid sorting filter
         for Praw and reducing code duplication in RedditCog.check_time()
         and RedditCog.check_sorting()
@@ -479,10 +500,10 @@ class RedditCog(BaseCog):
         return filter_ or default_filter
     
     async def check_time(self, ctx, time: Optional[str]) -> str:
-        return await self._check_filtering(ctx, "time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
+        return await self._check_filtering("time", time, self.DEFAULT_TIME, self.TIME_FILTERS)
 
     async def check_sorting(self, ctx,  sorting: Optional[str]) -> str:
-        return await self._check_filtering(ctx, "sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
+        return await self._check_filtering("sorting", sorting, self.DEFAULT_SORTING, self.SORTING_FILTERS)
 
     def _is_image_content(self, url: str) -> bool:
         return False if not url else any(url.endswith(end) for end in self.IMAGE_EXTENSIONS)
@@ -504,15 +525,23 @@ class RedditCog(BaseCog):
 
         return not over_18 or subreddit in self.NSFW_WHITELIST
 
-    async def _get_random_reddit_post(self, guild_id: int, subreddit: str, sorting: str, time: str, is_text: bool) -> praw.models.Submission:
+    async def _get_random_reddit_post(self, posts: List[Submission], is_text: bool) -> Optional[Submission]:
         """Attempts to select a random reddit post that has not
         yet been posted in the current bot session from list of posts.
         """
-        l = self.submissions[guild_id][subreddit][sorting][time]
         while True:
-            post = random.choice(l)
-            l.remove(post)
-            if is_text or self._is_image_content(post.url):
+            if not posts:
+                return None
+
+            # Pop a random submission from the list
+            post = posts.pop(random.randint(0, len(posts)-1)) 
+
+            if is_text and not self._is_image_content(post.url) and not post.media:
+                return post
+            elif post.media:
+                if post.media.get("reddit_video"):
+                    return post
+            elif not is_text and self._is_image_content(post.url):
                 return post
 
     async def _format_reddit_post(self, post: praw.models.Submission, subreddit: str, is_text: bool) -> Tuple[str, Optional[str]]:
@@ -561,7 +590,6 @@ class RedditCog(BaseCog):
                 _out = post.title
                 if self._is_image_content(post.url):
                     image_url = post.url
-        
         # Only post images for image subreddits
         else:
             _out = f"r/{subreddit}: {post.title}"
@@ -571,12 +599,13 @@ class RedditCog(BaseCog):
         return _out, image_url
 
     def _get_subreddit_posts(self,
-                                   ctx,
-                                   subreddit: str,
-                                   sorting: str = None,
-                                   time: str = None,
-                                   post_limit: int = None,
-                                   allow_nsfw: bool = False) -> list:
+                             ctx,
+                             subreddit: str,
+                             sorting: str = None,
+                             time: str = None,
+                             post_limit: int = None,
+                             allow_nsfw: bool = False
+                            ) -> List[Submission]:
         # Get subreddit
         sub = reddit.subreddit(subreddit)
 
@@ -590,7 +619,18 @@ class RedditCog(BaseCog):
         else:
             posts = sub.top(time_filter=time, limit=post_limit)      
         return list(posts) # Consume all items in the generator and return as list
-    
+
+    async def _fetch_subreddit_posts(self, subreddit: str, sorting: str, time: str, post_limit: Optional[int]) -> List[Submission]:
+        def to_run() -> List[Submission]:
+            sub = reddit.subreddit(subreddit)
+            if sorting == "hot":
+                posts = sub.hot()
+            else:
+                posts = sub.top(time_filter=time, limit=post_limit)      
+            return list(posts)
+        posts = await self.bot.loop.run_in_executor(None, to_run)
+        return posts
+
     async def get_from_reddit(self,
                               ctx: commands.Context,
                               subreddit: str,
@@ -598,9 +638,8 @@ class RedditCog(BaseCog):
                               time: str = None,
                               post_limit: int = None,
                               is_text: bool = False,
-                              allow_nsfw: bool = False,
-                              rtn_posts: bool = False
-                              ) -> None:
+                              allow_nsfw: bool = False
+                            ) -> None:
         # Parse arguments to params sorting & time
         sorting = await self.check_sorting(ctx, sorting) # "top"/"hot"
         time = await self.check_time(ctx, time) # "all", "year", "month", "week", "day"
@@ -610,31 +649,29 @@ class RedditCog(BaseCog):
             post_limit = self.POST_LIMITS.get(time, 25)
         
         # Get Reddit posts from a given subreddit
-        posts = self.submissions[ctx.guild.id][subreddit][sorting][time]
+        # Check if cached submissions exist first
+        posts = self.submissions.get(ctx.guild.id, subreddit, sorting, time)
         if not posts:
             try:
                 async with ctx.message.channel.typing():
-                    # Praw is not async, so we have to run the method in a new thread
-                    to_run = partial(self._get_subreddit_posts, ctx, subreddit, sorting, time, post_limit, allow_nsfw)
-                    posts = await self.bot.loop.run_in_executor(None, to_run)
-                    self.submissions[ctx.guild.id][subreddit][sorting][time] = posts
-            except (Forbidden, NotFound) as e:
+                    # Fetch new posts and cache them
+                    posts = await self._fetch_subreddit_posts(subreddit, sorting, time, post_limit)
+                    self.submissions.add(posts, ctx.guild.id, subreddit, sorting, time)
+            except (Forbidden, Redirect, NotFound) as e:
                 if isinstance(e, Forbidden):
-                    s = "Subreddit might be quarantined."
+                    reason = "Subreddit might be quarantined."
                 else:
-                    s = "Verify that the subreddit exists and is spelled correctly."
-                # Why send_error_msg() here instead of raise CommandError?
-                # Why doesn't this exception propagate properly?
-                return await self.send_error_msg(
-                    ctx,
-                    f"Cannot retrieve **r/{subreddit}** submissions! {s}"
-                )
+                    reason = "Verify that the subreddit exists and is spelled correctly."
+                raise CommandError(f"Cannot retrieve **r/{subreddit}** submissions! {reason}")
             
-        if rtn_posts: # Way too hacky
-            return posts
-        
         # Select a random post from list of posts
-        post = await self._get_random_reddit_post(ctx.guild.id, subreddit, sorting, time, is_text)
+        post = await self._get_random_reddit_post(posts, is_text)
+        if post is None:
+            raise CommandError(f"Failed to find a post within the given parameters for the subreddit **r/{subreddit}**")
+
+        # FIXME: Shitty band-aid fix to support videos
+        if post.media:
+            return await ctx.send(post.media["reddit_video"]["fallback_url"])
 
         # Obtain (title, image URL) or (selftext, None) if is_text==True
         out_text, image_url = await self._format_reddit_post(post, subreddit, is_text)
@@ -648,9 +685,10 @@ class RedditCog(BaseCog):
         # Embed image if image URL is not None
         if image_url:
             await self.send_embed_message(ctx, description="", title=out_text, image_url=image_url, color=self.COG_COLOR)
-        # Send plain text otherwise
-        else:
+        else: # Send plain text otherwise
             await self.send_text_message(out_text, ctx)
+
+    
 
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
