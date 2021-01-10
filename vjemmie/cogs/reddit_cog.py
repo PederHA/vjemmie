@@ -636,7 +636,6 @@ class RedditCog(BaseCog):
             else:
                 reason = "Verify that the subreddit exists and is spelled correctly."
             raise CommandError(f"Cannot retrieve `r/{subreddit}` submissions! {reason}")
-
         return posts
 
     async def get_from_reddit(self,
