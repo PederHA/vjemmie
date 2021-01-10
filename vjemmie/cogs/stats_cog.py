@@ -7,7 +7,8 @@ from functools import partial
 from itertools import islice
 from pathlib import Path
 from time import perf_counter, time, time_ns
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Type
+from typing import Counter as CounterType
 
 import discord
 from aiofile import AIOFile
@@ -24,7 +25,7 @@ from .base_cog import BaseCog
 
 GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
  
-githubclient: Github = None # Initialized by BotSetupCog
+githubclient: Optional[Github] = None # Initialized by BotSetupCog
 
 
 @dataclass
@@ -40,6 +41,7 @@ class DiscordCommand:
 
     @property
     def top_user(self) -> Optional[List[Tuple[Any, int]]]:
+        # FIXME: cursed return type
         top_user = self.get_top_users(limit=1)
         return top_user.most_common() if top_user else None
 
@@ -61,13 +63,13 @@ class DiscordGuild:
     def __post_init__(self) -> None:
         self.guild_name = self.ctx.guild.name
         self.guild_id = self.ctx.guild.id
-        self.commands = {}
+        self.commands: Dict[str, DiscordCommand] = {}
         del self.ctx # has to be deleted so object can be pickled
 
     @property
-    def top_total_commands_invokers(self) -> Counter:
+    def top_total_commands_invokers(self) -> CounterType[str]:
         """Retrieves Counter of top command invokers in the guild."""
-        users = Counter()
+        users: CounterType[str] = Counter()
         for command in self.commands.values():
             for (uid, uses) in command.get_top_users(limit=None):
                 users[uid] += uses
@@ -189,6 +191,7 @@ class StatsCog(BaseCog):
 
     def get_command_usage(self, guild_id: Union[str, int], command: str) -> int:
         """Get number of times a command has been used in a specific guild."""
+        guild_id = int(guild_id)
         try:
             return self.guilds[guild_id].commands[command].times_used
         except KeyError:
@@ -232,7 +235,7 @@ class StatsCog(BaseCog):
         up = self.get_bot_uptime(type=str)
         await ctx.send(f"Bot has been up for {up}")
 
-    def get_bot_uptime(self, type: Union[dict, str]=dict) -> Union[dict, str]:
+    def get_bot_uptime(self, type: Union[Type[dict], Type[str]]=dict) -> Union[dict, str]:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
             return up
@@ -276,7 +279,7 @@ class StatsCog(BaseCog):
                         days: int=0,
                         *,
                         rtn_type: Union[str, list, None]=None
-                        ) -> Union[List[Commit.Commit], str, None]:
+                       ) -> None:
         """Display git commit log"""
         commits = await self.get_commits("PederHA/vjemmie", days)
 
@@ -290,16 +293,17 @@ class StatsCog(BaseCog):
 
         await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
 
-    async def get_commits(self, repo: str, days: int) -> List[Commit.Commit]:
+    async def get_commits(self, repository_name: str, days: int) -> List[Commit.Commit]:
         # Limit number of days to get commits from
+        days = abs(int(days))
         if days > 7:
             raise ValueError("Number of days cannot exceed 7!")
 
         # Get repo
-        repo = githubclient.get_repo(repo)
+        repo = githubclient.get_repo(repository_name) # type: ignore
 
         # Fetch commits non-blocking
-        since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet
+        since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet # type: ignore
         to_run = partial(repo.get_commits, since=since)
         _c = await self.bot.loop.run_in_executor(None, to_run)
 
@@ -330,10 +334,9 @@ class StatsCog(BaseCog):
         await ctx.send(f"{n_commits} commits have been made the past week.")
 
     @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context) -> str:
+    async def ping(self, ctx: commands.Context) -> None:
         ping_ms = self.get_bot_ping_ms()
         await ctx.send(f"Ping: {ping_ms}ms")
 
     def get_bot_ping_ms(self) -> int:
         return round(self.bot.ws.latency*100)
-
