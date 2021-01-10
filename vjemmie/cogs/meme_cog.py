@@ -184,17 +184,23 @@ class MemeCog(BaseCog):
         
     @commands.command(name="markovreddit", aliases=["mr"])
     async def markovchain_subreddit(self, ctx: commands.Context, subreddit: str) -> None:
+        subreddit = subreddit.lower()
         if subreddit not in self.models:
             async with ctx.typing():
                 reddit_cog = self.bot.get_cog("RedditCog")
                 posts = await reddit_cog._fetch_subreddit_posts(subreddit, sorting="top", time="all", post_limit=1000)
-                await self._generate_markovchain_subreddit_model(subreddit, posts)
+                try:
+                    await self._generate_markovchain_subreddit_model(subreddit, posts)
+                except ValueError as e:
+                    raise CommandError(e)
         
         model = self.models[subreddit]
-
-        sentence = model.make_sentence(tries=300)
+        
+        to_run = partial(model.make_sentence, tries=300)
+        sentence = await self.bot.loop.run_in_executor(None, to_run)
         if not sentence:
             raise CommandError(f"Unable to generate a sentence for `r/{subreddit}`")
+        
         await self.send_text_message(sentence, ctx)
 
     async def _generate_markovchain_subreddit_model(self, subreddit: str, posts: List[Submission]) -> NewlineText:

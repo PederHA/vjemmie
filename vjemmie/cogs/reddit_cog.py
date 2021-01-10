@@ -628,7 +628,15 @@ class RedditCog(BaseCog):
             else:
                 posts = sub.top(time_filter=time, limit=post_limit)      
             return list(posts)
-        posts = await self.bot.loop.run_in_executor(None, to_run)
+        try:
+            posts = await self.bot.loop.run_in_executor(None, to_run)
+        except (Forbidden, Redirect, NotFound) as e:
+            if isinstance(e, Forbidden):
+                reason = "Subreddit might be quarantined."
+            else:
+                reason = "Verify that the subreddit exists and is spelled correctly."
+            raise CommandError(f"Cannot retrieve `r/{subreddit}` submissions! {reason}")
+
         return posts
 
     async def get_from_reddit(self,
@@ -652,18 +660,11 @@ class RedditCog(BaseCog):
         # Check if cached submissions exist first
         posts = self.submissions.get(ctx.guild.id, subreddit, sorting, time)
         if not posts:
-            try:
-                async with ctx.message.channel.typing():
-                    # Fetch new posts and cache them
-                    posts = await self._fetch_subreddit_posts(subreddit, sorting, time, post_limit)
-                    self.submissions.add(posts, ctx.guild.id, subreddit, sorting, time)
-            except (Forbidden, Redirect, NotFound) as e:
-                if isinstance(e, Forbidden):
-                    reason = "Subreddit might be quarantined."
-                else:
-                    reason = "Verify that the subreddit exists and is spelled correctly."
-                raise CommandError(f"Cannot retrieve **r/{subreddit}** submissions! {reason}")
-            
+            async with ctx.message.channel.typing():
+                # Fetch new posts and cache them
+                posts = await self._fetch_subreddit_posts(subreddit, sorting, time, post_limit)
+                self.submissions.add(posts, ctx.guild.id, subreddit, sorting, time)
+
         # Select a random post from list of posts
         post = await self._get_random_reddit_post(posts, is_text)
         if post is None:
@@ -687,8 +688,6 @@ class RedditCog(BaseCog):
             await self.send_embed_message(ctx, description="", title=out_text, image_url=image_url, color=self.COG_COLOR)
         else: # Send plain text otherwise
             await self.send_text_message(out_text, ctx)
-
-    
 
     def _get_commands(self, cmd: RedditCommand) -> str:
         """
