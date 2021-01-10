@@ -23,6 +23,7 @@ from .base_cog import BaseCog
 @dataclass
 class GoodmorningSettings:
     member_chance: int = 5 # Percentage chance to pick a member instead of a group
+    # TODO: add more settings
 
 
 async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
@@ -148,7 +149,10 @@ class MemeCog(BaseCog):
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
         # n% chance to pick a member instead of a group
-        chance = (self.goodmorning_settings[ctx.guild.id].member_chance) / 100
+        if not self.goodmorning_settings.get(ctx.guild.id, None):
+            self.goodmorning_settings[ctx.guild.id] = GoodmorningSettings()
+
+        chance = self.goodmorning_settings[ctx.guild.id].member_chance / 100
         if random.random() < chance:
             member = random.choice(ctx.guild.members)
             subject = member.mention
@@ -166,7 +170,8 @@ class MemeCog(BaseCog):
             return await ctx.send("This command is not supported in DMs.")   
         if chance < 1 or chance > 100:
             raise CommandError("Percent chance must be between 1 and 100.")
-        self.goodmorning_settings[ctx.guild.id] = chance
+        self.goodmorning_settings[ctx.guild.id].member_chance = chance
+        await ctx.send(f"Chance to pick a member for `{self.bot.command_prefix}goodmorning` set to {chance}%")
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:
