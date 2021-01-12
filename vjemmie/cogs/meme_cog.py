@@ -10,6 +10,7 @@ import markovify
 from aiofile import AIOFile
 from discord.ext import commands
 from markovify import NewlineText
+from praw.models import Submission
 
 from ..db import get_db
 from ..config import MAIN_DB
@@ -22,6 +23,7 @@ from .base_cog import BaseCog
 @dataclass
 class GoodmorningSettings:
     member_chance: int = 5 # Percentage chance to pick a member instead of a group
+    # TODO: add more settings
 
 
 async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
@@ -140,12 +142,17 @@ class MemeCog(BaseCog):
             words[0] = words[0].capitalize()
         word = " ".join(words)    
 
-        await self.db.groups_add_group(ctx.message.author, word)
+        ok = await self.db.groups_add_group(ctx.message.author, word)
+        if not ok:
+            raise CommandError(f"`{word}` has already been added!")
         await ctx.send(f"Added `{word}`.")
 
     async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
         # n% chance to pick a member instead of a group
-        chance = (self.goodmorning_settings[ctx.guild.id].member_chance) / 100
+        if not self.goodmorning_settings.get(ctx.guild.id, None):
+            self.goodmorning_settings[ctx.guild.id] = GoodmorningSettings()
+
+        chance = self.goodmorning_settings[ctx.guild.id].member_chance / 100
         if random.random() < chance:
             member = random.choice(ctx.guild.members)
             subject = member.mention
@@ -163,7 +170,8 @@ class MemeCog(BaseCog):
             return await ctx.send("This command is not supported in DMs.")   
         if chance < 1 or chance > 100:
             raise CommandError("Percent chance must be between 1 and 100.")
-        self.goodmorning_settings[ctx.guild.id] = chance
+        self.goodmorning_settings[ctx.guild.id].member_chance = chance
+        await ctx.send(f"Chance to pick a member for `{self.bot.command_prefix}goodmorning` set to {chance}%")
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:
@@ -172,21 +180,40 @@ class MemeCog(BaseCog):
 
     @commands.command(name="emojipastam")
     async def emojipasta_markovchain(self, ctx: commands.Context) -> None:
-        subreddit = "emojipasta"
+        await ctx.invoke(self.markovchain_subreddit, "emojipasta")
         
+    @commands.command(name="markovreddit", aliases=["mr"])
+    async def markovchain_subreddit(self, ctx: commands.Context, subreddit: str) -> None:
+        subreddit = subreddit.lower()
         if subreddit not in self.models:
-            reddit_cog = self.bot.get_cog("RedditCog")
-            
-            posts = await reddit_cog.get_from_reddit(ctx, subreddit, is_text=True, rtn_posts=True)
-            text = "\n".join([post.selftext for post in posts if post.selftext])
-            model = markovify.NewlineText(text)
-            
-            self.models[subreddit] = model
-        else:
-            model = self.models.get(subreddit)
+            async with ctx.typing():
+                reddit_cog = self.bot.get_cog("RedditCog")
+                posts = await reddit_cog._fetch_subreddit_posts(subreddit, sorting="top", time="all", post_limit=1000)
+                try:
+                    await self._generate_markovchain_subreddit_model(subreddit, posts)
+                except ValueError as e:
+                    raise CommandError(e)
         
-        await ctx.send(model.make_sentence(tries=300))
+        model = self.models[subreddit]
         
+        to_run = partial(model.make_sentence, tries=300)
+        sentence = await self.bot.loop.run_in_executor(None, to_run)
+        if not sentence:
+            raise CommandError(f"Unable to generate a sentence for `r/{subreddit}`")
+        
+        await self.send_text_message(sentence, ctx)
+
+    async def _generate_markovchain_subreddit_model(self, subreddit: str, posts: List[Submission]) -> NewlineText:
+        reddit_cog = self.bot.get_cog("RedditCog")
+        # TODO: Check if RedditCog is disabled
+        text = "\n".join([post.selftext for post in posts if post.selftext])
+        if not text:
+            raise ValueError("Unable to find text submissions")
+
+        model = markovify.NewlineText(text)
+        self.models[subreddit] = model
+        return model
+
     @commands.command(name="ricardo")
     async def ricardo(self, ctx: commands.Context, limit: int=4176) -> None:
         """Get random submission from ricardodb.tk. 

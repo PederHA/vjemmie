@@ -9,7 +9,7 @@ from functools import partial
 from itertools import chain
 from pprint import pprint
 from typing import List, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 import numpy as np
@@ -23,6 +23,7 @@ from ..config import MAIN_DB
 from ..utils.exceptions import CommandError
 from ..utils.messaging import fetch_message
 from ..utils.json import dump_json
+from ..utils.time import parse_time_option, format_time, get_valid_time_units
 from .base_cog import BaseCog
 
 mw: MWClient = None
@@ -323,6 +324,7 @@ class FunCog(BaseCog):
 
     @commands.command(name="timer")
     async def timer(self, ctx: commands.Context, minutes: int) -> None:
+        """Simple timer. Specify duration in minutes."""
         if minutes <= 0:
             raise CommandError("Sleep duration cannot be 0 minutes or less.")
         self.bot.loop.create_task(self._timer(ctx, minutes))
@@ -332,11 +334,32 @@ class FunCog(BaseCog):
         await asyncio.sleep(minutes*60)
         await ctx.send(f"Time's up, {ctx.message.author.mention}.")
 
+    @commands.command(name="remindme")
+    async def remindme(self, ctx: commands.Context, *args) -> None:
+        try:
+            td, message = await parse_time_option(args)
+        except ValueError as e:
+            msg = str(e)
+            time_units = ", ".join(f"`{u}`" for u in get_valid_time_units())
+            msg += f"\nValid time units: {time_units}."
+            raise CommandError(msg)
+
+        if td.total_seconds() == 0:
+            raise CommandError("Cannot set a reminder for 0 seconds!")  
+
+        self.bot.loop.create_task(self._remindme(ctx, td, message))
+        # TODO: Keep track of active reminders
+
+    async def _remindme(self, ctx: commands.Context, td: timedelta, message: str) -> None:
+        time_str = format_time(td.total_seconds())
+        await ctx.send(f"Reminding you in {time_str}")
+        await asyncio.sleep(td.total_seconds())
+        await ctx.send(f"{message} {ctx.message.author.mention}.")
+
     @commands.command(name="skribbl")
     async def skribbl(self, ctx: commands.Context, *args) -> None:
         if not args:
             raise CommandError("No arguments passed in.")
-
         # Manually handle subcommands since we apparently can't
         # have an *args parameter on a commands.group(),
         # since ctx.invoked_subcommand will always be None.

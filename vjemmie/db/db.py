@@ -32,15 +32,16 @@ class DatabaseConnection:
         self.rlock = asyncio.Lock()
         self.wlock = self.rlock
         
-    async def read(self, meth: Callable[[Any], Any], *args) -> Optional[Any]:
+    async def read(self, meth: Callable[..., Any], *args) -> Any:
         async with self.rlock:
             return await self.bot.loop.run_in_executor(None, meth, *args)
 
-    async def write(self, meth: Callable[[Any], Any], *args) -> Optional[Any]:
+    async def write(self, meth: Callable[..., Any], *args) -> Any:
         async with self.wlock:
             def to_run():
-                meth(*args)
+                r = meth(*args)
                 self.conn.commit()
+                return r
             return await self.bot.loop.run_in_executor(None, to_run)
 
     ##################
@@ -69,8 +70,8 @@ class DatabaseConnection:
         res = await self.read(self._get_tidstyveri_by_id, user_id)
         return res[1] if res else 0.0
     
-    def _get_tidstyveri_by_id(self, user_id: int) -> float:
-        self.cursor.execute("SELECT * FROM tidstyver WHERE id==?", (user_id,))
+    def _get_tidstyveri_by_id(self, user_id: int) -> List[float]:
+        self.cursor.execute("SELECT * FROM tidstyver WHERE id==?", [user_id])
         return self.cursor.fetchone()
 
     async def add_tidstyveri(self, member: discord.Member, time: float) -> None:
@@ -89,10 +90,10 @@ class DatabaseConnection:
     # PFM
     #########
 
-    async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> None:
+    async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> List[Tuple[str, str, str, str, str]]:
         return await self.read(self._get_pfm_memes)
 
-    def _get_pfm_memes(self) -> None:
+    def _get_pfm_memes(self) -> List[Tuple[str, str, str, str, str]]:
         self.cursor.execute("SELECT topic, title, description, content, media_type FROM pfm_memes")
         return list(self.cursor.fetchall())
 
@@ -100,13 +101,16 @@ class DatabaseConnection:
     # GAMING
     #########
 
-    async def get_gmoments(self) -> None:
+    async def get_gmoments(self) -> Dict[int, str]:
         r = await self.read(self._get_gmoments)
-        moments = filter(lambda user: user[1] > 0, r) #  ignore users with 0 occurrences
+        l = list(filter(lambda user: user[1] > 0, r)) #  ignore users with 0 occurrences
+        moments = {}
+        for user_id, occurrences in l:
+            moments[user_id] = occurrences
         return moments
     
     def _get_gmoments(self) -> List[Tuple[int, int]]:
-        self.cursor.execute("SELECT occurrences, id FROM gm ORDER BY occurrences DESC")
+        self.cursor.execute("SELECT id, occurrences FROM gm ORDER BY occurrences DESC")
         return list(self.cursor.fetchall())
 
     async def add_gmoment(self, member: discord.Member) -> None:
@@ -118,7 +122,7 @@ class DatabaseConnection:
 	        VALUES (?, 1)
 	        ON CONFLICT(id)
 	        DO UPDATE SET occurrences=occurrences+1""",
-            (member.id,)
+            [member.id],
         )
 
     async def decrement_gmoments(self, member: discord.Member) -> None:
@@ -131,10 +135,10 @@ class DatabaseConnection:
             raise CommandError(f"`{member.name}` has no gaming moments on record!")
         self.cursor.execute(f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}")
 
-    async def purge_gaming_moments(self, member: discord.Member) -> None:
-        await self.write(self._purge_gaming_moments, member)
+    async def purge_gmoments(self, member: discord.Member) -> None:
+        await self.write(self._purge_gmoments, member)
 
-    def _purge_gaming_moments(self, member: discord.Member) -> None:
+    def _purge_gmoments(self, member: discord.Member) -> None:
         self.cursor.execute(f"DELETE FROM `gmoments` WHERE `id`=={member.id}")
 
     #########
@@ -159,21 +163,21 @@ class DatabaseConnection:
         return await self.read(self._get_skribbl_words)
 
     def _get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
-        self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", user_id)
+        self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", [user_id])
         return list(self.cursor.fetchall())
     
     async def get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
         return await self.read(self._get_skribbl_word_author, word)
 
     def _get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
-        self.cursor.execute("SELECT submitterID, submittedAt FROM skribbl WHERE word==?", (word,))
+        self.cursor.execute("SELECT submitterID, submittedAt FROM skribbl WHERE word==?", [word])
         return self.cursor.fetchone()
 
     async def delete_skribbl_words(self, words: Iterable[str]) -> None:
         await self.write(self._delete_skribbl_words, words)
 
     def _delete_skribbl_words(self, words: Iterable[str]) -> None:
-        self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [(word,) for word in words])
+        self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [[word] for word in words])
 
     async def skribbl_get_stats(self) -> int:
         """Fetches number of unique authors and words in the skribbl table."""

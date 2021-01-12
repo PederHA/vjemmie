@@ -28,6 +28,7 @@ from ..cogs.base_cog import BaseCog
 from ..utils.checks import owners_only, test_server_cmd
 from ..utils.exceptions import CommandError
 from ..utils.messaging import ask_user_yes_no
+from ..utils.time import format_time
 
 SENTINEL = object() # Shouldn't strictly be called "sentinel", but it's not a None-value either...
 DEFAULT_OPERATOR = operator.eq
@@ -162,7 +163,7 @@ class TestCog(BaseCog):
         await self._pre_tests_setup()
 
         # Temporarily patch ctx to disable message sending while invoking bot commands
-        with self.patch_ctx(ctx) as ctx_:
+        with self.patch_ctx(ctx) as ctx_: # type: commands.Context
 
             for test in [k for k in dir(self) if k.startswith("test_")]:
                 # Get coroutine
@@ -227,7 +228,7 @@ class TestCog(BaseCog):
         # Reset test ID
         self.test_id = None
 
-    @contextmanager
+    @contextmanager # type: ignore
     def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
         """Patches the `send()` method of a 
         `discord.ext.commands.Context` object with a dummy method
@@ -614,6 +615,14 @@ class TestCog(BaseCog):
     async def test_imagecog_deepfry(self, ctx: commands.Context) -> None:
         await self.do_test_command(ctx, "deepfry", "-url", IMAGE_URL)
 
+    # Utils
+
+    # Time
+
+    async def test_time_format_time(self, ctx: commands.Context) -> None:
+        assert format_time(3600) == "01h"
+        assert format_time(3600 * 24) == "1d"
+        assert format_time(3600 * 24 + 1) == "1d 01s"
 
     async def _test_deepfry(self, ctx: commands.Context) -> None:
         # Get !deepfry command
