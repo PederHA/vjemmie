@@ -2,12 +2,15 @@ from typing import Iterable, List, Optional
 
 import discord
 from discord.ext.commands import Bot
-
+from discord.errors import NotFound
 
 async def get_user(bot: Bot, user_id: int) -> Optional[discord.User]:
     """Attempts to get user from bot's own member cache, 
     falls back on fetching from API if user is not cached."""
-    return bot.get_user(user_id) or await bot.fetch_user(user_id)
+    try:
+        return bot.get_user(user_id) or await bot.fetch_user(user_id)
+    except NotFound:
+        return None
 
 
 async def get_users_from_ids(bot: Bot, users: Iterable[int]) -> List[discord.User]:
