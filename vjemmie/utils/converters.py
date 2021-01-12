@@ -108,7 +108,6 @@ class NonCaseSensMemberConverter(IDConverter):
             else:
                 result = _get_from_guilds(bot, 'get_member', user_id)
 
-
         if result is None:
             raise BadArgument(f"No member named '{argument}'")
 

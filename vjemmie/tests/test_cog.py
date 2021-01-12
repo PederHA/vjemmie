@@ -163,7 +163,7 @@ class TestCog(BaseCog):
         await self._pre_tests_setup()
 
         # Temporarily patch ctx to disable message sending while invoking bot commands
-        with self.patch_ctx(ctx) as ctx_:
+        with self.patch_ctx(ctx) as ctx_: # type: commands.Context
 
             for test in [k for k in dir(self) if k.startswith("test_")]:
                 # Get coroutine
@@ -228,7 +228,7 @@ class TestCog(BaseCog):
         # Reset test ID
         self.test_id = None
 
-    @contextmanager
+    @contextmanager # type: ignore
     def patch_ctx(self, ctx: commands.Context) -> ContextManager[commands.Context]:
         """Patches the `send()` method of a 
         `discord.ext.commands.Context` object with a dummy method
