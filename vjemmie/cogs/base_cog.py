@@ -53,8 +53,9 @@ SHOW_ERROR = [
     DownloadError, # youtube-dl
     TypeError,
     ConnectError, # httpx
-    ConnectTimeout # httpx
-    ]
+    ConnectTimeout, # httpx
+    ConnectionError,
+]
 SHOW_ERROR += VJEMMIE_EXCEPTIONS
 
 # Don't log traceback of these exception types

@@ -192,7 +192,12 @@ class ImageCog(BaseCog):
             headers={'X-Api-Key': self.bot.secrets.REMOVEBG_KEY},
         )
         if response.status_code != 200:
-            raise ConnectionError(response)
+            j = response.json()
+            try:
+                err = j["errors"][0]["title"]
+            except KeyError:
+                err = response.text
+            raise ConnectionError(err)
 
         img_nobg = io.BytesIO(response.content)
         img_nobg.seek(0)
