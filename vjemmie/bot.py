@@ -6,6 +6,7 @@ with suppress(ImportError):
     import uvloop # poetry run pip install (wheel) uvloop
     uvloop.install()
 
+from discord import Intents
 from discord.ext.commands import Bot, Command, Cog
 
 from .db import MAIN_DB, init_db
@@ -30,8 +31,6 @@ def run(secrets,
         cogs = []
     
     if test:
-        import ptvsd
-        ptvsd.enable_attach(address=("0.0.0.0", 3000))
         cogs.append(TestCog)
     
     cogs.extend(COGS)  # add default cogs
@@ -40,7 +39,8 @@ def run(secrets,
     bot = Bot(
         command_prefix=command_prefix, 
         description=description,
-        pm_help=pm_help, 
+        pm_help=pm_help,
+        intents=Intents.all(),
         **kwargs
     )
     setattr(bot, "secrets", secrets)  # add secrets module as bot attribute
