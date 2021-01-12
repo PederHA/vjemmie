@@ -160,14 +160,14 @@ class ImageCog(BaseCog):
 
     @commands.command(name="removebg")
     @commands.cooldown(rate=2, per=300, type=commands.BucketType.user)
-    async def remove_bg(self, ctx: commands.Context, image_url: str=None) -> None:
+    async def remove_bg(self, ctx: commands.Context, image_url: Optional[str]=None) -> None:
         """Removes background from an image."""
-        if not image_url and not ctx.message.attachments:
-            self.reset_command_cooldown(ctx)
-            raise CommandError("Message has no image URL or image attachment")
-        
-        if ctx.message.attachments:
-            image_url = ctx.message.attachments[0].url
+        if not image_url:
+            if ctx.message.attachments:
+                image_url = ctx.message.attachments[0].url
+            else:
+                self.reset_command_cooldown(ctx)
+                raise CommandError("Message has no image URL or image attachment")
 
         # Download image from URL
         img = await self.download_from_url(ctx, image_url)
