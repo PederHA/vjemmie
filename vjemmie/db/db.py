@@ -101,13 +101,16 @@ class DatabaseConnection:
     # GAMING
     #########
 
-    async def get_gmoments(self) -> List[Tuple[int, int]]:
+    async def get_gmoments(self) -> Dict[int, str]:
         r = await self.read(self._get_gmoments)
-        moments = list(filter(lambda user: user[1] > 0, r)) #  ignore users with 0 occurrences
+        l = list(filter(lambda user: user[1] > 0, r)) #  ignore users with 0 occurrences
+        moments = {}
+        for user_id, occurrences in l:
+            moments[user_id] = occurrences
         return moments
     
     def _get_gmoments(self) -> List[Tuple[int, int]]:
-        self.cursor.execute("SELECT occurrences, id FROM gm ORDER BY occurrences DESC")
+        self.cursor.execute("SELECT id, occurrences FROM gm ORDER BY occurrences DESC")
         return list(self.cursor.fetchall())
 
     async def add_gmoment(self, member: discord.Member) -> None:
@@ -132,10 +135,10 @@ class DatabaseConnection:
             raise CommandError(f"`{member.name}` has no gaming moments on record!")
         self.cursor.execute(f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}")
 
-    async def purge_gaming_moments(self, member: discord.Member) -> None:
-        await self.write(self._purge_gaming_moments, member)
+    async def purge_gmoments(self, member: discord.Member) -> None:
+        await self.write(self._purge_gmoments, member)
 
-    def _purge_gaming_moments(self, member: discord.Member) -> None:
+    def _purge_gmoments(self, member: discord.Member) -> None:
         self.cursor.execute(f"DELETE FROM `gmoments` WHERE `id`=={member.id}")
 
     #########

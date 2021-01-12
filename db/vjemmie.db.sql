@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS "pfm_memes" (
 );
 CREATE TABLE IF NOT EXISTS "gm" (
 	"id"	INTEGER,
-	"occurences"	INTEGER
+	"occurrences"	INTEGER,
+	PRIMARY KEY("id")
 );
 CREATE TABLE IF NOT EXISTS "tidstyver" (
 	"id"	INTEGER UNIQUE,
