@@ -22,8 +22,20 @@ from .base_cog import BaseCog
 
 @dataclass
 class GoodmorningSettings:
-    member_chance: int = 5 # Percentage chance to pick a member instead of a group
+    member_chance: float = 0.05 # Chance to pick member instead of group (0-1)
+    all_chance: float = 0.005 # Chance to list every single group
     # TODO: add more settings
+
+    @property
+    def send_all(self) -> bool:
+        return self._should_send(self.all_chance)
+
+    @property
+    def send_member(self) -> bool:
+        return self._should_send(self.member_chance)
+
+    def _should_send(self, chance: float) -> bool:
+        return chance > random.random() 
 
 
 async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
@@ -122,14 +134,30 @@ class MemeCog(BaseCog):
         await self.read_send_file(ctx, "memes/txt/madara.txt")
 
     @commands.command(name="goodmorning")
-    @commands.cooldown(rate=1, per=72000.0, type=commands.BucketType.member)
+    @commands.cooldown(rate=1, per=36000.0, type=commands.BucketType.member)
     async def goodmorning(self, ctx: commands.Context) -> None:
         await self._do_post_goodmorning(ctx, "morning")
 
     @commands.command(name="goodnight")
-    @commands.cooldown(rate=1, per=72000.0, type=commands.BucketType.member)
+    @commands.cooldown(rate=1, per=36000.0, type=commands.BucketType.member)
     async def goodnight(self, ctx: commands.Context) -> None:
         await self._do_post_goodmorning(ctx, "night")
+
+    async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
+        # n% chance to pick a member instead of a group
+        if not self.goodmorning_settings.get(ctx.guild.id, None):
+            self.goodmorning_settings[ctx.guild.id] = GoodmorningSettings()
+
+        guild = self.goodmorning_settings[ctx.guild.id]
+        if guild.send_all:
+            subject = f"the {', '.join(g[0] for g in await self.db.groups_get_all_groups())}"
+        elif guild.send_member:
+            member = random.choice(ctx.guild.members)
+            subject = member.mention
+        else:
+            subject = f"the {await self.db.groups_get_random_group()}"
+        
+        await self.send_text_message(f"Good {time_of_day} to everyone apart from {subject}", ctx)        
 
     @commands.command(name="goodmorning_add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
@@ -147,20 +175,6 @@ class MemeCog(BaseCog):
             raise CommandError(f"`{word}` has already been added!")
         await ctx.send(f"Added `{word}`.")
 
-    async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
-        # n% chance to pick a member instead of a group
-        if not self.goodmorning_settings.get(ctx.guild.id, None):
-            self.goodmorning_settings[ctx.guild.id] = GoodmorningSettings()
-
-        chance = self.goodmorning_settings[ctx.guild.id].member_chance / 100
-        if random.random() < chance:
-            member = random.choice(ctx.guild.members)
-            subject = member.mention
-        else:
-            subject = f"the {await self.db.groups_get_random_group()}"
-        
-        await ctx.send(f"Good {time_of_day} to everyone apart from {subject}")        
-
     # TODO: rename this awful command
     @commands.command(name="goodmorning_chance")
     @admins_only()
@@ -170,7 +184,7 @@ class MemeCog(BaseCog):
             return await ctx.send("This command is not supported in DMs.")   
         if chance < 1 or chance > 100:
             raise CommandError("Percent chance must be between 1 and 100.")
-        self.goodmorning_settings[ctx.guild.id].member_chance = chance
+        self.goodmorning_settings[ctx.guild.id].member_chance = chance / 100
         await ctx.send(f"Chance to pick a member for `{self.bot.command_prefix}goodmorning` set to {chance}%")
 
     @commands.command(name="daddy")

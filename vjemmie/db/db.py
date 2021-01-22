@@ -194,6 +194,14 @@ class DatabaseConnection:
         self.cursor.execute("SELECT * FROM groups")
         return list(self.cursor.fetchall())
 
+    async def groups_get_all_groups(self) -> List[Tuple[str]]:
+        g = await self.read(self._groups_get_all_groups)
+        return g
+
+    def _groups_get_all_groups(self) -> List[Tuple[str]]:
+        self.cursor.execute("SELECT `group` from GROUPS ORDER BY RANDOM()")
+        return self.cursor.fetchall()
+
     async def groups_get_random_group(self) -> str:
         return await self.read(self._groups_get_random_group)
 
