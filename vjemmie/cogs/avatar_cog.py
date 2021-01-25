@@ -303,6 +303,11 @@ def _threat_helper(text: Text) -> None:
     )
 
 
+def _banter_helper(text: Text) -> None:
+    if len(text.content) > 13:
+        text.content = text.content[:10] + "..."
+
+
 avatar_commands = [
     AvatarCommand(
         name="fuckup",
@@ -489,6 +494,23 @@ avatar_commands = [
                 color=(0, 0, 0, 255),
                 upper=True,
                 helper=_threat_helper
+            ),
+        ]
+    ),
+    AvatarCommand(
+        name="banter",
+        template="banter.jpg",
+        help="https://i.imgur.com/7jxk8Qd.jpg",
+        avatars=[Avatar(w=190, h=267, x=12, y=80)],
+        #template_overlay=True, # hide avatar
+        text=[
+            Text(
+                size=7,
+                offset=(50, 352),
+                font="LiberationSans-Regular.ttf",
+                color=(0, 0, 0, 255),
+                upper=True,
+                helper=_banter_helper
             ),
         ]
     ),
