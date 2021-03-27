@@ -191,7 +191,7 @@ class RedditCog(BaseCog):
             al = aliases.split(" ") if aliases else []
             if not is_valid_command_name(subreddit) or not all(is_valid_command_name(a) for a in al):
                 raise CommandError("Command name can only include letters a-z and numbers 0-9.")
-            new_command = RedditCommand(subreddit=subreddit, aliases=aliases, is_text=is_text)
+            new_command = RedditCommand(subreddit=subreddit, aliases=al, is_text=is_text)
             self._add_sub(new_command)
         except discord.DiscordException:
             cmd = self.subs.get(subreddit)
