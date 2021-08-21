@@ -150,12 +150,12 @@ class MemeCog(BaseCog):
 
         guild = self.goodmorning_settings[ctx.guild.id]
         if guild.send_all:
-            subject = f"the {', '.join(g[0] for g in await self.db.groups_get_all_groups())}"
+            subject = f"{', '.join(g[0] for g in await self.db.groups_get_all_groups())}"
         elif guild.send_member:
             member = random.choice(ctx.guild.members)
             subject = member.mention
         else:
-            subject = f"the {await self.db.groups_get_random_group()}"
+            subject = await self.db.groups_get_random_group()
         
         await self.send_text_message(f"Good {time_of_day} to everyone apart from {subject}", ctx)        
 
