@@ -7,19 +7,20 @@ from pytz import timezone
 
 # I originally had a good reason to make this an Enum, but now it's kinda weird
 class TimeUnit(Enum):
-    MONTHS = "months" # this is not an actual datetime.timedelta param, so we need to treat it differently
+    MONTHS = "months"  # this is not an actual datetime.timedelta param, so we need to treat it differently
     WEEKS = "weeks"
     DAYS = "days"
     HOURS = "hours"
     MINUTES = "minutes"
     SECONDS = "seconds"
 
+
 # TODO: Might just be easier to have a defaultdict[str, int] for each timedelta arg?
 
 TIME_UNITS: Dict[str, TimeUnit] = {
     "months": TimeUnit.MONTHS,
     "month": TimeUnit.MONTHS,
-    "mon": TimeUnit.MONTHS, # NOTE: could clash with a future day of week option? (monday)
+    "mon": TimeUnit.MONTHS,  # NOTE: could clash with a future day of week option? (monday)
     "M": TimeUnit.MONTHS,
     "weeks": TimeUnit.WEEKS,
     "week": TimeUnit.WEEKS,
@@ -59,22 +60,23 @@ async def parse_time_option(message: Iterable[str]) -> Tuple[timedelta, str]:
     Returns
     -------
     Tuple[timedelta, str]
-        Tuple of parsed time option as timedelta and 
-        message with time option removed. 
+        Tuple of parsed time option as timedelta and
+        message with time option removed.
 
     Raises
     ------
     ValueError
         Time option can't be parsed
     """
-    message = list(message) # Ensure message is mutable
+    message = list(message)  # Ensure message is mutable
 
+    parsed: List[str] = []  # List of parsed tokens to remove from message
+    kwargs: Dict[
+        str, int
+    ] = {}  # Parsed tokens + values used to construct timedelta obj
+    val = 0  # Current parsed value
+    parse_val = False  # Whether to look for values instead of attributes
 
-    parsed: List[str] = [] # List of parsed tokens to remove from message
-    kwargs: Dict[str, int] = {} # Parsed tokens + values used to construct timedelta obj
-    val = 0   # Current parsed value
-    parse_val = False # Whether to look for values instead of attributes
-    
     for word in message:
         if parse_val:
             # Try to look for a time unit after a number is found
@@ -90,21 +92,23 @@ async def parse_time_option(message: Iterable[str]) -> Tuple[timedelta, str]:
             continue
         if word.isdigit():
             val = int(word)
-            parse_val = True # got a number, 
-            continue         # check if next word is a recognized time unit
+            parse_val = True  # got a number,
+            continue  # check if next word is a recognized time unit
         # elif is_special_time_unit(word):
         # # e.g "tomorrow"
     if not kwargs:
-        raise ValueError("No valid time options found")      
+        raise ValueError("No valid time options found")
 
-    message = " ".join(message) # the joys of Iterable[str] :-)
-    
-    # Remove time options from message 
+    message = " ".join(message)  # the joys of Iterable[str] :-)
+
+    # Remove time options from message
     # (very inefficient, and no, we can't do message.remove(word) while it's still a list.)
     for word in parsed:
         message = message.replace(word, "")
-    message = message.rstrip().lstrip() # Remove leading or trailing whitespace. NOTE: Could this be problematic?
-    
+    message = (
+        message.rstrip().lstrip()
+    )  # Remove leading or trailing whitespace. NOTE: Could this be problematic?
+
     kwargs = await _process_timedelta_kwargs(kwargs)
     td = timedelta(**kwargs)
     return (td, message)
@@ -136,13 +140,13 @@ def format_time(seconds: Union[int, float]) -> str:
         s.append(f"{str(hours).rjust(2, '0')}h")
 
     minutes = seconds // 60
-    if minutes or hours: # show minutes if hours are shown
+    if minutes or hours:  # show minutes if hours are shown
         seconds -= minutes * 60
         s.append(f"{str(minutes).rjust(2, '0')}m")
 
     if seconds:
         s.append(f"{str(seconds).rjust(2, '0')}s")
-    
+
     return " ".join(s)
 
 

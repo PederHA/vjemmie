@@ -9,15 +9,16 @@ from discord.ext import commands, tasks
 from discord.utils import get
 from pytz import timezone
 
-from ..config import MAIN_DB
-from ..db import DatabaseConnection, get_db
+from ..db import RESTClient, db
 from ..utils.exceptions import CommandError
 from ..utils.time import format_time, get_now_time
 from .base_cog import BaseCog
 
-BRONJAM_INTERVAL = 12000 # seconds
+BRONJAM_INTERVAL = 12000  # seconds
 BRONJAM_ALERT_ADVANCE = 10 * 60
-SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(list) # day of month : list of bronjam spawns that day
+SCHEDULE: DefaultDict[int, List[datetime]] = defaultdict(
+    list
+)  # day of month : list of bronjam spawns that day
 
 
 def create_schedule():
@@ -39,7 +40,9 @@ class BagGuild:
     role: discord.Role
 
     async def alert(self) -> None:
-        await self.channel.send(f"B A G in {BRONJAM_ALERT_ADVANCE//60} minutes! {self.role.mention}")
+        await self.channel.send(
+            f"B A G in {BRONJAM_ALERT_ADVANCE//60} minutes! {self.role.mention}"
+        )
 
     async def add_member(self, member: discord.Member) -> None:
         if self.role in member.roles:
@@ -55,11 +58,8 @@ class BagGuild:
         return (self.guild.id, self.channel.id, self.role.id)
 
     @classmethod
-    def from_ids(cls, 
-        bot: commands.Bot, 
-        guild_id: int, 
-        channel_id: int, 
-        role_id: int
+    def from_ids(
+        cls, bot: commands.Bot, guild_id: int, channel_id: int, role_id: int
     ) -> object:
         """Creates a new BagGuild from Discord IDs.
         NOTE
@@ -77,23 +77,23 @@ class BagGuild:
 @dataclass
 class Bags:
     """A collection of guilds to ping before Bag spawns."""
+
     bot: commands.Bot
-    db: DatabaseConnection
+    db: RESTClient
     _guilds: Dict[int, BagGuild] = field(default_factory=dict)
 
     async def alert_guilds(self) -> None:
         for guild in self._guilds.values():
             await guild.alert()
 
-    async def add_guild(self, ctx: commands.Context, channel: discord.TextChannel, role: discord.Role) -> None:
+    async def add_guild(
+        self, ctx: commands.Context, channel: discord.TextChannel, role: discord.Role
+    ) -> None:
         if ctx.guild.id in self._guilds:
-            raise CommandError("This Discord server has already been configured for bag alerts!")
-        guild = BagGuild(
-            bot=self.bot,
-            guild=ctx.guild,
-            channel=channel,
-            role=role
-        )
+            raise CommandError(
+                "This Discord server has already been configured for bag alerts!"
+            )
+        guild = BagGuild(bot=self.bot, guild=ctx.guild, channel=channel, role=role)
         self._guilds[ctx.guild.id] = guild
         await self.db.bag_add_guild(*(guild._dump()))
 
@@ -103,9 +103,9 @@ class Bags:
         guild = self._guilds.get(ctx.guild.id)
         if not guild:
             raise CommandError(
-        "This server has not been configured for bag alerts yet. "
-        f"Run `{self.bot.command_prefix}bag setup` to get started."
-        )
+                "This server has not been configured for bag alerts yet. "
+                f"Run `{self.bot.command_prefix}bag setup` to get started."
+            )
         return guild
 
     async def _restore_from_db(self) -> None:
@@ -121,7 +121,7 @@ class WowCog(BaseCog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
         create_schedule()
-        self.bag_guilds = Bags(self.bot, get_db(MAIN_DB))
+        self.bag_guilds = Bags(self.bot, db)
 
         # Timer synchronization variables
         self.bag_synced = False
@@ -139,7 +139,8 @@ class WowCog(BaseCog):
         while not self.bag_synced:
             if not syncing:
                 syncing = self.bot.loop.create_task(self._bag_alert_synchronize())
-            await asyncio.sleep(1) # wait for syncing to complete. this is super primitive
+            # wait for syncing to complete. this is super primitive
+            await asyncio.sleep(1)
         await self.bag_guilds.alert_guilds()
 
     async def _bag_alert_synchronize(self) -> None:
@@ -154,13 +155,13 @@ class WowCog(BaseCog):
             for spawns in SCHEDULE.values():
                 for spawn in spawns:
                     if now > spawn:
-                        continue       
+                        continue
                     wait = (spawn - now).total_seconds()
                     print(wait)
                     await asyncio.sleep(wait)
                     self.bag_synced = True
                     return
-                    
+
     @commands.group(name="bag")
     async def bag(self, ctx: commands.Context) -> None:
         if not ctx.invoked_subcommand:
@@ -168,20 +169,22 @@ class WowCog(BaseCog):
 
     @bag.command(name="setup")
     async def bag_setup(
-        self, 
-        ctx: commands.Context, 
-        channel: commands.TextChannelConverter=None, 
-        role: commands.RoleConverter=None
+        self,
+        ctx: commands.Context,
+        channel: commands.TextChannelConverter = None,
+        role: commands.RoleConverter = None,
     ) -> None:
-    # TODO: make sure role is mentionable
+        # TODO: make sure role is mentionable
         if not channel or not role:
-            return await ctx.send(f"Usage: `{self.bot.command_prefix}bag setup <text channel name> <role name>`")
-        await self.bag_guilds.add_guild(ctx, channel, role)   
+            return await ctx.send(
+                f"Usage: `{self.bot.command_prefix}bag setup <text channel name> <role name>`"
+            )
+        await self.bag_guilds.add_guild(ctx, channel, role)
         await ctx.send(
             "Guild has been configured for bag alerts. "
             f"Members can now type `{self.bot.command_prefix}bag add` & `{self.bot.command_prefix}bag remove` "
             "to enable bag alerts."
-        ) 
+        )
 
     @bag.command(name="add", aliases=["me"])
     async def bag_add(self, ctx: commands.Context) -> None:
@@ -206,11 +209,13 @@ class WowCog(BaseCog):
                     continue
                 spawn += timedelta(seconds=BRONJAM_ALERT_ADVANCE)
                 diff = (spawn - now).total_seconds()
-                return await ctx.send(f"Next spawn is in **{format_time(diff)}**. ({spawn})")
+                return await ctx.send(
+                    f"Next spawn is in **{format_time(diff)}**. ({spawn})"
+                )
 
     @bag.command(name="schedule")
     async def bag_schedule(self, ctx: commands.Context) -> None:
-        LIMIT = 5 # move this somewhere sensible
+        LIMIT = 5  # move this somewhere sensible
         out_spawns = []
         i = 0
         now = get_now_time()
@@ -219,7 +224,7 @@ class WowCog(BaseCog):
                 break
             for spawn in spawns:
                 if i >= LIMIT:
-                    break # wtb labeled break from Golang
+                    break  # wtb labeled break from Golang
                 if now > spawn:
                     continue
                 out_spawns.append(spawn)
@@ -227,11 +232,14 @@ class WowCog(BaseCog):
 
         if not out_spawns:
             return await ctx.send("No more spawns scheduled!")
-        
-        out = [f"`{spawn + timedelta(seconds=BRONJAM_ALERT_ADVANCE)}`" for spawn in out_spawns]
+
+        out = [
+            f"`{spawn + timedelta(seconds=BRONJAM_ALERT_ADVANCE)}`"
+            for spawn in out_spawns
+        ]
 
         await self.send_embed_message(
-            ctx, 
+            ctx,
             title=f"Next {len(out_spawns)} bag spawn times\n",
-            description="\n".join(out)
+            description="\n".join(out),
         )

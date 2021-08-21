@@ -22,10 +22,10 @@ botsecrets.py
 *.psd
 *.db
 
-# Docker
-docker*
-Docker*
-.docker*
+# # Docker
+# docker*
+# Docker*
+# .docker*
 
 # Directories
 downloads/
@@ -98,3 +98,9 @@ memes/templates/allmyhomies.png
 
 # Whitelisted
 !db/vjemmie.db.sql
+.bot.env
+.db.env
+botsecrets_orig.py
+hooks.json
+.cache
+.DS_Store

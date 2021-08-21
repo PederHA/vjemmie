@@ -1,19 +1,18 @@
 import asyncio
 from collections.abc import Sequence
 from itertools import chain
-from typing import Any, Iterable
+from typing import List
 
 import discord
 from discord.ext import commands
 
-from ..config import YES_ARGS
+from ..config import config
 from .exceptions import CommandError
 
 
-async def get_user_reply(ctx: commands.Context,
-                         *,
-                         timeout: float=10.0,
-                         timeout_msg: str=None) -> str:
+async def get_user_reply(
+    ctx: commands.Context, *, timeout: float = 10.0, timeout_msg: str = None
+) -> str:
     if not timeout_msg:
         timeout_msg = "User did not reply in time."
 
@@ -29,32 +28,36 @@ async def get_user_reply(ctx: commands.Context,
         return reply.content
 
 
-async def ask_user(ctx: commands.Context,
-                              msg: str,
-                              *options: list,
-                              timeout: float=10.0,
-                              timeout_msg: str=None,
-                              show_no: bool=False) -> bool:
+async def ask_user(
+    ctx: commands.Context,
+    msg: str,
+    *options: List[str],
+    timeout: float = 10.0,
+    timeout_msg: str = None,
+    show_no: bool = False,
+) -> bool:
     if not options:
-        options = YES_ARGS
+        options = config.YES_ARGS
 
     _opts = []
     for opt in options:
         if not isinstance(opt, Sequence):
             raise TypeError("Options must be iterable!")
-        _opts.append(opt[0]) # Append first option for each category: ["yes", "y", "+"] -> "yes"
-    opts_str = "/".join(_opts) # e.g. "yes/no"
+        _opts.append(
+            opt[0]
+        )  # Append first option for each category: ["yes", "y", "+"] -> "yes"
+    opts_str = "/".join(_opts)  # e.g. "yes/no"
 
     n = "/n" if show_no else ""
     await ctx.send(f"{msg} **[{opts_str}{n}]**")
 
     reply = await get_user_reply(ctx, timeout=timeout, timeout_msg=timeout_msg)
-    
+
     return reply.lower() in chain.from_iterable(options)
 
 
 async def ask_user_yes_no(ctx: commands.Context, msg: str) -> bool:
-    return await ask_user(ctx, msg, YES_ARGS, show_no=True)
+    return await ask_user(ctx, msg, config.YES_ARGS, show_no=True)
 
 
 async def fetch_message(ctx: commands.Context, message_id: int) -> discord.Message:

@@ -6,35 +6,34 @@ from datetime import datetime, timedelta
 from functools import partial
 from itertools import islice
 from pathlib import Path
-from time import perf_counter, time, time_ns
+from time import time_ns
 from typing import Any, Dict, List, Optional, Tuple, Union, Type
 from typing import Counter as CounterType
 
 import discord
-from aiofile import AIOFile
 from discord.ext import commands, tasks
 from github import Commit, Github, GithubObject
 
-from ..config import STATS_DIR
-from ..utils.caching import get_cached
+from ..config import config
 from ..utils.checks import owners_only
 from ..utils.converters import UserOrMeConverter
 from ..utils.datetimeutils import format_time_difference
 from ..utils.exceptions import CommandError
 from .base_cog import BaseCog
 
-GUILD_STATS_PATH = f"{STATS_DIR}/guilds.pkl"
- 
-githubclient: Optional[Github] = None # Initialized by BotSetupCog
+GUILD_STATS_PATH = f"{config.STATS_DIR}/guilds.pkl"
+
+githubclient: Optional[Github] = None  # Initialized by BotSetupCog
 
 
 @dataclass
 class DiscordCommand:
-    """Represents a Discord command. 
-    
-    Keeps track of total numbers of times the command is used 
+    """Represents a Discord command.
+
+    Keeps track of total numbers of times the command is used
     in a guild, as well as per-user statistics.
     """
+
     name: str = ""
     times_used: int = 0
     users: Counter = field(init=False, default_factory=Counter)
@@ -64,7 +63,7 @@ class DiscordGuild:
         self.guild_name = self.ctx.guild.name
         self.guild_id = self.ctx.guild.id
         self.commands: Dict[str, DiscordCommand] = {}
-        del self.ctx # has to be deleted so object can be pickled
+        del self.ctx  # has to be deleted so object can be pickled
 
     @property
     def top_total_commands_invokers(self) -> CounterType[str]:
@@ -75,7 +74,7 @@ class DiscordGuild:
                 users[uid] += uses
         return users
 
-    def get_top_users_command(self, command: str, *, limit: int=None) -> Counter:
+    def get_top_users_command(self, command: str, *, limit: int = None) -> Counter:
         """Get top N users of a command."""
         if not command in self.commands:
             # NOTE: should this really raise exception instead of returning empty list?
@@ -87,9 +86,11 @@ class DiscordGuild:
         """Get Counter of top 10 most used commands in the guild."""
         return self.get_top_commands(limit=10)
 
-    def get_top_commands(self, limit: int=10) -> Counter:
+    def get_top_commands(self, limit: int = 10) -> Counter:
         """Get Counter of top N most used commands in the guild."""
-        top_commands = [(command.name, command.times_used) for command in self.commands.values()]
+        top_commands = [
+            (command.name, command.times_used) for command in self.commands.values()
+        ]
 
         if limit:
             top_commands = top_commands[:limit]
@@ -107,7 +108,6 @@ class StatsCog(BaseCog):
     """Commands and methods for gathering bot statistics."""
 
     EMOJI = ":chart_with_upwards_trend:"
-    DIRS = [STATS_DIR]
     FILES = [GUILD_STATS_PATH]
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -118,13 +118,14 @@ class StatsCog(BaseCog):
 
     def cog_unload(self):
         self.dump_command_stats.cancel()
-    
+
     def _do_dump(self) -> None:
-        """Save guild usage statistics. NOTE: Blocking. Run with _do_dump()"""
+        """NOTE: Blocking. Run async with dump_guilds()"""
         with open(GUILD_STATS_PATH, "wb") as f:
             pickle.dump(self.guilds, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     async def dump_guilds(self) -> None:
+        """Save guild usage statistics."""
         await self.bot.loop.run_in_executor(None, self._do_dump)
 
     @tasks.loop(seconds=300.0)
@@ -135,7 +136,7 @@ class StatsCog(BaseCog):
     async def on_dump_command_stats_cancel(self) -> None:
         """Make sure we dump most recent stats if we are being cancelled."""
         if self.dump_command_stats.is_being_cancelled():
-            await self._do_dump()
+            await self.dump_guilds()
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
@@ -148,7 +149,7 @@ class StatsCog(BaseCog):
         self.guilds[gid].log_command(ctx)
 
     def load_guilds(self) -> Dict[int, DiscordGuild]:
-        """NOTE: Blocking! Load guild statistics. Only performed on bot startup. """
+        """NOTE: Blocking! Load guild statistics. Only performed on bot startup."""
         with open(GUILD_STATS_PATH, "rb") as f:
             try:
                 return pickle.load(f)
@@ -162,11 +163,13 @@ class StatsCog(BaseCog):
                         backup.write(contents)
                 return {}
 
-    def get_top_commands_for_guild(self, guild_id: int, limit: int=0) -> Counter:
+    def get_top_commands_for_guild(self, guild_id: int, limit: int = 0) -> Counter:
         """Get top commands for a specific guild."""
         return self.guilds[guild_id].get_top_commands(limit=limit)
 
-    def get_top_commands_for_user(self, guild_id: int, user: discord.User, limit: int=0) -> Counter: # FIX
+    def get_top_commands_for_user(
+        self, guild_id: int, user: discord.User, limit: int = 0
+    ) -> Counter:  # FIX
         """Get a Counter of a user's most used commands."""
         guild = self.guilds[guild_id]
         cmds = []
@@ -179,12 +182,14 @@ class StatsCog(BaseCog):
             cmds = cmds[:limit]
         return Counter(dict(cmds))
 
-    def get_top_command_users(self, guild_id: int, command: str, limit: int=10) -> Counter:
+    def get_top_command_users(
+        self, guild_id: int, command: str, limit: int = 10
+    ) -> Counter:
         """Get top users of a specific command."""
         try:
             guild = self.guilds[guild_id]
             cmd = guild.commands[command]
-        except KeyError: # Catches exception from both statements in 'try' clause
+        except KeyError:  # Catches exception from both statements in 'try' clause
             return Counter()
         else:
             return cmd.get_top_users(limit=limit)
@@ -198,7 +203,9 @@ class StatsCog(BaseCog):
             return 0
 
     @commands.command(name="topcommands", aliases=["topc"], usage="[user]")
-    async def top_commands(self, ctx: commands.Context, user: UserOrMeConverter=None) -> None:
+    async def top_commands(
+        self, ctx: commands.Context, user: UserOrMeConverter = None
+    ) -> None:
         """List most used commands in the server."""
         if not ctx.guild:
             raise CommandError("This command is not supported in DMs!")
@@ -216,16 +223,18 @@ class StatsCog(BaseCog):
             else:
                 title = f"Top Commands for {ctx.guild.name}"
 
-        # don't include commands that have been deleted or are unavailable      
+        # don't include commands that have been deleted or are unavailable
         for command in list(cmds):
             if not self.bot.get_command(command):
                 cmds.pop(command)
-        
+
         # Create message body
-        description = "\n".join([
-            f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {used}"
-            for (cmd, used) in cmds.most_common(10)
-        ])
+        description = "\n".join(
+            [
+                f"`{self.bot.command_prefix}{cmd.ljust(20, self.EMBED_FILL_CHAR)}:` {used}"
+                for (cmd, used) in cmds.most_common(10)
+            ]
+        )
 
         await self.send_embed_message(ctx, title=title, description=description)
 
@@ -235,16 +244,20 @@ class StatsCog(BaseCog):
         up = self.get_bot_uptime(type=str)
         await ctx.send(f"Bot has been up for {up}")
 
-    def get_bot_uptime(self, type: Union[Type[dict], Type[str]]=dict) -> Union[dict, str]:
+    def get_bot_uptime(
+        self, type: Union[Type[dict], Type[str]] = dict
+    ) -> Union[dict, str]:
         up = format_time_difference(self.bot.start_time)
         if type == dict:
             return up
         elif type == str:
             up_fmt = lambda dur, unit: f"{dur}{unit} " if dur else ""
-            uptime = (f"{up_fmt(up['days'], 'd')}"
-                    f"{up_fmt(up['hours'], 'h')}"
-                    f"{up_fmt(up['minutes'], 'm')}"
-                    f"{up_fmt(up['seconds'], 's')}")
+            uptime = (
+                f"{up_fmt(up['days'], 'd')}"
+                f"{up_fmt(up['hours'], 'h')}"
+                f"{up_fmt(up['minutes'], 'm')}"
+                f"{up_fmt(up['seconds'], 's')}"
+            )
             return uptime
         else:
             raise TypeError("Return type must be 'str' or 'dict'")
@@ -259,10 +272,10 @@ class StatsCog(BaseCog):
         out = []
         for gid, player in players.items():
             embed_body = (
-                    f"**Created at**: {player.created_at}\n"
-                    f"**Currently playing**: {player.current.title if player.current else None}\n"
-                    f"**Guild ID**: {gid}\n"
-                    )
+                f"**Created at**: {player.created_at}\n"
+                f"**Currently playing**: {player.current.title if player.current else None}\n"
+                f"**Guild ID**: {gid}\n"
+            )
             out.append((str(self.bot.get_guild(gid)), embed_body))
 
         # Post active players
@@ -274,24 +287,25 @@ class StatsCog(BaseCog):
 
     @commands.command(name="changelog")
     @commands.cooldown(rate=1, per=10, type=commands.BucketType.guild)
-    async def changelog(self,
-                        ctx: commands.Context,
-                        days: int=0,
-                        *,
-                        rtn_type: Union[str, list, None]=None
-                       ) -> None:
+    async def changelog(
+        self,
+        ctx: commands.Context,
+        days: int = 0,
+        *,
+        rtn_type: Union[str, list, None] = None,
+    ) -> None:
         """Display git commit log"""
         commits = await self.get_commits("PederHA/vjemmie", days)
 
         # Format commit hash + message
         out_commits = "\n".join(
             [
-            f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.splitlines()[0]}"
-            for commit in commits
+                f"[`{commit.sha[:7]}`]({commit.html_url}): {commit.commit.message.splitlines()[0]}"
+                for commit in commits
             ]
         )
 
-        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292e)
+        await self.send_embed_message(ctx, "Commits", out_commits, color=0x24292E)
 
     async def get_commits(self, repository_name: str, days: int) -> List[Commit.Commit]:
         # Limit number of days to get commits from
@@ -300,10 +314,10 @@ class StatsCog(BaseCog):
             raise ValueError("Number of days cannot exceed 7!")
 
         # Get repo
-        repo = githubclient.get_repo(repository_name) # type: ignore
+        repo = githubclient.get_repo(repository_name)  # type: ignore
 
         # Fetch commits non-blocking
-        since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet # type: ignore
+        since = datetime.now() - timedelta(days=days) if days else GithubObject.NotSet  # type: ignore
         to_run = partial(repo.get_commits, since=since)
         _c = await self.bot.loop.run_in_executor(None, to_run)
 
@@ -318,11 +332,11 @@ class StatsCog(BaseCog):
                 # Wrong type but w/e ill fix later
                 raise AttributeError(
                     f"No changes have been made in the past {days} days!"
-                    )
+                )
             else:
                 raise AttributeError(
                     "Could not fetch changes from GitHub, try again later!"
-                    )
+                )
 
         return commits
 
@@ -339,4 +353,4 @@ class StatsCog(BaseCog):
         await ctx.send(f"Ping: {ping_ms}ms")
 
     def get_bot_ping_ms(self) -> int:
-        return round(self.bot.ws.latency*100)
+        return round(self.bot.ws.latency * 100)

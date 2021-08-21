@@ -1,33 +1,36 @@
 import random
 from typing import Tuple
 
-import discord
 import numpy
 from discord.ext import commands
 
-from .base_cog import BaseCog
 from ..utils.converters import BoolConverter
 from ..utils.exceptions import CommandError
+from .base_cog import BaseCog
 
 
 class PUBGCog(BaseCog):
     """PUBG commands"""
-    
+
     EMOJI = "<:pubghelm:565522877902749726>"
-    
+
     DEFAULT_SQUAD = ["Simon", "Hugo", "Travis", "Steve"]
-    
+
     @commands.command(
         name="drop", aliases=["roulette", "plane"], description="u fucking wot"
     )
-    async def drop(self, ctx: commands.Context, map_:str=None, hot: BoolConverter(["hot", "h"])=False):
+    async def drop(
+        self,
+        ctx: commands.Context,
+        map_: str = None,
+        hot: BoolConverter(["hot", "h"]) = False,
+    ):
         """
         Chooses random drop location on a given map.
         """
         MAPS = {
-            "miramar": { 
-                "locations": 
-                    [
+            "miramar": {
+                "locations": [
                     "El Pozo",
                     "Pecado",
                     "San Martín",
@@ -41,12 +44,11 @@ class PUBGCog(BaseCog):
                     "Torre Ahumada",
                     "Impala",
                     "La Cobrería",
-                    ],
-                "hot_idx": 6
+                ],
+                "hot_idx": 6,
             },
             "erangel": {
-                "locations": 
-                    [
+                "locations": [
                     "South George",
                     "North George",
                     "Yasnaya",
@@ -62,9 +64,9 @@ class PUBGCog(BaseCog):
                     "Primorsk",
                     "Gatka",
                     "Zharki",
-                    ],
-                "hot_idx": 9
-                }
+                ],
+                "hot_idx": 9,
+            },
         }
         if not map_:
             _maps = ",".join([f"**`{m}`**" for m in MAPS.keys()])
@@ -79,7 +81,7 @@ class PUBGCog(BaseCog):
 
         # Get list of locations for selected map
         locations = pubgmap.get("locations")
-        
+
         # Determine drop location selection logic
         if hot:
             hot_idx = pubgmap.get("hot_idx")
@@ -94,7 +96,7 @@ class PUBGCog(BaseCog):
         name="crate",
         aliases=["crateplay", "dibs", "airdrop"],
         description="nah mate ur not getting the awm",
-        usage="<name1>, <name2>, ...[namelast] OR 'c'"
+        usage="<name1>, <name2>, ...[namelast] OR 'c'",
     )
     async def crate(self, ctx: commands.Context, *players):
         """
@@ -102,15 +104,15 @@ class PUBGCog(BaseCog):
         """
         # Make players iterable a mutable object
         players = list(players)
-        
-        tts = "tts" in players 
+
+        tts = "tts" in players
         if tts:
             players.remove("tts")
-  
+
         # Resort to default squad if no players arguments
         if not players:
             squad = self.DEFAULT_SQUAD
-        
+
         # Get players from ctx.author's voice channel
         elif players[0] in ["channel", "c", "ch", "chanel"]:
             try:
@@ -123,12 +125,12 @@ class PUBGCog(BaseCog):
                 if len(squad) < 2:
                     raise CommandError(
                         "A minimum of 2 users must be connected to the voice channel!"
-                        )                    
-      
-       # At least 2 players must be specified 
+                    )
+
+        # At least 2 players must be specified
         elif len(players) == 1:
             raise CommandError("Can't roll crate for 1 player.")
-        
+
         else:
             squad = players
 
@@ -140,10 +142,12 @@ class PUBGCog(BaseCog):
         gunsplit, armorsplit = await self.roll_guns(squad)
 
         output = await self.generate_crate_text(squad, gunsplit, armorsplit)
-        
+
         if tts:
             sc = self.bot.get_cog("SoundCog")
-            filename = await sc._do_create_tts_file(output[3:-3], "en", "pubgcrate", overwrite=True)
+            filename = await sc._do_create_tts_file(
+                output[3:-3], "en", "pubgcrate", overwrite=True
+            )
             await ctx.invoke(sc.play, filename)
 
         await ctx.send(output)
@@ -175,25 +179,32 @@ class PUBGCog(BaseCog):
 
         # Reroll if one person gets 4 items in a 3-man squad.
         if squadsize == 3:
-            while any([True if len(list(guns)+list(armor))>=4 else False for guns, armor in zip(gunsplit, armorsplit)]):
+            while any(
+                [
+                    True if len(list(guns) + list(armor)) >= 4 else False
+                    for guns, armor in zip(gunsplit, armorsplit)
+                ]
+            ):
                 random.shuffle(gunsplit)
                 random.shuffle(armorsplit)
 
         return gunsplit, armorsplit
 
-    async def generate_crate_text(self, squad: list, gunsplit: list, armorsplit: list) -> str:
+    async def generate_crate_text(
+        self, squad: list, gunsplit: list, armorsplit: list
+    ) -> str:
         """
         Creates output message for !crate command.
-        """              
-        if squad[0].isdigit(): 
+        """
+        if squad[0].isdigit():
             # Sort squad numerically
-            squad.sort() 
+            squad.sort()
         msg = "```"
         _spc = len(max(squad, key=len)) + 1
         for idx, player in enumerate(squad):
             if player.islower():
                 player = player.capitalize()
-            name_spc = " "*(_spc-len(player))
+            name_spc = " " * (_spc - len(player))
             gun = " ".join(gunsplit[idx])
             equipment = " ".join(armorsplit[idx])
             msg += f"{player}:{name_spc} {gun} {equipment}\n"

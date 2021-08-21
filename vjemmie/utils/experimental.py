@@ -4,6 +4,7 @@ from discord.ext import commands
 
 from .exceptions import NoContextException
 
+
 def _OLD_get_ctx() -> commands.Context:
     """Original, and slower, `get_ctx()` implementation"""
     frames = inspect.stack(context=1)
@@ -14,6 +15,7 @@ def _OLD_get_ctx() -> commands.Context:
                 return v
     else:
         raise NoContextException("Cannot find context in call stack!")
+
 
 def get_ctx() -> commands.Context:
     """Attempts to retrieve discord context from the call stack."""

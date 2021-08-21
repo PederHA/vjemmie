@@ -18,6 +18,18 @@ async def get(url, *args, **kwargs) -> Response:
 
 
 async def post(url, *args, **kwargs) -> Response:
-    """Wrapper around the async httpx.get() function"""
+    """Wrapper around the async httpx.post() function"""
     async with httpx.AsyncClient() as client:
         return await client.post(url, *args, **kwargs)
+
+
+async def put(url, *args, **kwargs) -> Response:
+    """Wrapper around the async httpx.put() function"""
+    async with httpx.AsyncClient() as client:
+        return await client.put(url, *args, **kwargs)
+
+
+async def delete(url, *args, **kwargs) -> Response:
+    """Wrapper around the async httpx.delete() function"""
+    async with httpx.AsyncClient() as client:
+        return await client.delete(url, *args, **kwargs)

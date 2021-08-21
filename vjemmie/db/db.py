@@ -15,219 +15,226 @@ from typing import Tuple, List, Dict, Callable, Any, Optional, Iterable
 
 import discord
 from discord.ext import commands
+import aiomysql
+from discord.ext.commands.core import Command
+import httpx
+from .models import (
+    GamingMoments,
+    GoodmorningTarget,
+    MediaType,
+    PFMMeme,
+    SkribblAdd,
+    SkribblAggregateStats,
+    SkribblWord,
+    Subreddit,
+    SubredditAlias,
+    Tidstyv,
+    Goodmorning,
+)
 
 import trueskill
 from ..utils.exceptions import CommandError
+from ..utils import http
+
+os.environ.setdefault("MYSQL_DB_HOST", "127.0.0.1")
+os.environ["MYSQL_ROOT_USER"] = "root"
+os.environ["MYSQL_ROOT_PASSWORD"] = "password"
 
 
-class DatabaseConnection:
-    def __init__(self, db_path: str, bot: commands.Bot) -> None:
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self.cursor: sqlite3.Cursor = self.conn.cursor()
-        self.bot = bot # To run blocking methods in thread pool
-        
-        # I was planning to add separate read and write locks,
-        # but I'm not actually sure if that's safe. 
-        # So for now, both read and write locks share the same lock.
-        self.rlock = asyncio.Lock()
-        self.wlock = self.rlock
-        
-    async def read(self, meth: Callable[..., Any], *args) -> Any:
-        async with self.rlock:
-            return await self.bot.loop.run_in_executor(None, meth, *args)
+class RESTClient:
+    def __init__(self, api_url: str) -> None:
+        self.url = api_url
 
-    async def write(self, meth: Callable[..., Any], *args) -> Any:
-        async with self.wlock:
-            def to_run():
-                r = meth(*args)
-                self.conn.commit()
-                return r
-            return await self.bot.loop.run_in_executor(None, to_run)
+    async def _check_response(
+        self, response: httpx.Response, content_type: str = "application/json"
+    ) -> None:
+        if not response.headers.get("content-type") == content_type:
+            raise CommandError("Invalid response type received from API.")
 
     ##################
     # TIDSTYVERI
     ##################
 
-    async def get_tidstyveri(self) -> List[Tuple[discord.User, float]]:
-        return await self.read(self._get_tidstyveri)
-
-    def _get_tidstyveri(self) -> List[Tuple[discord.User, float]]:
-        tt: List[Tuple[discord.User, float]] = []
-        for row in self.cursor.execute("SELECT * FROM tidstyver"):
-            user = self.bot.get_user(row[0])
-            if not user:
-                continue # Ignore user who can't be found
-            tt.append((user, row[1]))
-
-        # Return sorted list of (discord.User, float) tuples
-        return sorted(
-                tt,
-                key=lambda i: i[1],
-                reverse=True
-        )
+    async def get_tidstyveri(self) -> List[Tidstyv]:
+        resp = await http.get(f"{self.url}/tidstyveri")
+        if resp.is_error:
+            raise CommandError("Unable to get tidstyver.")
+        await self._check_response(resp)
+        return [Tidstyv(**t) for t in resp.json()]
 
     async def get_tidstyveri_by_id(self, user_id: int) -> float:
-        res = await self.read(self._get_tidstyveri_by_id, user_id)
-        return res[1] if res else 0.0
-    
-    def _get_tidstyveri_by_id(self, user_id: int) -> List[float]:
-        self.cursor.execute("SELECT * FROM tidstyver WHERE id==?", [user_id])
-        return self.cursor.fetchone()
+        resp = await http.get(f"{self.url}/tidstyveri/{user_id}")
+        if resp.is_error:
+            raise CommandError("Unable to get tidstyver.")
+        await self._check_response(resp)
+        t = Tidstyv(**(resp.json()))
+        return t.stolen
 
-    async def add_tidstyveri(self, member: discord.Member, time: float) -> None:
-        return await self.write(self._add_tidstyveri, member, time)
-
-    def _add_tidstyveri(self, member: discord.Member, time: float) -> None:
-        self.cursor.execute(
-            """INSERT INTO tidstyver (id, time)
-	        VALUES (?, ?)
-	        ON CONFLICT(id)
-	        DO UPDATE SET time=time+?""", 
-            (member.id, time, time)
+    async def add_tidstyveri(self, member: discord.Member, stolen: float) -> Tidstyv:
+        resp = await http.post(
+            f"{self.url}/tidstyveri", json={"user_id": member.id, "stolen": stolen}
         )
+        if resp.is_error:
+            raise CommandError(f"Unable to add tidstyveri for `{member.display_name}`")
+        await self._check_response(resp)
+        return Tidstyv(**(resp.json()))
 
     #########
     # PFM
     #########
+    # TODO: check if we can delete ctx and topic param
+    async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> List[PFMMeme]:
+        resp = await http.get(f"{self.url}/pfm/memes")
+        if resp.is_error:
+            raise CommandError("Unable to retrieve PFM memes.")
+        await self._check_response(resp)
+        return [PFMMeme(**t) for t in resp.json()]
 
-    async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> List[Tuple[str, str, str, str, str]]:
-        return await self.read(self._get_pfm_memes)
-
-    def _get_pfm_memes(self) -> List[Tuple[str, str, str, str, str]]:
-        self.cursor.execute("SELECT topic, title, description, content, media_type FROM pfm_memes")
-        return list(self.cursor.fetchall())
+    async def get_pfm_memes_for_topic(self, topic: str) -> List[PFMMeme]:
+        resp = await http.get(f"{self.url}/pfm/memes?topic={topic}")
+        if resp.is_error:
+            raise CommandError("Unable to retrieve PFM memes.")
+        await self._check_response(resp)
+        return [PFMMeme(**t) for t in resp.json()]
 
     #########
     # GAMING
     #########
 
-    async def get_gmoments(self) -> Dict[int, str]:
-        r = await self.read(self._get_gmoments)
-        l = list(filter(lambda user: user[1] > 0, r)) #  ignore users with 0 occurrences
-        moments = {}
-        for user_id, occurrences in l:
-            moments[user_id] = occurrences
-        return moments
-    
-    def _get_gmoments(self) -> List[Tuple[int, int]]:
-        self.cursor.execute("SELECT id, occurrences FROM gm ORDER BY occurrences DESC")
-        return list(self.cursor.fetchall())
+    async def get_gmoments(self) -> List[GamingMoments]:
+        resp = await http.get(f"{self.url}/gamingmoments")
+        if resp.is_error:
+            raise CommandError("Unable to get gamingmoments.")
+        await self._check_response(resp)
+        return [GamingMoments(**g) for g in resp.json()]
 
     async def add_gmoment(self, member: discord.Member) -> None:
-       await self.write(self._add_gmoment, member)
-
-    def _add_gmoment(self, member: discord.Member) -> None:
-        self.cursor.execute(
-            """INSERT INTO gm (id, occurrences)
-	        VALUES (?, 1)
-	        ON CONFLICT(id)
-	        DO UPDATE SET occurrences=occurrences+1""",
-            [member.id],
-        )
+        resp = await http.post(f"{self.url}/gamingmoments/{member.id}")
+        if resp.is_error:
+            raise CommandError(
+                f"Unable to add gamingmoment for `{member.display_name}`"
+            )
+        await self._check_response(resp)
+        return GamingMoments(**(resp.json()))
 
     async def decrement_gmoments(self, member: discord.Member) -> None:
-        await self.write(self._decrement_gmoments, member)
-
-    def _decrement_gmoments(self, member: discord.Member) -> None:
-        self.cursor.execute(f"SELECT occurrences FROM gm WHERE id==?", member.id)
-        gmoments = self.cursor.fetchone()
-        if gmoments is None or gmoments[0] <= 0: # FIXME: is this a tuple or just an int?
-            raise CommandError(f"`{member.name}` has no gaming moments on record!")
-        self.cursor.execute(f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}")
+        resp = await http.post(f"{self.url}/gamingmoments/{member.id}?decrease=1")
+        if resp.is_error:
+            raise CommandError(
+                f"Unable to decrease gamingmoments for `{member.display_name}`"
+            )
+        await self._check_response(resp)
+        return GamingMoments(**(resp.json()))
 
     async def purge_gmoments(self, member: discord.Member) -> None:
-        await self.write(self._purge_gmoments, member)
-
-    def _purge_gmoments(self, member: discord.Member) -> None:
-        self.cursor.execute(f"DELETE FROM `gmoments` WHERE `id`=={member.id}")
+        resp = await http.delete(f"{self.url}/gamingmoments/{member.id}")
+        if resp.is_error:
+            raise CommandError(
+                f"Unable to delete gamingmoments for `{member.display_name}`"
+            )
+        await self._check_response(resp)
+        return GamingMoments(**(resp.json()))
 
     #########
     # SKRIBBL
     #########
 
-    async def add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
-        await self.write(self._add_skribbl_words, member, words)
+    async def add_skribbl_words(
+        self, member: discord.Member, words: Iterable[str]
+    ) -> SkribblAdd:
+        payload = {"words": words, "submitter": member.id}
+        resp = await http.post(f"{self.url}/skribbl/words", json=payload)
+        if resp.is_error:
+            raise CommandError(f"Unable to add Skribbl words.")
+        await self._check_response(resp)
+        return SkribblAdd(**(resp.json()))
 
-    def _add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
-        to_add = [(word, member.id, time.time()) for word in words]
-        self.cursor.executemany("INSERT OR IGNORE INTO skribbl (word, submitterID, submittedAt) VALUES (?, ?, ?)", to_add)
+    async def get_skribbl_words(self, limit: Optional[int] = None) -> List[SkribblWord]:
+        resp = await http.get(
+            f"{self.url}/skribbl/words", params={"limit": limit} if limit else {}
+        )
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve Skribbl words.")
+        await self._check_response(resp)
+        return [SkribblWord(**s) for s in resp.json()]
 
-    async def get_skribbl_words(self) -> List[Tuple[str]]:
-        return await self.read(self._get_skribbl_words)
+    async def get_skribbl_words_by_user(self, user_id: int) -> List[SkribblWord]:
+        resp = await http.get(f"{self.url}/skribbl/words?user_id={user_id}")
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve Skribbl words.")
+        await self._check_response(resp)
+        return [SkribblWord(**s) for s in resp.json()]
 
-    def _get_skribbl_words(self) -> List[Tuple[str]]:
-        self.cursor.execute("SELECT word FROM skribbl")
-        return list(self.cursor.fetchall())
-
-    async def get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
-        return await self.read(self._get_skribbl_words)
-
-    def _get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
-        self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", [user_id])
-        return list(self.cursor.fetchall())
-    
-    async def get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
-        return await self.read(self._get_skribbl_word_author, word)
-
-    def _get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
-        self.cursor.execute("SELECT submitterID, submittedAt FROM skribbl WHERE word==?", [word])
-        return self.cursor.fetchone()
+    async def get_skribbl_word(self, word: str) -> SkribblWord:
+        resp = await http.get(f"{self.url}/skribbl/words/{word}")
+        if resp.is_error:
+            raise CommandError(f"Unable to find {word}")
+        await self._check_response(resp)
+        return SkribblWord(**(resp.json()))
 
     async def delete_skribbl_words(self, words: Iterable[str]) -> None:
-        await self.write(self._delete_skribbl_words, words)
+        for word in words:
+            await http.delete(f"{self.url}/skribbl/words/{word}")
 
-    def _delete_skribbl_words(self, words: Iterable[str]) -> None:
-        self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [[word] for word in words])
+    async def skribbl_get_stats(self) -> SkribblAggregateStats:
+        resp = await http.get(f"{self.url}/skribbl/stats-aggregate")
+        if resp.is_error:
+            raise CommandError(f"Unable to goodmorning target.")
+        await self._check_response(resp)
+        return SkribblAggregateStats(**(resp.json()))
 
-    async def skribbl_get_stats(self) -> int:
-        """Fetches number of unique authors and words in the skribbl table."""
-        return await self.read(self._skribbl_get_stats)
+    async def goodmorning_get_all_targets(self) -> List[Goodmorning]:
+        resp = await http.get(f"{self.url}/goodmorning/all")
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve goodmorning targets")
+        await self._check_response(resp)
+        return [GoodmorningTarget(**t) for t in resp.json()]
 
-    def _skribbl_get_stats(self) -> int:
-        self.cursor.execute("SELECT COUNT(DISTINCT submitterID), COUNT(word) FROM skribbl")
-        return self.cursor.fetchone()
+    async def goodmorning_get_random_target(self) -> GoodmorningTarget:
+        resp = await http.get(f"{self.url}/goodmorning")
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve skribbl stats")
+        await self._check_response(resp)
+        return GoodmorningTarget(**(resp.json()))
 
-    async def groups_get_groups(self) -> List[str]:
-        return await self.read(self._groups_get_groups)
-
-    def _groups_get_groups(self) -> List[str]:
-        self.cursor.execute("SELECT * FROM groups")
-        return list(self.cursor.fetchall())
-
-    async def groups_get_all_groups(self) -> List[Tuple[str]]:
-        g = await self.read(self._groups_get_all_groups)
-        return g
-
-    def _groups_get_all_groups(self) -> List[Tuple[str]]:
-        self.cursor.execute("SELECT `group` from GROUPS ORDER BY RANDOM()")
-        return self.cursor.fetchall()
-
-    async def groups_get_random_group(self) -> str:
-        return await self.read(self._groups_get_random_group)
-
-    def _groups_get_random_group(self) -> str:
-        self.cursor.execute("SELECT `group` FROM groups ORDER BY RANDOM() LIMIT 1")
-        return self.cursor.fetchone()[0]
-
-    async def groups_add_group(self, submitter: discord.User, group: str) -> bool:
-        return await self.write(self._groups_add_group, submitter, group)
-
-    def _groups_add_group(self, submitter: discord.User, group: str) -> bool:
-        r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?, ?, (SELECT strftime('%s', 'now')))", [group, submitter.id])
-        return bool(r.rowcount)
-
-    async def bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
-        await self.write(self._bag_add_guild, guild_id, channel_id, role_id)
-
-    def _bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
-        self.cursor.execute(
-            "INSERT OR IGNORE INTO bag VALUES (?, ?, ?)", 
-            [guild_id, channel_id, role_id]
+    async def goodmorning_add_target(
+        self, submitter: discord.User, target: str
+    ) -> bool:
+        resp = await http.post(
+            f"{self.url}/goodmorning",
+            json={"submitter": submitter.id, "target": target},
         )
+        if resp.is_error:
+            if resp.status_code == 400:
+                raise CommandError(f"{target} has already been added!")
+            else:
+                raise CommandError(f"Unable to add {target}")
+        await self._check_response(resp)
+        return Goodmorning(**(resp.json()))
 
-    async def bag_get_guilds(self) -> List[Tuple[int, int, int]]:
-        return await self.read(self._bag_get_guilds)
+    async def reddit_get_subreddits(self) -> List[Subreddit]:
+        resp = await http.get(f"{self.url}/reddit/subreddits")
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve subreddits.")
+        await self._check_response(resp)
+        return [Subreddit(**s) for s in resp.json()]
 
-    def _bag_get_guilds(self) -> List[Tuple[int, int, int]]:
-        self.cursor.execute("SELECT * FROM bag")
-        return self.cursor.fetchall()
+    async def reddit_get_subreddit(self, subreddit: str) -> Subreddit:
+        resp = await http.get(f"{self.url}/reddit/subreddits/{subreddit}")
+        if resp.is_error:
+            raise CommandError(f"Unable to retrieve subreddit {subreddit}.")
+        await self._check_response(resp)
+        return Subreddit(**(resp.json()))
+
+    async def reddit_add_subreddit(self, subreddit: Subreddit) -> None:
+        resp = await http.post(
+            f"{self.url}/reddit/subreddits",
+            json=subreddit.dict(),
+        )
+        if resp.is_error:
+            raise CommandError(f"Unable to add subreddit {subreddit.subreddit}.")
+
+    async def reddit_remove_subreddit(self, subreddit: str) -> None:
+        resp = await http.delete(f"{self.url}/reddit/subreddits/{subreddit}")
+        if resp.is_error:
+            raise CommandError(f"Unable to delete subreddit {subreddit}.")

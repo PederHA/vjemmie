@@ -1,0 +1,51 @@
+version: "3.3"
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    env_file:
+      - .bot.env
+      - .db.env
+    environment:
+      API_URL: http://api:8000
+    networks:
+        - default
+    volumes:
+        - ./:/app
+
+  db:
+    image: mariadb:latest
+    env_file: .db.env
+    ports:
+      - 3306:3306
+    volumes:
+      - ./dbInit:/docker-entrypoint-initdb.d
+      - persistent:/var/lib/mysql
+    networks:
+        - default
+
+  phpmyadmin:
+      image: phpmyadmin/phpmyadmin
+      ports:
+          - 8082:80
+      environment:
+          PMA_HOST: db
+      env_file: .db.env
+      networks:
+          - default 
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - .bot.env
+      - .db.env
+    environment:
+      API_URL: http://api:8000
+    networks:
+        - default
+volumes:
+  persistent:

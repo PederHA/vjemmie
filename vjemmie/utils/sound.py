@@ -3,6 +3,7 @@ import wave
 from pathlib import Path
 import shlex
 
+
 def convert(filepath: Path, to_wav: bool) -> Path:
     """Attempts to convert a file from .mp3 to .wav or vice versa"""
     outfile = filepath.with_suffix(".wav") if to_wav else filepath.with_suffix(".mp3")
@@ -12,7 +13,9 @@ def convert(filepath: Path, to_wav: bool) -> Path:
         cmd = f'ffmpeg -y -i "{inf}" -acodec pcm_u8 -ar 44100 "{outf}"'
     else:
         cmd = f'ffmpeg -y -i "{inf}" -acodec libmp3lame -ab 128k "{outf}"'
-    subprocess.Popen(shlex.split(cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+    subprocess.Popen(
+        shlex.split(cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    ).wait()
     return outfile
 
 

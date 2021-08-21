@@ -6,6 +6,7 @@ T = Union[BinaryIO, bytes]
 
 BUFSIZE = 1024
 
+
 def _get_file_mimetype(file: T, bufsize: int) -> str:
     if hasattr(file, "read"):
         pos = file.tell()
@@ -18,18 +19,18 @@ def _get_file_mimetype(file: T, bufsize: int) -> str:
     return magic.from_buffer(b, mime=True)
 
 
-def check_file_audio(file: T, bufsize: int=BUFSIZE) -> bool:
-    """DO NOT use this to check MP3 files. They sometimes show up as `application/octet-stream`.""" 
+def check_file_audio(file: T, bufsize: int = BUFSIZE) -> bool:
+    """DO NOT use this to check MP3 files. They sometimes show up as `application/octet-stream`."""
     return _get_file_mimetype(file, bufsize).startswith("audio/")
 
 
-def check_file_video(file: T, bufsize: int=BUFSIZE) -> bool:
+def check_file_video(file: T, bufsize: int = BUFSIZE) -> bool:
     return _get_file_mimetype(file, bufsize).startswith("video/")
 
 
-def check_file_image(file: T, bufsize: int=BUFSIZE) -> bool:
+def check_file_image(file: T, bufsize: int = BUFSIZE) -> bool:
     return _get_file_mimetype(file, bufsize).startswith("image/")
 
 
-def get_file_mimetype(file: T, bufsize: int=BUFSIZE) -> str:
+def get_file_mimetype(file: T, bufsize: int = BUFSIZE) -> str:
     return _get_file_mimetype(file, bufsize)

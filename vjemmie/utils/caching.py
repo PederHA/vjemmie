@@ -1,17 +1,20 @@
+"""DEPRECATED!"""
+
 import json
 import os
 import time
-from typing import Any, Dict, Union, Tuple
-from collections import deque, defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import partial
+from typing import Union
 
 from recordclass import recordclass
 from recordclass.recordobject import recordclasstype
 
 
 class CacheError(Exception):
-    """Exceptions stemming from operations 
+    """Exceptions stemming from operations
     performed on the cache data structure"""
+
 
 DEFAULT_CATEGORY = "default"
 MAX_SIZE = 5
@@ -19,15 +22,16 @@ MAX_SIZE = 5
 CACHE = None
 CachedContent = recordclass("CachedContent", "contents content_type modified")
 
-def get_cached(path: str, category: str=None) -> Union[str, dict, list]:
-    """Get contents of a file. 
+
+def get_cached(path: str, category: str = None) -> Union[str, dict, list]:
+    """Get contents of a file.
     The file contents are cached in memory, and all subsequent calls
     to `get_cached()` with identical `path` & `category` arguments
     return cached contents rather than reading the file on disk.
 
     Should the file be modified between calls, `get_cached()` loads new
     version of file into the cache, overwriting the previous version.
-    
+
     Parameters
     ----------
     path : `str`
@@ -37,7 +41,7 @@ def get_cached(path: str, category: str=None) -> Union[str, dict, list]:
         Uses default category if None is passed in.
         The default category "default" can be overridden
         by calling `setup(default=<your category here>)`.
-    
+
     Returns
     -------
     `Union[str, dict, list]`
@@ -56,7 +60,7 @@ def get_cached(path: str, category: str=None) -> Union[str, dict, list]:
     cached = _get_from_cache(path, category)
 
     # Get modification time of cached content if it exists
-    if cached:
+    if cached is not None:
         last_modified = cached.modified
 
     # Get current modification time of file
@@ -96,7 +100,7 @@ def _add_to_cache(path: str, category: str, contents: CachedContent) -> None:
     except KeyError:
         pass
     if len(CACHE[category]) == MAX_SIZE:
-        CACHE[category].popitem(last=False) # Pop oldest item
+        CACHE[category].popitem(last=False)  # Pop oldest item
     CACHE[category][path] = contents
 
 
@@ -108,14 +112,16 @@ def _get_from_cache(path: str, category: str) -> CachedContent:
         pass
 
 
-def setup(size: int=MAX_SIZE, default: str=None) -> None:
+def setup(size: int = MAX_SIZE, default: str = None) -> None:
     """Creates cache with custom size and default category key"""
     global DEFAULT_CATEGORY
     global MAX_SIZE
 
     if CACHE:
-        raise CacheError("Cache already contains data! "
-            "Flush cache before attempting to make changes.")
+        raise CacheError(
+            "Cache already contains data! "
+            "Flush cache before attempting to make changes."
+        )
 
     if size:
         if not isinstance(size, int):
@@ -129,13 +135,15 @@ def setup(size: int=MAX_SIZE, default: str=None) -> None:
         except TypeError:
             raise TypeError("Default category key must be hashable")
         DEFAULT_CATEGORY = default
-    
+
     flush_cache()
+
 
 def flush_cache() -> None:
     """Flushes cache and creates new cache using default category
     and size settings."""
     _do_create_cache()
+
 
 def _do_create_cache() -> None:
     global CACHE
