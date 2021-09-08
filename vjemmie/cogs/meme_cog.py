@@ -22,8 +22,8 @@ from .base_cog import BaseCog
 
 @dataclass
 class GoodmorningSettings:
-    member_chance: float = 0.05 # Chance to pick member instead of group (0-1)
-    all_chance: float = 0.005 # Chance to list every single group
+    member_chance: float = 0.05  # Chance to pick member instead of group (0-1)
+    all_chance: float = 0.005  # Chance to list every single group
     # TODO: add more settings
 
     @property
@@ -35,10 +35,16 @@ class GoodmorningSettings:
         return self._should_send(self.member_chance)
 
     def _should_send(self, chance: float) -> bool:
-        return chance > random.random() 
+        return chance > random.random()
 
 
-async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=None, n_lines: Optional[int]=None) -> None:
+async def gpt_command(
+    cls: commands.Cog,
+    ctx: commands.Context,
+    *,
+    path: str = None,
+    n_lines: Optional[int] = None,
+) -> None:
     if not path:
         raise ValueError("No path lol")
 
@@ -50,13 +56,13 @@ async def gpt_command(cls: commands.Cog, ctx: commands.Context, *, path: str=Non
             [await cls.random_line_from_gptfile(path) for n in range(n_lines)]
         )
         await cls.send_text_message(lines, ctx)
-    
+
 
 class MemeCog(BaseCog):
     """Text meme commands"""
 
     EMOJI = ":spaghetti:"
-    
+
     def __init__(self, bot) -> None:
         super().__init__(bot)
         self.experimental = False
@@ -74,7 +80,7 @@ class MemeCog(BaseCog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await self._setup_goodmorning()
-    
+
     async def _setup_goodmorning(self) -> None:
         for guild in self.bot.guilds:
             self.goodmorning_settings[guild.id] = GoodmorningSettings()
@@ -83,18 +89,19 @@ class MemeCog(BaseCog):
         p = Path("memes/txt/gpt")
         if not p.exists():
             return
-        
+
         for file_ in p.iterdir():
             if file_.suffix != ".txt":
                 continue
-            
-            add_command(self, 
-                        gpt_command, 
-                        name=file_.stem, 
-                        group=self.gpt, 
-                        path=str(file_), # command kwargs
-                        n_lines=10
-                        )
+
+            add_command(
+                self,
+                gpt_command,
+                name=file_.stem,
+                group=self.gpt,
+                path=str(file_),  # command kwargs
+                n_lines=10,
+            )
 
     def load_daddy_verbs(self) -> List[str]:
         """NOTE: Blocking!"""
@@ -103,16 +110,18 @@ class MemeCog(BaseCog):
                 return f.read().splitlines()
         except:
             print("Failed to load 'memes/txt/verbs.txt'")
-            self.verb_me_daddy.enabled = False # Disable command
+            self.verb_me_daddy.enabled = False  # Disable command
             return list()
-    
-    async def random_line_from_gptfile(self, path: str, encoding: str="utf-8", **kwargs) -> str:
+
+    async def random_line_from_gptfile(
+        self, path: str, encoding: str = "utf-8", **kwargs
+    ) -> str:
         """Kinda primitive rn. Needs some sort of caching for bigger files."""
         if path not in self.files:
             async with AIOFile(path, "r", encoding=encoding, **kwargs) as f:
                 self.files[path] = (await f.read()).split("====================")
         return random.choice(self.files[path])
-    
+
     @commands.group(name="gpt")
     async def gpt(self, ctx: commands.Context) -> None:
         if not ctx.invoked_subcommand:
@@ -143,32 +152,38 @@ class MemeCog(BaseCog):
     async def goodnight(self, ctx: commands.Context) -> None:
         await self._do_post_goodmorning(ctx, "night")
 
-    async def _do_post_goodmorning(self, ctx: commands.Context, time_of_day: str) -> None:
+    async def _do_post_goodmorning(
+        self, ctx: commands.Context, time_of_day: str
+    ) -> None:
         # n% chance to pick a member instead of a group
         if not self.goodmorning_settings.get(ctx.guild.id, None):
             self.goodmorning_settings[ctx.guild.id] = GoodmorningSettings()
 
         guild = self.goodmorning_settings[ctx.guild.id]
         if guild.send_all:
-            subject = f"{', '.join(g[0] for g in await self.db.groups_get_all_groups())}"
+            subject = (
+                f"{', '.join(g[0] for g in await self.db.groups_get_all_groups())}"
+            )
         elif guild.send_member:
             member = random.choice(ctx.guild.members)
             subject = member.mention
         else:
-            subject = await self.db.groups_get_random_group()
-        
-        await self.send_text_message(f"Good {time_of_day} to everyone apart from {subject}", ctx)        
+            subject = f"the {await self.db.groups_get_random_group()}"
+
+        await self.send_text_message(
+            f"Good {time_of_day} to everyone apart from {subject}", ctx
+        )
 
     @commands.command(name="goodmorning_add")
     async def goodmorning_add(self, ctx: commands.Context, *args) -> None:
         if not args:
             raise CommandError("One or more words are required")
-        
+
         # Make sure first letter is uppercase, but don't touch the rest
         words = list(args)
         if not words[0][0].isupper() and words[0] != "the":
             words[0] = words[0].capitalize()
-        word = " ".join(words)    
+        word = " ".join(words)
 
         ok = await self.db.groups_add_group(ctx.message.author, word)
         if not ok:
@@ -181,11 +196,13 @@ class MemeCog(BaseCog):
     async def goodmorning_chance(self, ctx: commands.Context, chance: int) -> None:
         """Change the % chance of picking a member."""
         if not ctx.guild:
-            return await ctx.send("This command is not supported in DMs.")   
+            return await ctx.send("This command is not supported in DMs.")
         if chance < 1 or chance > 100:
             raise CommandError("Percent chance must be between 1 and 100.")
         self.goodmorning_settings[ctx.guild.id].member_chance = chance / 100
-        await ctx.send(f"Chance to pick a member for `{self.bot.command_prefix}goodmorning` set to {chance}%")
+        await ctx.send(
+            f"Chance to pick a member for `{self.bot.command_prefix}goodmorning` set to {chance}%"
+        )
 
     @commands.command(name="daddy")
     async def verb_me_daddy(self, ctx: commands.Context) -> None:
@@ -195,29 +212,35 @@ class MemeCog(BaseCog):
     @commands.command(name="emojipastam")
     async def emojipasta_markovchain(self, ctx: commands.Context) -> None:
         await ctx.invoke(self.markovchain_subreddit, "emojipasta")
-        
+
     @commands.command(name="markovreddit", aliases=["mr"])
-    async def markovchain_subreddit(self, ctx: commands.Context, subreddit: str) -> None:
+    async def markovchain_subreddit(
+        self, ctx: commands.Context, subreddit: str
+    ) -> None:
         subreddit = subreddit.lower()
         if subreddit not in self.models:
             async with ctx.typing():
                 reddit_cog = self.bot.get_cog("RedditCog")
-                posts = await reddit_cog._fetch_subreddit_posts(subreddit, sorting="top", time="all", post_limit=1000)
+                posts = await reddit_cog._fetch_subreddit_posts(
+                    subreddit, sorting="top", time="all", post_limit=1000
+                )
                 try:
                     await self._generate_markovchain_subreddit_model(subreddit, posts)
                 except ValueError as e:
                     raise CommandError(e)
-        
+
         model = self.models[subreddit]
-        
+
         to_run = partial(model.make_sentence, tries=300)
         sentence = await self.bot.loop.run_in_executor(None, to_run)
         if not sentence:
             raise CommandError(f"Unable to generate a sentence for `r/{subreddit}`")
-        
+
         await self.send_text_message(sentence, ctx)
 
-    async def _generate_markovchain_subreddit_model(self, subreddit: str, posts: List[Submission]) -> NewlineText:
+    async def _generate_markovchain_subreddit_model(
+        self, subreddit: str, posts: List[Submission]
+    ) -> NewlineText:
         reddit_cog = self.bot.get_cog("RedditCog")
         # TODO: Check if RedditCog is disabled
         text = "\n".join([post.selftext for post in posts if post.selftext])
@@ -229,9 +252,9 @@ class MemeCog(BaseCog):
         return model
 
     @commands.command(name="ricardo")
-    async def ricardo(self, ctx: commands.Context, limit: int=4176) -> None:
-        """Get random submission from ricardodb.tk. 
-        
+    async def ricardo(self, ctx: commands.Context, limit: int = 4176) -> None:
+        """Get random submission from ricardodb.tk.
+
         Limit is hard-coded right now because parsing the content on the site
         is a bit of a pain, and additionally their SSL certificate is not recognized
         by the `certifi` module."""
