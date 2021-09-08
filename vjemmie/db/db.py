@@ -238,14 +238,14 @@ class DatabaseConnection:
         )
         return bool(r.rowcount)
 
-    async def groups_find_group(self, word: str) -> Optional[str]:
-        return await self.read(self._groups_find_group, word)
+    async def groups_find_groups(self, word: str) -> List[str]:
+        return await self.read(self._groups_find_groups, word)
 
-    def _groups_find_group(self, word: str) -> Optional[str]:
+    def _groups_find_groups(self, word: str) -> List[str]:
         r = self.cursor.execute(
             "SELECT `group` FROM `groups` WHERE `group` LIKE ?", [word]
         )
-        return r.fetchone()
+        return r.fetchall()
 
     async def groups_delete_group(self, word: str) -> bool:
         return await self.write(self._groups_delete_group, word)

@@ -200,6 +200,18 @@ class MemeCog(BaseCog):
             raise CommandError(f"Unable to find `{word}`")
         await ctx.send(f"Deleted `{word}`")
 
+    @commands.command(name="goodmorning_search")
+    async def goodmorning_search(self, ctx: commands.Context, *args) -> None:
+        query = " ".join(args)
+        results = await self.db.groups_find_groups(query)
+        if not results:
+            return await ctx.send("0 results.")
+        await self.send_embed_message(
+            ctx,
+            title="Results",
+            description="\n".join(r[0] for r in results),
+        )
+
     # TODO: rename this awful command
     @commands.command(name="goodmorning_chance")
     @admins_only()
