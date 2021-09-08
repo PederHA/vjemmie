@@ -24,24 +24,26 @@ class DatabaseConnection:
     def __init__(self, db_path: str, bot: commands.Bot) -> None:
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor: sqlite3.Cursor = self.conn.cursor()
-        self.bot = bot # To run blocking methods in thread pool
-        
+        self.bot = bot  # To run blocking methods in thread pool
+
         # I was planning to add separate read and write locks,
-        # but I'm not actually sure if that's safe. 
+        # but I'm not actually sure if that's safe.
         # So for now, both read and write locks share the same lock.
         self.rlock = asyncio.Lock()
         self.wlock = self.rlock
-        
+
     async def read(self, meth: Callable[..., Any], *args) -> Any:
         async with self.rlock:
             return await self.bot.loop.run_in_executor(None, meth, *args)
 
     async def write(self, meth: Callable[..., Any], *args) -> Any:
         async with self.wlock:
+
             def to_run():
                 r = meth(*args)
                 self.conn.commit()
                 return r
+
             return await self.bot.loop.run_in_executor(None, to_run)
 
     ##################
@@ -56,20 +58,16 @@ class DatabaseConnection:
         for row in self.cursor.execute("SELECT * FROM tidstyver"):
             user = self.bot.get_user(row[0])
             if not user:
-                continue # Ignore user who can't be found
+                continue  # Ignore user who can't be found
             tt.append((user, row[1]))
 
         # Return sorted list of (discord.User, float) tuples
-        return sorted(
-                tt,
-                key=lambda i: i[1],
-                reverse=True
-        )
+        return sorted(tt, key=lambda i: i[1], reverse=True)
 
     async def get_tidstyveri_by_id(self, user_id: int) -> float:
         res = await self.read(self._get_tidstyveri_by_id, user_id)
         return res[1] if res else 0.0
-    
+
     def _get_tidstyveri_by_id(self, user_id: int) -> List[float]:
         self.cursor.execute("SELECT * FROM tidstyver WHERE id==?", [user_id])
         return self.cursor.fetchone()
@@ -82,19 +80,23 @@ class DatabaseConnection:
             """INSERT INTO tidstyver (id, time)
 	        VALUES (?, ?)
 	        ON CONFLICT(id)
-	        DO UPDATE SET time=time+?""", 
-            (member.id, time, time)
+	        DO UPDATE SET time=time+?""",
+            (member.id, time, time),
         )
 
     #########
     # PFM
     #########
 
-    async def get_pfm_memes(self, ctx: commands.Context, topic: str) -> List[Tuple[str, str, str, str, str]]:
+    async def get_pfm_memes(
+        self, ctx: commands.Context, topic: str
+    ) -> List[Tuple[str, str, str, str, str]]:
         return await self.read(self._get_pfm_memes)
 
     def _get_pfm_memes(self) -> List[Tuple[str, str, str, str, str]]:
-        self.cursor.execute("SELECT topic, title, description, content, media_type FROM pfm_memes")
+        self.cursor.execute(
+            "SELECT topic, title, description, content, media_type FROM pfm_memes"
+        )
         return list(self.cursor.fetchall())
 
     #########
@@ -103,18 +105,20 @@ class DatabaseConnection:
 
     async def get_gmoments(self) -> Dict[int, str]:
         r = await self.read(self._get_gmoments)
-        l = list(filter(lambda user: user[1] > 0, r)) #  ignore users with 0 occurrences
+        l = list(
+            filter(lambda user: user[1] > 0, r)
+        )  #  ignore users with 0 occurrences
         moments = {}
         for user_id, occurrences in l:
             moments[user_id] = occurrences
         return moments
-    
+
     def _get_gmoments(self) -> List[Tuple[int, int]]:
         self.cursor.execute("SELECT id, occurrences FROM gm ORDER BY occurrences DESC")
         return list(self.cursor.fetchall())
 
     async def add_gmoment(self, member: discord.Member) -> None:
-       await self.write(self._add_gmoment, member)
+        await self.write(self._add_gmoment, member)
 
     def _add_gmoment(self, member: discord.Member) -> None:
         self.cursor.execute(
@@ -131,9 +135,13 @@ class DatabaseConnection:
     def _decrement_gmoments(self, member: discord.Member) -> None:
         self.cursor.execute(f"SELECT occurrences FROM gm WHERE id==?", member.id)
         gmoments = self.cursor.fetchone()
-        if gmoments is None or gmoments[0] <= 0: # FIXME: is this a tuple or just an int?
+        if (
+            gmoments is None or gmoments[0] <= 0
+        ):  # FIXME: is this a tuple or just an int?
             raise CommandError(f"`{member.name}` has no gaming moments on record!")
-        self.cursor.execute(f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}")
+        self.cursor.execute(
+            f"UPDATE gmoments SET occurrences=occurrences-1 WHERE id=={member.id}"
+        )
 
     async def purge_gmoments(self, member: discord.Member) -> None:
         await self.write(self._purge_gmoments, member)
@@ -145,12 +153,17 @@ class DatabaseConnection:
     # SKRIBBL
     #########
 
-    async def add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
+    async def add_skribbl_words(
+        self, member: discord.Member, words: Iterable[str]
+    ) -> None:
         await self.write(self._add_skribbl_words, member, words)
 
     def _add_skribbl_words(self, member: discord.Member, words: Iterable[str]) -> None:
         to_add = [(word, member.id, time.time()) for word in words]
-        self.cursor.executemany("INSERT OR IGNORE INTO skribbl (word, submitterID, submittedAt) VALUES (?, ?, ?)", to_add)
+        self.cursor.executemany(
+            "INSERT OR IGNORE INTO skribbl (word, submitterID, submittedAt) VALUES (?, ?, ?)",
+            to_add,
+        )
 
     async def get_skribbl_words(self) -> List[Tuple[str]]:
         return await self.read(self._get_skribbl_words)
@@ -165,26 +178,32 @@ class DatabaseConnection:
     def _get_skribbl_words_by_user(self, user_id: int) -> List[Tuple[str]]:
         self.cursor.execute("SELECT word FROM skribbl WHERE submitterID==?", [user_id])
         return list(self.cursor.fetchall())
-    
+
     async def get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
         return await self.read(self._get_skribbl_word_author, word)
 
     def _get_skribbl_word_author(self, word: str) -> Tuple[int, int]:
-        self.cursor.execute("SELECT submitterID, submittedAt FROM skribbl WHERE word==?", [word])
+        self.cursor.execute(
+            "SELECT submitterID, submittedAt FROM skribbl WHERE word==?", [word]
+        )
         return self.cursor.fetchone()
 
     async def delete_skribbl_words(self, words: Iterable[str]) -> None:
         await self.write(self._delete_skribbl_words, words)
 
     def _delete_skribbl_words(self, words: Iterable[str]) -> None:
-        self.cursor.executemany("DELETE FROM skribbl WHERE word == ?", [[word] for word in words])
+        self.cursor.executemany(
+            "DELETE FROM skribbl WHERE word == ?", [[word] for word in words]
+        )
 
     async def skribbl_get_stats(self) -> int:
         """Fetches number of unique authors and words in the skribbl table."""
         return await self.read(self._skribbl_get_stats)
 
     def _skribbl_get_stats(self) -> int:
-        self.cursor.execute("SELECT COUNT(DISTINCT submitterID), COUNT(word) FROM skribbl")
+        self.cursor.execute(
+            "SELECT COUNT(DISTINCT submitterID), COUNT(word) FROM skribbl"
+        )
         return self.cursor.fetchone()
 
     async def groups_get_groups(self) -> List[str]:
@@ -213,7 +232,26 @@ class DatabaseConnection:
         return await self.write(self._groups_add_group, submitter, group)
 
     def _groups_add_group(self, submitter: discord.User, group: str) -> bool:
-        r = self.cursor.execute("INSERT OR IGNORE INTO groups VALUES (?, ?, (SELECT strftime('%s', 'now')))", [group, submitter.id])
+        r = self.cursor.execute(
+            "INSERT OR IGNORE INTO groups VALUES (?, ?, (SELECT strftime('%s', 'now')))",
+            [group, submitter.id],
+        )
+        return bool(r.rowcount)
+
+    async def groups_find_group(self, word: str) -> Optional[str]:
+        return await self.read(self._groups_find_group, word)
+
+    def _groups_find_group(self, word: str) -> Optional[str]:
+        r = self.cursor.execute(
+            "SELECT `group` FROM `groups` WHERE `group` == ?", [word]
+        )
+        return r.fetchone()
+
+    async def groups_delete_group(self, word: str) -> bool:
+        return await self.write(self._groups_delete_group, word)
+
+    def _groups_delete_group(self, word: str) -> bool:
+        r = self.cursor.execute("DELETE FROM `groups` WHERE `group` == ?", [word])
         return bool(r.rowcount)
 
     async def bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
@@ -221,8 +259,8 @@ class DatabaseConnection:
 
     def _bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
         self.cursor.execute(
-            "INSERT OR IGNORE INTO bag VALUES (?, ?, ?)", 
-            [guild_id, channel_id, role_id]
+            "INSERT OR IGNORE INTO bag VALUES (?, ?, ?)",
+            [guild_id, channel_id, role_id],
         )
 
     async def bag_get_guilds(self) -> List[Tuple[int, int, int]]:

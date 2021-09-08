@@ -17,6 +17,7 @@ from ..config import MAIN_DB
 from ..utils.commands import add_command
 from ..utils.checks import admins_only
 from ..utils.exceptions import CommandError
+from ..utils.voting import vote
 from .base_cog import BaseCog
 
 
@@ -189,6 +190,15 @@ class MemeCog(BaseCog):
         if not ok:
             raise CommandError(f"`{word}` has already been added!")
         await ctx.send(f"Added `{word}`.")
+
+    @commands.command(name="goodmorning_remove")
+    @vote(votes=3)
+    async def goodmorning_remove(self, ctx: commands.Context, *args) -> None:
+        word = "".join(args)
+        result = await self.db.groups_delete_group(word)
+        if not result:
+            raise CommandError(f"Unable to find `{word}`")
+        await ctx.send(f"Deleted `{word}`")
 
     # TODO: rename this awful command
     @commands.command(name="goodmorning_chance")
