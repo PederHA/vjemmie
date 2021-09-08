@@ -243,7 +243,7 @@ class DatabaseConnection:
 
     def _groups_find_groups(self, word: str) -> List[str]:
         r = self.cursor.execute(
-            "SELECT `group` FROM `groups` WHERE `group` LIKE %?%", [word]
+            "SELECT `group` FROM `groups` WHERE `group` LIKE ?", [f"%{word}%"]
         )
         return r.fetchall()
 
