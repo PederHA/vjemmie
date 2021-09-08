@@ -192,9 +192,9 @@ class MemeCog(BaseCog):
         await ctx.send(f"Added `{word}`.")
 
     @commands.command(name="goodmorning_remove")
-    @vote(votes=3)
+    @vote(votes=2)
     async def goodmorning_remove(self, ctx: commands.Context, *args) -> None:
-        word = "".join(args)
+        word = " ".join(args)
         result = await self.db.groups_delete_group(word)
         if not result:
             raise CommandError(f"Unable to find `{word}`")
