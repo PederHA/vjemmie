@@ -243,7 +243,7 @@ class DatabaseConnection:
 
     def _groups_find_group(self, word: str) -> Optional[str]:
         r = self.cursor.execute(
-            "SELECT `group` FROM `groups` WHERE `group` == ?", [word]
+            "SELECT `group` FROM `groups` WHERE `group` LIKE ?", [word]
         )
         return r.fetchone()
 
@@ -251,7 +251,7 @@ class DatabaseConnection:
         return await self.write(self._groups_delete_group, word)
 
     def _groups_delete_group(self, word: str) -> bool:
-        r = self.cursor.execute("DELETE FROM `groups` WHERE `group` == ?", [word])
+        r = self.cursor.execute("DELETE FROM `groups` WHERE `group` LIKE ?", [word])
         return bool(r.rowcount)
 
     async def bag_add_guild(self, guild_id: int, channel_id: int, role_id: int) -> None:
