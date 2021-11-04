@@ -181,10 +181,7 @@ class MemeCog(BaseCog):
             raise CommandError("One or more words are required")
 
         # Make sure first letter is uppercase, but don't touch the rest
-        words = list(args)
-        if not words[0][0].isupper() and words[0] != "the":
-            words[0] = words[0].capitalize()
-        word = " ".join(words)
+        word = " ".join(args)
 
         ok = await self.db.groups_add_group(ctx.message.author, word)
         if not ok:
