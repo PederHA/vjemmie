@@ -24,7 +24,7 @@ from .base_cog import BaseCog
 @dataclass
 class GoodmorningSettings:
     member_chance: float = 0.05  # Chance to pick member instead of group (0-1)
-    all_chance: float = 0.005  # Chance to list every single group
+    all_chance: float = 0.0001  # Chance to list every single group
     # TODO: add more settings
 
     @property
