@@ -53,7 +53,7 @@ pyasn1-modules==0.2.8
 pycparser==2.20
 pyee==7.0.4
 pygithub==1.54
-pyjwt==1.7.1
+pyjwt==2.4.0
 pynacl==1.4.0
 pyppeteer==0.2.2
 pyquery==1.4.3
