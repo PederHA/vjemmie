@@ -35,7 +35,7 @@ httplib2==0.18.1
 httpx==0.13.3
 hyperframe==5.2.0
 idna==2.10
-lxml==4.6.2
+lxml==4.9.1
 markovify==0.8.3
 mcstatus==2.3.0
 multidict==4.7.6
